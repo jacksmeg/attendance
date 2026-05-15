@@ -194,6 +194,7 @@ class AttendanceAppTests(unittest.TestCase):
                 "working_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
                 "location_enforcement_enabled": "on",
                 "allowed_location_name": "Head Office",
+                "allowed_location_address": "Ring Road Central, Accra, Ghana",
                 "allowed_location_latitude": "5.60372",
                 "allowed_location_longitude": "-0.18696",
                 "allowed_location_radius_meters": "180",
@@ -210,6 +211,7 @@ class AttendanceAppTests(unittest.TestCase):
             settings = get_app_settings(default_app_name="fallback")
             self.assertTrue(settings["location_enforcement_enabled"])
             self.assertEqual(settings["allowed_location_name"], "Head Office")
+            self.assertEqual(settings["allowed_location_address"], "Ring Road Central, Accra, Ghana")
             self.assertAlmostEqual(settings["allowed_location_latitude"], 5.60372)
             self.assertAlmostEqual(settings["allowed_location_longitude"], -0.18696)
             self.assertEqual(settings["allowed_location_radius_meters"], 180)
@@ -537,6 +539,12 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(kiosk_response.status_code, 200)
         self.assertIn(b"The online system is live for QR, PIN/password, and staff mobile access.", kiosk_response.data)
 
+    def test_online_root_redirects_to_staff_login(self) -> None:
+        self.app.config["APP_SETTINGS"].fingerprint_backend = "disabled"
+        response = self.client.get("/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/staff/login", response.headers["Location"])
+
     def test_reports_page_and_export_render_for_admin(self) -> None:
         self.client.post(
             "/admin/login",
@@ -615,6 +623,7 @@ class AttendanceAppTests(unittest.TestCase):
                 "working_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
                 "location_enforcement_enabled": "on",
                 "allowed_location_name": "Head Office",
+                "allowed_location_address": "Ring Road Central, Accra, Ghana",
                 "allowed_location_latitude": "5.60372",
                 "allowed_location_longitude": "-0.18696",
                 "allowed_location_radius_meters": "150",
@@ -668,6 +677,7 @@ class AttendanceAppTests(unittest.TestCase):
                 "working_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
                 "location_enforcement_enabled": "on",
                 "allowed_location_name": "Head Office",
+                "allowed_location_address": "Ring Road Central, Accra, Ghana",
                 "allowed_location_latitude": "5.60372",
                 "allowed_location_longitude": "-0.18696",
                 "allowed_location_radius_meters": "150",

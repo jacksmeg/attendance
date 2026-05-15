@@ -119,6 +119,10 @@
                     <span>Longitude</span>
                     <input form="attendance-settings-form" type="number" step="any" name="allowed_location_longitude" value="{{ '' if form_values.allowed_location_longitude is none else form_values.allowed_location_longitude }}" placeholder="-0.1870">
                 </label>
+                <label class="admin-field" style="grid-column: 1 / -1;">
+                    <span>Detected Address</span>
+                    <input form="attendance-settings-form" type="text" name="allowed_location_address" value="{{ form_values.allowed_location_address }}" placeholder="Detected office address will appear here">
+                </label>
                 <div class="admin-field" style="grid-column: 1 / -1;">
                     <span>Capture Coordinates with GPS</span>
                     <div class="admin-form-actions" style="justify-content: flex-start;">
@@ -182,6 +186,7 @@
                 <div class="admin-summary-row"><span>Working week</span><strong>{{ form_values.working_days|join(', ') }}</strong></div>
                 <div class="admin-summary-row"><span>Location restriction</span><strong>{% if form_values.location_enforcement_enabled %}Active{% else %}Disabled{% endif %}</strong></div>
                 <div class="admin-summary-row"><span>Allowed location</span><strong>{{ location_policy.location_name }}</strong></div>
+                <div class="admin-summary-row"><span>Detected address</span><strong>{{ location_policy.address if location_policy.address else 'Not captured yet' }}</strong></div>
                 <div class="admin-summary-row"><span>Radius</span><strong>{{ form_values.allowed_location_radius_meters }} m</strong></div>
             </div>
         </article>
@@ -252,6 +257,7 @@
         const button = document.querySelector("#capture-admin-location");
         const latitudeField = document.querySelector('input[name="allowed_location_latitude"]');
         const longitudeField = document.querySelector('input[name="allowed_location_longitude"]');
+        const addressField = document.querySelector('input[name="allowed_location_address"]');
         const radiusField = document.querySelector('input[name="allowed_location_radius_meters"]');
         const locationNameField = document.querySelector('input[name="allowed_location_name"]');
         const status = document.querySelector("#admin-location-capture-status");
@@ -263,6 +269,47 @@
         const setStatus = (message, tone = "normal") => {
             status.textContent = message;
             status.dataset.tone = tone;
+        };
+
+        const fetchAddressDetails = async (latitude, longitude) => {
+            const url = new URL("https://nominatim.openstreetmap.org/reverse");
+            url.searchParams.set("format", "jsonv2");
+            url.searchParams.set("lat", latitude);
+            url.searchParams.set("lon", longitude);
+            url.searchParams.set("zoom", "18");
+            url.searchParams.set("addressdetails", "1");
+
+            const response = await fetch(url.toString(), {
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+            if (!response.ok) {
+                throw new Error("reverse_lookup_failed");
+            }
+            return response.json();
+        };
+
+        const pickLocationName = (payload) => {
+            const address = payload.address || {};
+            return (
+                address.office ||
+                address.building ||
+                address.company ||
+                address.amenity ||
+                address.shop ||
+                address.tourism ||
+                address.school ||
+                address.university ||
+                address.hospital ||
+                address.suburb ||
+                address.neighbourhood ||
+                address.road ||
+                address.city ||
+                address.town ||
+                address.village ||
+                "Current Office Location"
+            );
         };
 
         button.addEventListener("click", () => {
@@ -281,16 +328,34 @@
                 if (radiusField && (!radiusField.value || Number(radiusField.value) < 25)) {
                     radiusField.value = Math.max(25, Math.ceil(position.coords.accuracy || 50));
                 }
+                setStatus("GPS captured. Looking up the location name and address...", "normal");
 
-                if (locationNameField && !locationNameField.value.trim()) {
-                    locationNameField.value = "Current Office Location";
-                }
-
-                setStatus(
-                    `GPS captured successfully. Accuracy: about ${Math.round(position.coords.accuracy || 0)} meters. Review the values and click Save Settings.`,
-                    "success"
-                );
-                button.disabled = false;
+                fetchAddressDetails(latitudeField.value, longitudeField.value)
+                    .then((payload) => {
+                        const locationName = pickLocationName(payload);
+                        if (locationNameField && (!locationNameField.value.trim() || locationNameField.value.trim() === "Current Office Location")) {
+                            locationNameField.value = locationName;
+                        }
+                        if (addressField && payload.display_name) {
+                            addressField.value = payload.display_name;
+                        }
+                        setStatus(
+                            `GPS and address captured successfully. Accuracy: about ${Math.round(position.coords.accuracy || 0)} meters. Review the values and click Save Settings.`,
+                            "success"
+                        );
+                    })
+                    .catch(() => {
+                        if (locationNameField && !locationNameField.value.trim()) {
+                            locationNameField.value = "Current Office Location";
+                        }
+                        setStatus(
+                            `GPS captured successfully, but address lookup could not finish. Accuracy: about ${Math.round(position.coords.accuracy || 0)} meters. You can still save the coordinates.`,
+                            "error"
+                        );
+                    })
+                    .finally(() => {
+                        button.disabled = false;
+                    });
             }, (error) => {
                 let message = "Location access was not completed. Allow GPS permission and try again.";
                 if (error && error.code === 1) {

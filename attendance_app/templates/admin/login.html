@@ -44,8 +44,8 @@
             <h3>{{ app_name }} access overview</h3>
             <div class="detail-stack">
                 <div class="detail-row">
-                    <span>Kiosk</span>
-                    <strong>Always available</strong>
+                    <span>Online entry</span>
+                    <strong>{% if is_cloud_fingerprint_mode %}Staff login first{% else %}Kiosk available{% endif %}</strong>
                 </div>
                 <div class="detail-row">
                     <span>Staff tools</span>

@@ -142,6 +142,10 @@ def register_routes(app: Flask) -> None:
     def home():
         if session.get("staff_authenticated"):
             return redirect(url_for("app.staff_home"))
+        if session.get("admin_authenticated"):
+            return redirect(url_for("app.admin_dashboard"))
+        if current_app.config["APP_SETTINGS"].fingerprint_backend == "disabled":
+            return redirect(url_for("app.staff_login"))
         return redirect(url_for("app.kiosk"))
 
     @bp.route("/health")
@@ -1683,6 +1687,7 @@ def _read_settings_form(form) -> dict[str, Any]:
         "working_days": form.getlist("working_days"),
         "location_enforcement_enabled": form.get("location_enforcement_enabled") == "on",
         "allowed_location_name": form.get("allowed_location_name", "").strip(),
+        "allowed_location_address": form.get("allowed_location_address", "").strip(),
         "allowed_location_latitude": form.get("allowed_location_latitude", "").strip(),
         "allowed_location_longitude": form.get("allowed_location_longitude", "").strip(),
         "allowed_location_radius_meters": form.get("allowed_location_radius_meters", "150").strip() or "150",
@@ -1805,6 +1810,7 @@ def _location_policy_view_model(app_defaults: dict[str, Any]) -> dict[str, Any]:
     return {
         "enabled": enabled,
         "location_name": location_name or "Main Work Location",
+        "address": str(app_defaults.get("allowed_location_address", "") or "").strip(),
         "latitude": latitude,
         "longitude": longitude,
         "radius_meters": radius,
@@ -1815,6 +1821,7 @@ def _location_policy_view_model(app_defaults: dict[str, Any]) -> dict[str, Any]:
             longitude=longitude,
             radius_meters=radius,
             location_name=location_name,
+            address=str(app_defaults.get("allowed_location_address", "") or "").strip(),
         ),
     }
 
@@ -1826,12 +1833,15 @@ def _location_policy_summary(
     longitude: float | None,
     radius_meters: int,
     location_name: str,
+    address: str,
 ) -> str:
     if not enabled:
         return "Staff can clock from any location."
     name = location_name or "Main Work Location"
     if latitude is None or longitude is None:
         return f"Location restriction is enabled, but {name} has not been configured yet."
+    if address:
+        return f"Staff must be within {radius_meters} meters of {name} at {address} to clock in or out."
     return f"Staff must be within {radius_meters} meters of {name} to clock in or out."
 
 

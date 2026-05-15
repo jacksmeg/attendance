@@ -28,6 +28,7 @@ DEFAULT_SETTINGS = {
     "report_default_range_days": "30",
     "location_enforcement_enabled": "0",
     "allowed_location_name": "",
+    "allowed_location_address": "",
     "allowed_location_latitude": "",
     "allowed_location_longitude": "",
     "allowed_location_radius_meters": "150",
@@ -54,6 +55,7 @@ def get_app_settings(default_app_name: str = "") -> dict[str, Any]:
         "report_default_range_days": max(1, _to_int(merged.get("report_default_range_days"), 30)),
         "location_enforcement_enabled": _to_bool(merged.get("location_enforcement_enabled")),
         "allowed_location_name": str(merged.get("allowed_location_name", "") or "").strip(),
+        "allowed_location_address": str(merged.get("allowed_location_address", "") or "").strip(),
         "allowed_location_latitude": _to_float(merged.get("allowed_location_latitude")),
         "allowed_location_longitude": _to_float(merged.get("allowed_location_longitude")),
         "allowed_location_radius_meters": max(
@@ -75,6 +77,7 @@ def save_app_settings(data: Mapping[str, Any], default_app_name: str = "") -> di
         "report_default_range_days": str(max(1, _to_int(data.get("report_default_range_days"), 30))),
         "location_enforcement_enabled": "1" if _to_bool(data.get("location_enforcement_enabled")) else "0",
         "allowed_location_name": str(data.get("allowed_location_name", "") or "").strip(),
+        "allowed_location_address": str(data.get("allowed_location_address", "") or "").strip(),
         "allowed_location_latitude": _normalize_optional_float(data.get("allowed_location_latitude")),
         "allowed_location_longitude": _normalize_optional_float(data.get("allowed_location_longitude")),
         "allowed_location_radius_meters": str(

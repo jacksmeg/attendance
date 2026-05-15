@@ -18,13 +18,15 @@
     {% set settings_active = endpoint == 'app.admin_settings' %}
     {% set kiosk_active = endpoint == 'app.kiosk' %}
     {% set staff_portal_active = endpoint in ['app.staff_root', 'app.staff_home', 'app.staff_clock', 'app.staff_quick_access'] %}
+    {% set cloud_mode = is_cloud_fingerprint_mode %}
+    {% set public_home_url = url_for('app.staff_login') if cloud_mode else url_for('app.kiosk') %}
     {% set current_role = current_access_role if current_access_role else ('Administrator' if admin_authed else ('Staff' if staff_authed else 'Public session')) %}
     {% set display_name = display_name if display_name else (session.get('display_name') or session.get('admin_username') or 'Guest') %}
     {% set initials = (display_name[:1] if display_name else 'G')|upper %}
 
     <div class="desktop-shell">
         <aside class="sidebar">
-            <a class="sidebar-brand" href="{{ url_for('app.kiosk') }}">
+            <a class="sidebar-brand" href="{{ public_home_url }}">
                 <span class="sidebar-brand-mark">
                     {% if app_logo_url %}
                     <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
@@ -39,10 +41,12 @@
             </a>
 
             <nav class="sidebar-nav" aria-label="Primary navigation">
+                {% if not cloud_mode %}
                 <a class="sidebar-link {% if kiosk_active %}is-active{% endif %}" href="{{ url_for('app.kiosk') }}">
                     {{ icon('kiosk') }}
                     <span>Kiosk</span>
                 </a>
+                {% endif %}
                 {% if staff_authed %}
                     <a class="sidebar-link {% if staff_portal_active %}is-active{% endif %}" href="{{ url_for('app.staff_home') }}">
                         {{ icon('mobile') }}
@@ -96,7 +100,7 @@
                             {% elif staff_authed %}
                                 Staff self-service
                             {% else %}
-                                Public kiosk mode
+                                {% if cloud_mode %}Online access mode{% else %}Public kiosk mode{% endif %}
                             {% endif %}
                         </span>
                     </div>
@@ -119,7 +123,7 @@
                             <a class="tab-link {% if settings_active %}is-active{% endif %}" href="{{ url_for('app.admin_settings') }}">Settings</a>
                         {% endif %}
                     {% elif not staff_authed %}
-                        <a class="tab-link is-active" href="{{ url_for('app.kiosk') }}">Kiosk</a>
+                        <a class="tab-link is-active" href="{{ url_for('app.staff_login') }}">Staff Login</a>
                     {% endif %}
                 </nav>
 
