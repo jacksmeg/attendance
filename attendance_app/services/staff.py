@@ -120,6 +120,28 @@ def get_staff_by_code(staff_code: str) -> dict[str, Any] | None:
     return _decorate_staff_row(dict(row), ensure_token=True) if row else None
 
 
+def get_staff_by_login_identifier(login_identifier: str) -> dict[str, Any] | None:
+    value = login_identifier.strip()
+    if not value:
+        return None
+    db = get_db()
+    row = db.execute(
+        """
+        SELECT *
+        FROM staff
+        WHERE
+            is_active = 1
+            AND (
+                UPPER(staff_code) = UPPER(?)
+                OR LOWER(email) = LOWER(?)
+            )
+        LIMIT 1
+        """,
+        (value, value),
+    ).fetchone()
+    return _decorate_staff_row(dict(row), ensure_token=True) if row else None
+
+
 def get_staff_by_qr_token(qr_token: str) -> dict[str, Any] | None:
     db = get_db()
     row = db.execute(
@@ -135,11 +157,12 @@ def get_staff_by_qr_token(qr_token: str) -> dict[str, Any] | None:
 
 
 def authenticate_staff(
-    staff_code: str,
+    staff_code: str = "",
+    login_identifier: str = "",
     password: str = "",
     pin: str = "",
 ) -> dict[str, Any] | None:
-    staff = get_staff_by_code(staff_code)
+    staff = get_staff_by_login_identifier(login_identifier or staff_code)
     if not staff:
         return None
     if password and secret_matches(staff.get("password_hash"), password):

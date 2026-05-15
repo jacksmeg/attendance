@@ -542,6 +542,15 @@ class AttendanceAppTests(unittest.TestCase):
             self.assertAlmostEqual(check_in_row["latitude"], 5.60372)
             self.assertAlmostEqual(check_in_row["longitude"], -0.18696)
 
+    def test_staff_login_accepts_email_address(self) -> None:
+        login_response = self.client.post(
+            "/staff/login",
+            data={"staff_identifier": "test@example.com", "password": "Test@1234"},
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"attendance for today", login_response.data)
+
     def test_kiosk_quick_access_supports_pin_and_qr(self) -> None:
         pin_response = self.client.post(
             "/kiosk/quick-access",

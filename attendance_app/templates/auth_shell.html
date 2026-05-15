@@ -1,0 +1,27 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | {{ app_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="auth-shell-body {{ body_class|default('') }}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <section class="auth-flash-shell">
+            <div class="auth-flash-stack">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    {% endwith %}
+
+    <main class="auth-standalone-page">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

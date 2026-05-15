@@ -311,11 +311,17 @@ def register_routes(app: Flask) -> None:
     @bp.route("/staff/login", methods=["GET", "POST"])
     def staff_login():
         if request.method == "POST":
+            staff_identifier = request.form.get("staff_identifier", "").strip()
             staff_code = request.form.get("staff_code", "").strip().upper()
             password = request.form.get("password", "")
             pin = request.form.get("pin", "")
             next_url = request.form.get("next", "").strip()
-            staff = authenticate_staff(staff_code=staff_code, password=password, pin=pin)
+            staff = authenticate_staff(
+                staff_code=staff_code,
+                login_identifier=staff_identifier,
+                password=password,
+                pin=pin,
+            )
             if staff:
                 start_staff_session(staff)
                 flash("Welcome back. You are signed in.", "success")
@@ -330,6 +336,7 @@ def register_routes(app: Flask) -> None:
             "staff/login.html",
             title="Staff Login",
             next_url=request.args.get("next", ""),
+            body_class="staff-login-minimal-body",
         )
 
     @bp.route("/logout")

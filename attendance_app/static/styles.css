@@ -1839,3 +1839,291 @@ tbody tr:hover {
         padding-inline: 10px;
     }
 }
+
+.auth-shell-body {
+    min-height: 100vh;
+}
+
+.auth-flash-shell {
+    position: relative;
+    z-index: 2;
+}
+
+.auth-flash-stack {
+    width: min(100%, 540px);
+    margin: 0 auto;
+    padding: 20px 18px 0;
+    display: grid;
+    gap: 12px;
+}
+
+.auth-standalone-page {
+    min-height: 100vh;
+}
+
+.staff-login-minimal-body {
+    background:
+        radial-gradient(circle at top center, rgba(78, 219, 12, 0.08), transparent 22%),
+        linear-gradient(180deg, #1c2118 0%, #171b14 100%);
+    color: #f2f6e7;
+    font-family: "Segoe UI", "Aptos", sans-serif;
+}
+
+.staff-login-screen {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 42px 18px;
+}
+
+.staff-login-card {
+    width: min(100%, 480px);
+    padding: 38px 34px 28px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(43, 48, 35, 0.98), rgba(38, 43, 31, 0.98));
+    border: 1px solid rgba(103, 118, 86, 0.26);
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.28);
+}
+
+.staff-login-brand {
+    display: grid;
+    justify-items: center;
+    gap: 18px;
+    margin-bottom: 28px;
+    text-align: center;
+}
+
+.staff-login-logo {
+    width: 102px;
+    height: 102px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 2px solid rgba(78, 219, 12, 0.22);
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.12));
+    box-shadow: 0 0 0 10px rgba(78, 219, 12, 0.05);
+    color: #55da12;
+}
+
+.staff-login-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+.staff-login-logo .icon {
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+.staff-login-intro {
+    display: grid;
+    gap: 10px;
+}
+
+.staff-login-intro h1 {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 2.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+    color: #4edb0c;
+}
+
+.staff-login-intro p {
+    margin: 0;
+    color: rgba(236, 243, 224, 0.78);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.staff-login-switcher {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 6px;
+    border-radius: 18px;
+    background: rgba(60, 67, 49, 0.52);
+    border: 1px solid rgba(108, 118, 93, 0.18);
+    margin-bottom: 28px;
+}
+
+.staff-login-tab {
+    min-height: 48px;
+    border-radius: 14px;
+    border: 0;
+    background: transparent;
+    color: rgba(244, 248, 236, 0.72);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.staff-login-tab:hover,
+.staff-login-tab:focus-visible {
+    transform: translateY(-1px);
+}
+
+.staff-login-tab.is-active {
+    background: rgba(31, 35, 27, 0.92);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(92, 103, 78, 0.34);
+}
+
+.staff-login-form {
+    display: grid;
+    gap: 22px;
+}
+
+.staff-login-field {
+    display: grid;
+    gap: 10px;
+}
+
+.staff-login-field > span {
+    color: #f4f8ec;
+    font-size: 0.98rem;
+    font-weight: 700;
+}
+
+.staff-login-field input {
+    width: 100%;
+    min-height: 54px;
+    padding: 15px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(89, 99, 76, 0.56);
+    background: rgba(39, 44, 31, 0.96);
+    color: #f2f7e7;
+    font-size: 1rem;
+}
+
+.staff-login-field input::placeholder {
+    color: rgba(214, 222, 198, 0.55);
+}
+
+.staff-login-field input:focus {
+    outline: none;
+    border-color: rgba(78, 219, 12, 0.5);
+    box-shadow: 0 0 0 4px rgba(78, 219, 12, 0.08);
+}
+
+.staff-login-field small {
+    color: rgba(226, 232, 212, 0.72);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.staff-login-secret-panel {
+    display: none;
+}
+
+.staff-login-secret-panel.is-active {
+    display: block;
+}
+
+.staff-login-secret-row {
+    position: relative;
+}
+
+.staff-login-secret-row input {
+    padding-right: 54px;
+}
+
+.staff-login-eye {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    border: 0;
+    background: transparent;
+    color: rgba(225, 232, 212, 0.72);
+    cursor: pointer;
+}
+
+.staff-login-eye:hover,
+.staff-login-eye:focus-visible {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+    outline: none;
+}
+
+.staff-login-eye .icon {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.staff-login-submit {
+    min-height: 54px;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #49d40f 0%, #3bc408 100%);
+    color: #0e120b;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 14px 28px rgba(73, 212, 15, 0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.staff-login-submit:hover,
+.staff-login-submit:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 34px rgba(73, 212, 15, 0.24);
+    filter: brightness(1.02);
+    outline: none;
+}
+
+.staff-login-help {
+    margin: 22px 0 18px;
+    text-align: center;
+    color: rgba(230, 236, 218, 0.72);
+    font-size: 0.96rem;
+}
+
+.staff-login-footer {
+    display: grid;
+    gap: 6px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(103, 118, 86, 0.22);
+    text-align: center;
+}
+
+.staff-login-footer strong {
+    font-size: 1.02rem;
+    color: #f5f8ef;
+}
+
+.staff-login-footer span {
+    color: rgba(226, 232, 212, 0.68);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .auth-flash-stack {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .staff-login-screen {
+        padding: 22px 12px;
+    }
+
+    .staff-login-card {
+        padding: 26px 18px 22px;
+        border-radius: 20px;
+    }
+
+    .staff-login-logo {
+        width: 86px;
+        height: 86px;
+    }
+
+    .staff-login-intro h1 {
+        font-size: 1.85rem;
+    }
+}

@@ -1,67 +1,120 @@
-{% extends "base.html" %}
+{% extends "auth_shell.html" %}
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="center-stage">
-    <div class="auth-layout">
-        <article class="panel-card auth-panel">
-            <div class="auth-brand-lockup">
-                <span class="auth-brand-mark">
-                    {% if app_logo_url %}
+<section class="staff-login-screen">
+    <article class="staff-login-card">
+        <div class="staff-login-brand">
+            <span class="staff-login-logo">
+                {% if app_logo_url %}
                     <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
-                    {% else %}
+                {% else %}
                     {{ icon('fingerprint') }}
-                    {% endif %}
-                </span>
-                <span class="auth-brand-copy">
-                    <span class="auth-brand-title">{{ app_name }}</span>
-                    <span class="auth-brand-subtitle">Staff self-service sign in</span>
-                </span>
+                {% endif %}
+            </span>
+            <div class="staff-login-intro">
+                <h1>{{ app_name|upper }}</h1>
+                <p>Sign in with your staff number or email, then use your password or PIN.</p>
             </div>
-            <p class="section-kicker">Staff Access</p>
-            <h1>Sign in to clock in, manage breaks, and view today's attendance.</h1>
-            <p class="hero-subtitle">Use your staff code with either your password or your PIN to enter {{ app_name }} from any device.</p>
+        </div>
 
-            <form method="post" class="stack-form auth-form">
-                <input type="hidden" name="next" value="{{ next_url }}">
-                <label class="field">
-                    <span>Staff Code</span>
-                    <input type="text" name="staff_code" placeholder="EMP-001" required>
-                </label>
-                <label class="field">
+        <div class="staff-login-switcher" role="tablist" aria-label="Login method">
+            <button class="staff-login-tab is-active" type="button" data-mode="password" aria-pressed="true">Staff Login</button>
+            <button class="staff-login-tab" type="button" data-mode="pin" aria-pressed="false">PIN Login</button>
+        </div>
+
+        <form method="post" class="staff-login-form" id="staff-login-form">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <label class="staff-login-field">
+                <span>Staff Number or Email Address</span>
+                <input type="text" name="staff_identifier" placeholder="Enter your staff number or email" autocomplete="username" required>
+                <small>Use your staff code like `EMP-001` or the email saved on your staff profile.</small>
+            </label>
+
+            <div class="staff-login-secret-panel is-active" data-panel="password">
+                <label class="staff-login-field">
                     <span>Password</span>
-                    <input type="password" name="password" placeholder="Enter password">
+                    <div class="staff-login-secret-row">
+                        <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password">
+                        <button class="staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
+                            {{ icon('eye') }}
+                        </button>
+                    </div>
                 </label>
-                <label class="field">
-                    <span>PIN</span>
-                    <input type="password" name="pin" placeholder="Enter PIN">
-                </label>
-                <button class="primary-button" type="submit">
-                    <span class="button-icon">{{ icon('mobile') }}</span>
-                    <span>Open Staff Portal</span>
-                </button>
-            </form>
-        </article>
-
-        <article class="panel-card auth-side-panel">
-            <p class="section-kicker">Access Options</p>
-            <h3>{{ app_name }} access options</h3>
-            <div class="detail-stack">
-                <div class="detail-row">
-                    <span>Fingerprint kiosk</span>
-                    <strong>Entrance clock-in</strong>
-                </div>
-                <div class="detail-row">
-                    <span>PIN / password</span>
-                    <strong>Fast self-service</strong>
-                </div>
-                <div class="detail-row">
-                    <span>QR badge</span>
-                    <strong>Mobile quick access</strong>
-                </div>
             </div>
-            <p class="panel-note">If you do not have your portal password or PIN yet, ask HR or an administrator to update your staff profile.</p>
-        </article>
-    </div>
+
+            <div class="staff-login-secret-panel" data-panel="pin" hidden>
+                <label class="staff-login-field">
+                    <span>PIN</span>
+                    <div class="staff-login-secret-row">
+                        <input type="password" name="pin" placeholder="Enter your PIN" inputmode="numeric" autocomplete="one-time-code">
+                        <button class="staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">
+                            {{ icon('eye') }}
+                        </button>
+                    </div>
+                    <small>Use the PIN assigned to your staff profile.</small>
+                </label>
+            </div>
+
+            <button class="staff-login-submit" type="submit" id="staff-login-submit">
+                <span>Sign In</span>
+            </button>
+        </form>
+
+        <p class="staff-login-help">Need access? Contact HR or an administrator to activate your staff portal.</p>
+
+        <footer class="staff-login-footer">
+            <strong>{{ app_name }}</strong>
+            <span>Staff self-service attendance portal</span>
+        </footer>
+    </article>
 </section>
+
+<script>
+    const tabs = Array.from(document.querySelectorAll(".staff-login-tab"));
+    const panels = Array.from(document.querySelectorAll(".staff-login-secret-panel"));
+    const submitLabel = document.querySelector("#staff-login-submit span");
+    const passwordInput = document.querySelector('input[name="password"]');
+    const pinInput = document.querySelector('input[name="pin"]');
+
+    const setMode = (mode) => {
+        tabs.forEach((tab) => {
+            const active = tab.dataset.mode === mode;
+            tab.classList.toggle("is-active", active);
+            tab.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        panels.forEach((panel) => {
+            const active = panel.dataset.panel === mode;
+            panel.classList.toggle("is-active", active);
+            panel.hidden = !active;
+        });
+        if (submitLabel) {
+            submitLabel.textContent = mode === "pin" ? "Continue with PIN" : "Sign In";
+        }
+        if (passwordInput) {
+            passwordInput.disabled = mode !== "password";
+            if (mode !== "password") passwordInput.value = "";
+        }
+        if (pinInput) {
+            pinInput.disabled = mode !== "pin";
+            if (mode !== "pin") pinInput.value = "";
+        }
+    };
+
+    tabs.forEach((tab) => {
+        tab.addEventListener("click", () => setMode(tab.dataset.mode));
+    });
+
+    const bindVisibilityToggle = (selector, input) => {
+        const button = document.querySelector(selector);
+        if (!button || !input) return;
+        button.addEventListener("click", () => {
+            input.type = input.type === "password" ? "text" : "password";
+        });
+    };
+
+    bindVisibilityToggle("[data-toggle-password]", passwordInput);
+    bindVisibilityToggle("[data-toggle-pin]", pinInput);
+    setMode("password");
+</script>
 {% endblock %}
