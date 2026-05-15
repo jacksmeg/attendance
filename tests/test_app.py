@@ -12,6 +12,11 @@ from attendance_app import create_app
 from attendance_app.services.attendance import list_attendance_events
 from attendance_app.services.staff import create_staff, get_staff, upsert_fingerprint
 
+TEST_SELFIE_DATA_URL = (
+    "data:image/png;base64,"
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Zf1cAAAAASUVORK5CYII="
+)
+
 
 class AttendanceAppTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -547,7 +552,7 @@ class AttendanceAppTests(unittest.TestCase):
     def test_staff_login_mobile_clock_flow_with_breaks_and_gps(self) -> None:
         login_response = self.client.post(
             "/staff/login",
-            data={"staff_code": "EMP-100", "pin": "4321"},
+            data={"staff_code": "EMP-100", "pin": "4321", "selfie_data": TEST_SELFIE_DATA_URL},
             follow_redirects=True,
         )
         self.assertEqual(login_response.status_code, 200)
@@ -609,7 +614,7 @@ class AttendanceAppTests(unittest.TestCase):
 
         login_response = self.client.post(
             "/staff/login",
-            data={"staff_code": "EMP-100", "pin": "4321"},
+            data={"staff_code": "EMP-100", "pin": "4321", "selfie_data": TEST_SELFIE_DATA_URL},
             follow_redirects=True,
         )
         self.assertEqual(login_response.status_code, 200)
@@ -662,7 +667,7 @@ class AttendanceAppTests(unittest.TestCase):
 
         self.client.post(
             "/staff/login",
-            data={"staff_code": "EMP-100", "pin": "4321"},
+            data={"staff_code": "EMP-100", "pin": "4321", "selfie_data": TEST_SELFIE_DATA_URL},
             follow_redirects=True,
         )
 
@@ -677,11 +682,43 @@ class AttendanceAppTests(unittest.TestCase):
     def test_staff_login_accepts_email_address(self) -> None:
         login_response = self.client.post(
             "/staff/login",
-            data={"staff_identifier": "test@example.com", "password": "Test@1234"},
+            data={
+                "staff_identifier": "test@example.com",
+                "password": "Test@1234",
+                "selfie_data": TEST_SELFIE_DATA_URL,
+            },
             follow_redirects=True,
         )
         self.assertEqual(login_response.status_code, 200)
         self.assertIn(b"attendance for today", login_response.data)
+
+    def test_staff_login_requires_selfie_and_creates_audit_record(self) -> None:
+        missing_selfie_response = self.client.post(
+            "/staff/login",
+            data={"staff_code": "EMP-100", "pin": "4321"},
+            follow_redirects=True,
+        )
+        self.assertEqual(missing_selfie_response.status_code, 200)
+        self.assertIn(b"Capture a selfie before signing in.", missing_selfie_response.data)
+
+        login_response = self.client.post(
+            "/staff/login",
+            data={"staff_code": "EMP-100", "pin": "4321", "selfie_data": TEST_SELFIE_DATA_URL},
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"attendance for today", login_response.data)
+
+        self.client.get("/logout", follow_redirects=True)
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+        audit_response = self.client.get("/admin/audit-logs")
+        self.assertEqual(audit_response.status_code, 200)
+        self.assertIn(b"Staff login selfie captured", audit_response.data)
+        self.assertIn(b"Open image", audit_response.data)
 
     def test_kiosk_quick_access_supports_pin_and_qr(self) -> None:
         pin_response = self.client.post(
@@ -730,7 +767,11 @@ class AttendanceAppTests(unittest.TestCase):
 
         login_response = self.client.post(
             "/staff/login",
-            data={"staff_code": manager["staff_code"], "password": "Manager@123"},
+            data={
+                "staff_code": manager["staff_code"],
+                "password": "Manager@123",
+                "selfie_data": TEST_SELFIE_DATA_URL,
+            },
             follow_redirects=True,
         )
         self.assertEqual(login_response.status_code, 200)

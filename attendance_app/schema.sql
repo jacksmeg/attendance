@@ -77,3 +77,21 @@ CREATE TABLE IF NOT EXISTS app_settings (
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS staff_selfie_audits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    staff_id INTEGER NOT NULL,
+    audit_type TEXT NOT NULL,
+    login_identifier TEXT,
+    auth_method TEXT NOT NULL,
+    photo_filename TEXT NOT NULL,
+    photo_mime_type TEXT NOT NULL,
+    file_size_bytes INTEGER NOT NULL DEFAULT 0,
+    ip_address TEXT,
+    device_name TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_selfie_audits_staff_created
+ON staff_selfie_audits(staff_id, created_at DESC);

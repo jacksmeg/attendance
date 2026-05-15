@@ -16,14 +16,15 @@ def reset_system_data(instance_dir: Path, database_path: Path) -> Path | None:
         shutil.copy2(database_path, backup_path)
 
     db = get_db()
-    for table_name in ("attendance_events", "fingerprint_templates", "staff"):
+    for table_name in ("staff_selfie_audits", "attendance_events", "fingerprint_templates", "staff"):
         db.execute(f"DELETE FROM {table_name}")
     db.execute(
-        "DELETE FROM sqlite_sequence WHERE name IN ('attendance_events', 'fingerprint_templates', 'staff')"
+        "DELETE FROM sqlite_sequence WHERE name IN ('staff_selfie_audits', 'attendance_events', 'fingerprint_templates', 'staff')"
     )
     db.commit()
 
     _clear_directory(instance_dir / "staff_photos")
+    _clear_directory(instance_dir / "staff_selfie_audits")
     _clear_directory(instance_dir / "enrollment_sessions")
 
     mock_store = instance_dir / "mock_fingerprint_store.json"

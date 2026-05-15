@@ -671,6 +671,24 @@ body.admin-ui {
     line-height: 1.6;
 }
 
+.admin-inline-media-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--admin-primary);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-inline-audit-photo {
+    width: 52px;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 1px solid rgba(44, 105, 243, 0.16);
+    box-shadow: 0 10px 20px rgba(20, 30, 58, 0.08);
+}
+
 .admin-chart-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.3fr) 300px;

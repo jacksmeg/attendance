@@ -62,6 +62,7 @@ from .services.enrollment_sessions import (
 from .services.qr_codes import build_qr_svg
 from .services.reporting import attendance_rows_to_csv, build_report_snapshot, report_snapshot_to_csv
 from .services.seed import seed_demo_data
+from .services.selfie_audits import create_staff_selfie_audit, list_staff_selfie_audits
 from .services.settings import (
     WORKDAY_OPTIONS,
     admin_password_matches,
@@ -93,6 +94,12 @@ STAFF_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_STAFF_PHOTO_BYTES = 4 * 1024 * 1024
 SYSTEM_LOGO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_SYSTEM_LOGO_BYTES = 3 * 1024 * 1024
+AUDIT_SELFIE_MIME_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+MAX_AUDIT_SELFIE_BYTES = 3 * 1024 * 1024
 
 
 def register_routes(app: Flask) -> None:
@@ -158,6 +165,11 @@ def register_routes(app: Flask) -> None:
     @bp.route("/media/system/<path:filename>")
     def system_logo(filename: str):
         return send_from_directory(_system_logo_directory(), filename, max_age=0)
+
+    @bp.route("/media/audit-selfies/<path:filename>")
+    @roles_required(*SETTINGS_ROLES)
+    def audit_selfie_image(filename: str):
+        return send_from_directory(_audit_selfie_directory(), filename, max_age=0)
 
     @bp.route("/kiosk")
     def kiosk():
@@ -316,6 +328,7 @@ def register_routes(app: Flask) -> None:
             staff_code = request.form.get("staff_code", "").strip().upper()
             password = request.form.get("password", "")
             pin = request.form.get("pin", "")
+            selfie_data = request.form.get("selfie_data", "").strip()
             next_url = request.form.get("next", "").strip()
             staff = authenticate_staff(
                 staff_code=staff_code,
@@ -324,6 +337,27 @@ def register_routes(app: Flask) -> None:
                 pin=pin,
             )
             if staff:
+                auth_method = "password" if password else "pin"
+                try:
+                    selfie_capture = _store_login_selfie_capture(selfie_data)
+                except ValueError as exc:
+                    flash(str(exc), "error")
+                    return render_template(
+                        "staff/login.html",
+                        title="Staff Login",
+                        next_url=next_url,
+                        body_class="staff-login-minimal-body",
+                    )
+                create_staff_selfie_audit(
+                    staff_id=int(staff["id"]),
+                    login_identifier=staff_identifier or staff_code,
+                    auth_method=auth_method,
+                    photo_filename=selfie_capture["filename"],
+                    photo_mime_type=selfie_capture["mime_type"],
+                    file_size_bytes=selfie_capture["file_size_bytes"],
+                    ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "")[:255],
+                    device_name=_request_device_name(),
+                )
                 start_staff_session(staff)
                 flash("Welcome back. You are signed in.", "success")
                 if next_url:
@@ -1000,10 +1034,11 @@ def register_routes(app: Flask) -> None:
     @bp.route("/admin/audit-logs")
     @roles_required(*SETTINGS_ROLES)
     def admin_audit_logs():
+        audit_rows = _selfie_audit_rows(list_staff_selfie_audits(limit=120))
         return render_template(
             "admin/audit_logs.html",
             title="Audit Logs",
-            audit_rows=[],
+            audit_rows=audit_rows,
             **_admin_context("Audit Logs", "audit", ["Dashboard", "Audit Logs"]),
         )
 
@@ -1560,6 +1595,38 @@ def _store_system_logo_upload(upload: FileStorage | None) -> str | None:
     return filename
 
 
+def _store_login_selfie_capture(data_url: str) -> dict[str, Any]:
+    if not data_url:
+        raise ValueError("Capture a selfie before signing in.")
+    if not data_url.startswith("data:") or ";base64," not in data_url:
+        raise ValueError("The selfie capture format is invalid. Refresh the page and try again.")
+
+    header, encoded = data_url.split(";base64,", 1)
+    mime_type = header.replace("data:", "", 1).strip().lower()
+    suffix = AUDIT_SELFIE_MIME_TYPES.get(mime_type)
+    if not suffix:
+        raise ValueError("Only JPG, PNG, or WEBP selfie captures are supported.")
+
+    try:
+        payload = b64decode(encoded, validate=True)
+    except Exception as exc:  # pragma: no cover - defensive decode guard
+        raise ValueError("The selfie capture could not be decoded. Please retake the photo.") from exc
+
+    if not payload:
+        raise ValueError("The selfie capture was empty. Please retake the photo.")
+    if len(payload) > MAX_AUDIT_SELFIE_BYTES:
+        raise ValueError("The captured selfie is too large. Retake it and try again.")
+
+    filename = f"login-selfie-{uuid4().hex}{suffix}"
+    destination = _audit_selfie_directory() / filename
+    destination.write_bytes(payload)
+    return {
+        "filename": filename,
+        "mime_type": mime_type,
+        "file_size_bytes": len(payload),
+    }
+
+
 def _staff_photo_directory() -> Path:
     directory = current_app.config["APP_SETTINGS"].instance_dir / "staff_photos"
     directory.mkdir(parents=True, exist_ok=True)
@@ -1568,6 +1635,12 @@ def _staff_photo_directory() -> Path:
 
 def _system_logo_directory() -> Path:
     directory = current_app.config["APP_SETTINGS"].instance_dir / "system_branding"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def _audit_selfie_directory() -> Path:
+    directory = current_app.config["APP_SETTINGS"].instance_dir / "staff_selfie_audits"
     directory.mkdir(parents=True, exist_ok=True)
     return directory
 
@@ -1592,6 +1665,12 @@ def _system_logo_url_for_filename(filename: str | None) -> str:
     if not filename:
         return ""
     return url_for("app.system_logo", filename=filename)
+
+
+def _audit_selfie_url_for_filename(filename: str | None) -> str:
+    if not filename:
+        return ""
+    return url_for("app.audit_selfie_image", filename=filename)
 
 
 def _read_settings_form(form) -> dict[str, Any]:
@@ -2990,6 +3069,31 @@ def _audit_reference_rows() -> list[dict[str, str]]:
         {"time": "May 19, 2024 08:31 AM", "actor": "HR/Admin", "event": "Approved leave request for Jane Smith", "area": "Leave"},
         {"time": "May 18, 2024 06:10 PM", "actor": "Finance", "event": "Processed monthly payroll batch", "area": "Payroll"},
     ]
+
+
+def _selfie_audit_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    formatted_rows: list[dict[str, Any]] = []
+    for row in rows:
+        created_at = str(row.get("created_at") or "")
+        try:
+            display_time = datetime.fromisoformat(created_at).strftime("%d %b %Y, %I:%M %p")
+        except ValueError:
+            display_time = created_at
+        formatted_rows.append(
+            {
+                "time": display_time,
+                "actor": f"{row.get('first_name', '')} {row.get('last_name', '')}".strip() or row.get("staff_code", ""),
+                "staff_code": row.get("staff_code", ""),
+                "department": row.get("department", ""),
+                "event": "Staff login selfie captured",
+                "area": "Selfie Audit",
+                "auth_method": str(row.get("auth_method", "")).replace("_", " ").title(),
+                "ip_address": row.get("ip_address", ""),
+                "device_name": row.get("device_name", ""),
+                "photo_url": _audit_selfie_url_for_filename(row.get("photo_filename")),
+            }
+        )
+    return formatted_rows
 
 
 def _staff_display_rows(staff_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -9,9 +9,11 @@
             <thead>
                 <tr>
                     <th>Timestamp</th>
-                    <th>Actor</th>
+                    <th>Staff</th>
                     <th>Event</th>
-                    <th>Area</th>
+                    <th>Method</th>
+                    <th>IP / Device</th>
+                    <th>Evidence</th>
                 </tr>
             </thead>
             <tbody>
@@ -19,17 +21,34 @@
                 {% for row in audit_rows %}
                 <tr>
                     <td>{{ row.time }}</td>
-                    <td>{{ row.actor }}</td>
+                    <td>
+                        <strong>{{ row.actor }}</strong>
+                        <div class="cell-sub">{{ row.staff_code }} · {{ row.department }}</div>
+                    </td>
                     <td>{{ row.event }}</td>
-                    <td>{{ row.area }}</td>
+                    <td>{{ row.auth_method }}</td>
+                    <td>
+                        <strong>{{ row.ip_address or 'Unknown IP' }}</strong>
+                        <div class="cell-sub">{{ row.device_name or 'Unknown device' }}</div>
+                    </td>
+                    <td>
+                        {% if row.photo_url %}
+                        <a href="{{ row.photo_url }}" target="_blank" rel="noopener" class="admin-inline-media-link">
+                            <img src="{{ row.photo_url }}" alt="Captured login selfie" class="admin-inline-audit-photo">
+                            <span>Open image</span>
+                        </a>
+                        {% else %}
+                        <span class="cell-sub">No evidence</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="4">
+                    <td colspan="6">
                         <div class="admin-empty">
                             <strong>No audit activity yet.</strong>
-                            <p>Administrative actions will begin to appear here as you use the system.</p>
+                            <p>Selfie-backed staff login activity will start appearing here after staff sign in online.</p>
                         </div>
                     </td>
                 </tr>

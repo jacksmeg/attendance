@@ -49,6 +49,10 @@ def init_db() -> None:
     _ensure_column(db, "attendance_events", "longitude", "REAL")
     _ensure_column(db, "attendance_events", "gps_accuracy", "REAL")
     db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_staff_qr_token ON staff(qr_token)")
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_staff_selfie_audits_staff_created "
+        "ON staff_selfie_audits(staff_id, created_at DESC)"
+    )
     db.commit()
 
 

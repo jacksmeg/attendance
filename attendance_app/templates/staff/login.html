@@ -25,6 +25,7 @@
 
         <form method="post" class="staff-login-form" id="staff-login-form">
             <input type="hidden" name="next" value="{{ next_url }}">
+            <input type="hidden" name="selfie_data" id="staff-login-selfie-data">
             <label class="staff-login-field">
                 <span>Staff Number or Email Address</span>
                 <input type="text" name="staff_identifier" placeholder="Enter your staff number or email" autocomplete="username" required>
@@ -56,6 +57,36 @@
                 </label>
             </div>
 
+            <section class="staff-login-camera-card" aria-label="Selfie audit">
+                <div class="staff-login-camera-head">
+                    <div>
+                        <strong>Selfie Audit Capture</strong>
+                        <p>Before staff login completes, the system captures one live selfie for audit evidence only.</p>
+                    </div>
+                    <span class="staff-login-camera-badge">No face recognition</span>
+                </div>
+
+                <div class="staff-login-camera-stage">
+                    <video id="staff-login-video" class="staff-login-video" autoplay playsinline muted></video>
+                    <img id="staff-login-preview" class="staff-login-preview" alt="Captured selfie preview" hidden>
+                    <div class="staff-login-camera-overlay" id="staff-login-camera-overlay">
+                        <span>Camera loading...</span>
+                    </div>
+                </div>
+
+                <canvas id="staff-login-canvas" hidden></canvas>
+
+                <div class="staff-login-camera-actions">
+                    <button class="staff-login-camera-button" type="button" id="staff-login-start-camera">Turn On Camera</button>
+                    <button class="staff-login-camera-button is-primary" type="button" id="staff-login-capture-selfie">Capture Selfie</button>
+                    <button class="staff-login-camera-button" type="button" id="staff-login-retake-selfie" hidden>Retake Selfie</button>
+                </div>
+
+                <p class="staff-login-camera-note" id="staff-login-camera-note">
+                    Your selfie is stored as a login audit record and is not compared with your profile photo automatically.
+                </p>
+            </section>
+
             <button class="staff-login-submit" type="submit" id="staff-login-submit">
                 <span>Sign In</span>
             </button>
@@ -74,8 +105,19 @@
     const tabs = Array.from(document.querySelectorAll(".staff-login-tab"));
     const panels = Array.from(document.querySelectorAll(".staff-login-secret-panel"));
     const submitLabel = document.querySelector("#staff-login-submit span");
+    const form = document.querySelector("#staff-login-form");
     const passwordInput = document.querySelector('input[name="password"]');
     const pinInput = document.querySelector('input[name="pin"]');
+    const selfieInput = document.querySelector("#staff-login-selfie-data");
+    const video = document.querySelector("#staff-login-video");
+    const preview = document.querySelector("#staff-login-preview");
+    const canvas = document.querySelector("#staff-login-canvas");
+    const cameraNote = document.querySelector("#staff-login-camera-note");
+    const cameraOverlay = document.querySelector("#staff-login-camera-overlay");
+    const startCameraButton = document.querySelector("#staff-login-start-camera");
+    const captureSelfieButton = document.querySelector("#staff-login-capture-selfie");
+    const retakeSelfieButton = document.querySelector("#staff-login-retake-selfie");
+    let cameraStream = null;
 
     const setMode = (mode) => {
         tabs.forEach((tab) => {
@@ -116,5 +158,115 @@
     bindVisibilityToggle("[data-toggle-password]", passwordInput);
     bindVisibilityToggle("[data-toggle-pin]", pinInput);
     setMode("password");
+
+    const updateCameraNote = (message, isError = false) => {
+        if (!cameraNote) return;
+        cameraNote.textContent = message;
+        cameraNote.classList.toggle("is-error", isError);
+    };
+
+    const stopCamera = () => {
+        if (!cameraStream) return;
+        cameraStream.getTracks().forEach((track) => track.stop());
+        cameraStream = null;
+    };
+
+    const startCamera = async () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !video) {
+            updateCameraNote("This browser does not support camera access for selfie audit.", true);
+            return false;
+        }
+        if (cameraStream) {
+            return true;
+        }
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: "user",
+                    width: { ideal: 720 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+            video.srcObject = cameraStream;
+            if (cameraOverlay) {
+                cameraOverlay.hidden = true;
+            }
+            preview.hidden = true;
+            video.hidden = false;
+            retakeSelfieButton.hidden = true;
+            updateCameraNote("Camera is ready. Capture one selfie before signing in.");
+            return true;
+        } catch (error) {
+            updateCameraNote("Camera access was blocked. Allow camera permission to continue.", true);
+            return false;
+        }
+    };
+
+    const captureSelfie = () => {
+        if (!video || !canvas || !selfieInput) {
+            return false;
+        }
+        const width = video.videoWidth || 720;
+        const height = video.videoHeight || 720;
+        if (!width || !height) {
+            updateCameraNote("The camera is still warming up. Try capture again in a moment.", true);
+            return false;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+            updateCameraNote("The browser could not prepare the selfie image.", true);
+            return false;
+        }
+        context.drawImage(video, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+        selfieInput.value = dataUrl;
+        preview.src = dataUrl;
+        preview.hidden = false;
+        video.hidden = true;
+        retakeSelfieButton.hidden = false;
+        stopCamera();
+        updateCameraNote("Selfie captured. You can now sign in.");
+        return true;
+    };
+
+    startCameraButton?.addEventListener("click", async () => {
+        await startCamera();
+    });
+
+    captureSelfieButton?.addEventListener("click", async () => {
+        const ready = await startCamera();
+        if (ready) {
+            captureSelfie();
+        }
+    });
+
+    retakeSelfieButton?.addEventListener("click", async () => {
+        if (selfieInput) {
+            selfieInput.value = "";
+        }
+        preview.hidden = true;
+        preview.removeAttribute("src");
+        await startCamera();
+    });
+
+    form?.addEventListener("submit", async (event) => {
+        if (selfieInput?.value) {
+            return;
+        }
+        event.preventDefault();
+        const ready = await startCamera();
+        if (!ready) {
+            return;
+        }
+        if (captureSelfie()) {
+            form.requestSubmit();
+        }
+    });
+
+    window.addEventListener("beforeunload", stopCamera);
+    startCamera();
 </script>
 {% endblock %}

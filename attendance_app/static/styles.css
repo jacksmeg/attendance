@@ -2021,6 +2021,116 @@ tbody tr:hover {
     display: block;
 }
 
+.staff-login-camera-card {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(34, 39, 28, 0.9);
+    border: 1px solid rgba(92, 103, 78, 0.34);
+}
+
+.staff-login-camera-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.staff-login-camera-head strong {
+    display: block;
+    color: #f5f8ef;
+    font-size: 1rem;
+}
+
+.staff-login-camera-head p {
+    margin: 6px 0 0;
+    color: rgba(226, 232, 212, 0.72);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.staff-login-camera-badge {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(78, 219, 12, 0.12);
+    color: #91ee5d;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.staff-login-camera-stage {
+    position: relative;
+    overflow: hidden;
+    min-height: 248px;
+    border-radius: 18px;
+    background: #11150e;
+    border: 1px solid rgba(92, 103, 78, 0.32);
+}
+
+.staff-login-video,
+.staff-login-preview {
+    width: 100%;
+    min-height: 248px;
+    display: block;
+    object-fit: cover;
+    background: #141814;
+}
+
+.staff-login-camera-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(180deg, rgba(17, 21, 14, 0.18), rgba(17, 21, 14, 0.84));
+    color: rgba(236, 243, 224, 0.82);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.staff-login-camera-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.staff-login-camera-button {
+    min-height: 46px;
+    padding: 0 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(89, 99, 76, 0.58);
+    background: rgba(43, 48, 35, 0.96);
+    color: #f1f6e8;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.staff-login-camera-button:hover,
+.staff-login-camera-button:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(78, 219, 12, 0.45);
+    outline: none;
+}
+
+.staff-login-camera-button.is-primary {
+    border-color: transparent;
+    background: linear-gradient(180deg, #49d40f 0%, #3bc408 100%);
+    color: #10140b;
+}
+
+.staff-login-camera-note {
+    margin: 0;
+    color: rgba(226, 232, 212, 0.78);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.staff-login-camera-note.is-error {
+    color: #ffb1a8;
+}
+
 .staff-login-secret-row {
     position: relative;
 }
@@ -2125,5 +2235,10 @@ tbody tr:hover {
 
     .staff-login-intro h1 {
         font-size: 1.85rem;
+    }
+
+    .staff-login-camera-head,
+    .staff-login-camera-actions {
+        flex-direction: column;
     }
 }
