@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from base64 import b64decode
 from datetime import date, datetime, time, timedelta
+import math
 from pathlib import Path
 from typing import Any
 import sqlite3
@@ -1195,6 +1196,7 @@ def register_routes(app: Flask) -> None:
             workday_options=WORKDAY_OPTIONS,
             admin_security=admin_security,
             password_form=password_form,
+            location_policy=_location_policy_view_model(app_defaults),
             **_admin_context("Settings", "settings", ["Dashboard", "Settings"]),
         )
 
@@ -1224,6 +1226,9 @@ def register_routes(app: Flask) -> None:
 
         quick_url = request.url_root.rstrip("/") + url_for("app.staff_quick_access", qr_token=staff["qr_token"])
         today_status = get_staff_today_status(staff["id"])
+        location_policy = _location_policy_view_model(
+            get_app_settings(default_app_name=current_app.config["APP_SETTINGS"].app_name)
+        )
         return render_template(
             "staff/home.html",
             title="Staff Portal",
@@ -1232,6 +1237,7 @@ def register_routes(app: Flask) -> None:
             today_status=today_status,
             quick_url=quick_url,
             mobile_qr_svg=build_qr_svg(quick_url),
+            location_policy=location_policy,
         )
 
     @bp.route("/staff/clock", methods=["POST"])
@@ -1259,6 +1265,14 @@ def register_routes(app: Flask) -> None:
         longitude = _coerce_float(request.form.get("longitude"))
         gps_accuracy = _coerce_float(request.form.get("gps_accuracy"))
         notes = request.form.get("notes", "").strip()
+        location_error = _attendance_location_error(
+            latitude=latitude,
+            longitude=longitude,
+            gps_accuracy=gps_accuracy,
+        )
+        if location_error:
+            flash(location_error, "error")
+            return redirect(url_for("app.staff_home"))
         result = record_attendance(
             staff=staff,
             template_ref=staff["staff_code"],
@@ -1285,6 +1299,9 @@ def register_routes(app: Flask) -> None:
             return redirect(url_for("app.kiosk"))
 
         today_status = get_staff_today_status(staff["id"])
+        location_policy = _location_policy_view_model(
+            get_app_settings(default_app_name=current_app.config["APP_SETTINGS"].app_name)
+        )
         if request.method == "POST":
             action = request.form.get("action", "").strip()
             if action not in today_status["next_actions"]:
@@ -1294,6 +1311,14 @@ def register_routes(app: Flask) -> None:
             latitude = _coerce_float(request.form.get("latitude"))
             longitude = _coerce_float(request.form.get("longitude"))
             gps_accuracy = _coerce_float(request.form.get("gps_accuracy"))
+            location_error = _attendance_location_error(
+                latitude=latitude,
+                longitude=longitude,
+                gps_accuracy=gps_accuracy,
+            )
+            if location_error:
+                flash(location_error, "error")
+                return redirect(url_for("app.staff_quick_access", qr_token=qr_token))
             result = record_attendance(
                 staff=staff,
                 template_ref=staff["staff_code"],
@@ -1318,6 +1343,7 @@ def register_routes(app: Flask) -> None:
             staff=staff,
             today_status=today_status,
             today=date.today(),
+            location_policy=location_policy,
         )
 
     app.register_blueprint(bp)
@@ -1576,6 +1602,11 @@ def _read_settings_form(form) -> dict[str, Any]:
         "default_grace_minutes": form.get("default_grace_minutes", "15").strip() or "15",
         "report_default_range_days": form.get("report_default_range_days", "30").strip() or "30",
         "working_days": form.getlist("working_days"),
+        "location_enforcement_enabled": form.get("location_enforcement_enabled") == "on",
+        "allowed_location_name": form.get("allowed_location_name", "").strip(),
+        "allowed_location_latitude": form.get("allowed_location_latitude", "").strip(),
+        "allowed_location_longitude": form.get("allowed_location_longitude", "").strip(),
+        "allowed_location_radius_meters": form.get("allowed_location_radius_meters", "150").strip() or "150",
     }
 
 
@@ -1607,6 +1638,29 @@ def _validate_settings_form(form_values: dict[str, Any]) -> str | None:
 
     if not form_values.get("working_days"):
         return "Select at least one working day."
+
+    location_enforcement_enabled = bool(form_values.get("location_enforcement_enabled"))
+    latitude_raw = str(form_values.get("allowed_location_latitude", "")).strip()
+    longitude_raw = str(form_values.get("allowed_location_longitude", "")).strip()
+    radius_raw = str(form_values.get("allowed_location_radius_meters", "150")).strip()
+    if location_enforcement_enabled:
+        if not latitude_raw or not longitude_raw:
+            return "Enter the allowed work location latitude and longitude before enabling location restriction."
+        try:
+            latitude = float(latitude_raw)
+            longitude = float(longitude_raw)
+        except ValueError:
+            return "Allowed work location latitude and longitude must be valid numbers."
+        if latitude < -90 or latitude > 90:
+            return "Allowed work location latitude must be between -90 and 90."
+        if longitude < -180 or longitude > 180:
+            return "Allowed work location longitude must be between -180 and 180."
+        try:
+            radius = int(radius_raw)
+        except ValueError:
+            return "Allowed work location radius must be a whole number of meters."
+        if radius < 25:
+            return "Allowed work location radius must be at least 25 meters."
     return None
 
 
@@ -1661,6 +1715,98 @@ def _normalize_qr_value(raw_value: str) -> str:
     if "/staff/quick/" in value:
         return value.rsplit("/", 1)[-1]
     return value
+
+
+def _location_policy_view_model(app_defaults: dict[str, Any]) -> dict[str, Any]:
+    enabled = bool(app_defaults.get("location_enforcement_enabled"))
+    latitude = app_defaults.get("allowed_location_latitude")
+    longitude = app_defaults.get("allowed_location_longitude")
+    radius = int(app_defaults.get("allowed_location_radius_meters", 150) or 150)
+    location_name = str(app_defaults.get("allowed_location_name", "") or "").strip()
+    return {
+        "enabled": enabled,
+        "location_name": location_name or "Main Work Location",
+        "latitude": latitude,
+        "longitude": longitude,
+        "radius_meters": radius,
+        "is_configured": latitude is not None and longitude is not None,
+        "summary": _location_policy_summary(
+            enabled=enabled,
+            latitude=latitude,
+            longitude=longitude,
+            radius_meters=radius,
+            location_name=location_name,
+        ),
+    }
+
+
+def _location_policy_summary(
+    *,
+    enabled: bool,
+    latitude: float | None,
+    longitude: float | None,
+    radius_meters: int,
+    location_name: str,
+) -> str:
+    if not enabled:
+        return "Staff can clock from any location."
+    name = location_name or "Main Work Location"
+    if latitude is None or longitude is None:
+        return f"Location restriction is enabled, but {name} has not been configured yet."
+    return f"Staff must be within {radius_meters} meters of {name} to clock in or out."
+
+
+def _attendance_location_error(
+    *,
+    latitude: float | None,
+    longitude: float | None,
+    gps_accuracy: float | None,
+) -> str | None:
+    app_defaults = get_app_settings(default_app_name=current_app.config["APP_SETTINGS"].app_name)
+    policy = _location_policy_view_model(app_defaults)
+    if not policy["enabled"]:
+        return None
+    if not policy["is_configured"]:
+        return "Work-location restriction is enabled, but the allowed location is not configured yet. Contact your administrator."
+    if latitude is None or longitude is None:
+        return (
+            f"Location access is required. Allow GPS and try again while you are near "
+            f"{policy['location_name']}."
+        )
+
+    distance_meters = _distance_in_meters(
+        latitude,
+        longitude,
+        float(policy["latitude"]),
+        float(policy["longitude"]),
+    )
+    allowed_radius = float(policy["radius_meters"]) + max(gps_accuracy or 0.0, 0.0)
+    if distance_meters <= allowed_radius:
+        return None
+    return (
+        f"You are outside the allowed work location for {policy['location_name']}. "
+        f"Move closer to the approved area and try again."
+    )
+
+
+def _distance_in_meters(
+    latitude_a: float,
+    longitude_a: float,
+    latitude_b: float,
+    longitude_b: float,
+) -> float:
+    earth_radius_meters = 6371000.0
+    lat1 = math.radians(latitude_a)
+    lon1 = math.radians(longitude_a)
+    lat2 = math.radians(latitude_b)
+    lon2 = math.radians(longitude_b)
+    delta_lat = lat2 - lat1
+    delta_lon = lon2 - lon1
+    sin_lat = math.sin(delta_lat / 2.0)
+    sin_lon = math.sin(delta_lon / 2.0)
+    haversine = sin_lat ** 2 + math.cos(lat1) * math.cos(lat2) * sin_lon ** 2
+    central_angle = 2 * math.atan2(math.sqrt(haversine), math.sqrt(1 - haversine))
+    return earth_radius_meters * central_angle
 
 
 def _resolve_department_filter(requested_department: str, department_scope: str) -> str:

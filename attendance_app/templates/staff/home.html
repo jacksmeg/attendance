@@ -103,7 +103,13 @@
                 </form>
             {% endfor %}
         </div>
-        <p class="panel-note">Your browser will try to attach GPS coordinates automatically when available. If location is blocked, the action still records as a web event.</p>
+        <p class="panel-note">
+            {% if location_policy.enabled %}
+            GPS access is required. You must be within {{ location_policy.radius_meters }} meters of {{ location_policy.location_name }} before an online clock action will be accepted.
+            {% else %}
+            Your browser will try to attach GPS coordinates automatically when available. If location is blocked, the action still records as a web event.
+            {% endif %}
+        </p>
     </article>
 
     <article class="panel-card qr-panel">
@@ -123,6 +129,41 @@
             <strong class="truncate-value">{{ quick_url }}</strong>
         </div>
     </article>
+</section>
+
+<section class="panel-card">
+    <div class="panel-card-head">
+        <div>
+            <p class="section-kicker">Location Policy</p>
+            <h3>Online attendance area</h3>
+        </div>
+        <span class="status-pill">{% if location_policy.enabled %}Protected{% else %}Open{% endif %}</span>
+    </div>
+    <div class="detail-stack detail-stack-grid">
+        <div class="detail-row">
+            <span>Rule</span>
+            <strong>{% if location_policy.enabled %}Approved work zone only{% else %}No location restriction{% endif %}</strong>
+        </div>
+        <div class="detail-row">
+            <span>Location</span>
+            <strong>{{ location_policy.location_name }}</strong>
+        </div>
+        <div class="detail-row">
+            <span>Radius</span>
+            <strong>{{ location_policy.radius_meters }} meters</strong>
+        </div>
+        <div class="detail-row">
+            <span>Coordinates</span>
+            <strong>
+                {% if location_policy.is_configured %}
+                {{ '%.5f'|format(location_policy.latitude) }}, {{ '%.5f'|format(location_policy.longitude) }}
+                {% else %}
+                Not configured
+                {% endif %}
+            </strong>
+        </div>
+    </div>
+    <p class="panel-note">{{ location_policy.summary }}</p>
 </section>
 
 <section class="panel-card">

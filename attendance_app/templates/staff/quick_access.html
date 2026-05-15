@@ -22,6 +22,13 @@
                     </form>
                 {% endfor %}
             </div>
+            <p class="panel-note">
+                {% if location_policy.enabled %}
+                GPS is required for this QR action. You must be inside {{ location_policy.location_name }} within {{ location_policy.radius_meters }} meters.
+                {% else %}
+                This QR page will attach your GPS coordinates automatically when your browser allows location access.
+                {% endif %}
+            </p>
         </article>
 
         <article class="panel-card auth-side-panel">
@@ -39,6 +46,10 @@
                 <div class="detail-row">
                     <span>Worked Minutes</span>
                     <strong>{{ today_status.worked_minutes }}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Location Rule</span>
+                    <strong>{% if location_policy.enabled %}Restricted{% else %}Open{% endif %}</strong>
                 </div>
             </div>
         </article>

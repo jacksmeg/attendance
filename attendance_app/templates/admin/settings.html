@@ -14,7 +14,7 @@
     {{ stat_card('dashboard', 'blue', 'Organization', form_values.organization_name, 'System profile') }}
     {{ stat_card('shift', 'green', 'Default Shift', form_values.default_shift_start ~ ' - ' ~ form_values.default_shift_end, 'New staff schedule') }}
     {{ stat_card('attendance', 'orange', 'Grace Minutes', form_values.default_grace_minutes, 'Late arrival threshold') }}
-    {{ stat_card('reports', 'purple', 'Report Window', form_values.report_default_range_days ~ ' days', 'Auto-selected range') }}
+    {{ stat_card('reports', 'purple', 'Location Rule', 'Active' if form_values.location_enforcement_enabled else 'Open', location_policy.location_name if form_values.location_enforcement_enabled else 'Any approved location') }}
 </section>
 
 <form id="attendance-settings-form" method="post" enctype="multipart/form-data">
@@ -91,6 +91,49 @@
 
         <article class="admin-table-card">
             <div class="admin-card-head">
+                {{ section_title('Work Location Restriction', 'Choose the only physical area where staff mobile and QR clocking is allowed') }}
+            </div>
+            <div class="admin-check-grid admin-check-grid-compact">
+                <label class="admin-check-card admin-check-card-inline" style="grid-column: 1 / -1;">
+                    <input form="attendance-settings-form" type="checkbox" name="location_enforcement_enabled" {% if form_values.location_enforcement_enabled %}checked{% endif %}>
+                    <div>
+                        <strong>Require approved work location</strong>
+                        <span>When enabled, staff must allow GPS and be inside the configured radius before they can clock in or out online.</span>
+                    </div>
+                </label>
+            </div>
+            <div class="admin-form-grid">
+                <label class="admin-field">
+                    <span>Location Name</span>
+                    <input form="attendance-settings-form" type="text" name="allowed_location_name" value="{{ form_values.allowed_location_name }}" placeholder="Main Office, Accra">
+                </label>
+                <label class="admin-field">
+                    <span>Allowed Radius (Meters)</span>
+                    <input form="attendance-settings-form" type="number" min="25" name="allowed_location_radius_meters" value="{{ form_values.allowed_location_radius_meters }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Latitude</span>
+                    <input form="attendance-settings-form" type="number" step="any" name="allowed_location_latitude" value="{{ '' if form_values.allowed_location_latitude is none else form_values.allowed_location_latitude }}" placeholder="5.6037">
+                </label>
+                <label class="admin-field">
+                    <span>Longitude</span>
+                    <input form="attendance-settings-form" type="number" step="any" name="allowed_location_longitude" value="{{ '' if form_values.allowed_location_longitude is none else form_values.allowed_location_longitude }}" placeholder="-0.1870">
+                </label>
+            </div>
+            <div class="admin-note-list">
+                <div class="admin-note-item">
+                    <strong>How it works</strong>
+                    <span>{{ location_policy.summary }}</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Coverage</strong>
+                    <span>This applies to staff portal clocking and QR mobile clocking. Local kiosk fingerprint and kiosk quick access are left unchanged.</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
                 {{ section_title('Working Week', 'Choose the official working days used by reports and staffing defaults') }}
             </div>
             <div class="admin-check-grid admin-check-grid-compact">
@@ -125,6 +168,9 @@
                 <div class="admin-summary-row"><span>Grace period</span><strong>{{ form_values.default_grace_minutes }} mins</strong></div>
                 <div class="admin-summary-row"><span>Report range</span><strong>{{ form_values.report_default_range_days }} days</strong></div>
                 <div class="admin-summary-row"><span>Working week</span><strong>{{ form_values.working_days|join(', ') }}</strong></div>
+                <div class="admin-summary-row"><span>Location restriction</span><strong>{% if form_values.location_enforcement_enabled %}Active{% else %}Disabled{% endif %}</strong></div>
+                <div class="admin-summary-row"><span>Allowed location</span><strong>{{ location_policy.location_name }}</strong></div>
+                <div class="admin-summary-row"><span>Radius</span><strong>{{ form_values.allowed_location_radius_meters }} m</strong></div>
             </div>
         </article>
 
@@ -175,6 +221,10 @@
                 <div class="admin-note-item">
                     <strong>Reports</strong>
                     <span>The reports module uses this default range whenever no dates are selected.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Location Control</strong>
+                    <span>Enable the work-location rule to stop staff from checking in or out outside the approved office area.</span>
                 </div>
                 <div class="admin-note-item">
                     <strong>Admin Login</strong>

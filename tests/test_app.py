@@ -170,6 +170,45 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn(b'value="16:30"', form_response.data)
         self.assertIn(b'value="18"', form_response.data)
 
+    def test_settings_can_enable_allowed_work_location(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        response = self.client.post(
+            "/admin/settings",
+            data={
+                "form_name": "attendance_settings",
+                "organization_name": "Geo Locked Attendance",
+                "default_shift_start": "09:00",
+                "default_shift_end": "17:00",
+                "default_grace_minutes": "15",
+                "report_default_range_days": "30",
+                "working_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                "location_enforcement_enabled": "on",
+                "allowed_location_name": "Head Office",
+                "allowed_location_latitude": "5.60372",
+                "allowed_location_longitude": "-0.18696",
+                "allowed_location_radius_meters": "180",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Attendance settings saved successfully", response.data)
+        self.assertIn(b"Head Office", response.data)
+
+        with self.app.app_context():
+            from attendance_app.services.settings import get_app_settings
+
+            settings = get_app_settings(default_app_name="fallback")
+            self.assertTrue(settings["location_enforcement_enabled"])
+            self.assertEqual(settings["allowed_location_name"], "Head Office")
+            self.assertAlmostEqual(settings["allowed_location_latitude"], 5.60372)
+            self.assertAlmostEqual(settings["allowed_location_longitude"], -0.18696)
+            self.assertEqual(settings["allowed_location_radius_meters"], 180)
+
     def test_settings_branding_name_and_logo_reflect_across_system(self) -> None:
         self.client.post(
             "/admin/login",
@@ -541,6 +580,99 @@ class AttendanceAppTests(unittest.TestCase):
             self.assertEqual(check_in_row["method"], "mobile_gps")
             self.assertAlmostEqual(check_in_row["latitude"], 5.60372)
             self.assertAlmostEqual(check_in_row["longitude"], -0.18696)
+
+    def test_staff_mobile_clock_blocks_outside_allowed_location(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+        self.client.post(
+            "/admin/settings",
+            data={
+                "form_name": "attendance_settings",
+                "organization_name": "Geo Locked Attendance",
+                "default_shift_start": "09:00",
+                "default_shift_end": "17:00",
+                "default_grace_minutes": "15",
+                "report_default_range_days": "30",
+                "working_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                "location_enforcement_enabled": "on",
+                "allowed_location_name": "Head Office",
+                "allowed_location_latitude": "5.60372",
+                "allowed_location_longitude": "-0.18696",
+                "allowed_location_radius_meters": "150",
+            },
+            follow_redirects=True,
+        )
+        self.client.get("/logout", follow_redirects=True)
+
+        login_response = self.client.post(
+            "/staff/login",
+            data={"staff_code": "EMP-100", "pin": "4321"},
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+
+        outside_response = self.client.post(
+            "/staff/clock",
+            data={
+                "action": "check_in",
+                "latitude": "5.65000",
+                "longitude": "-0.24000",
+                "gps_accuracy": "10",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(outside_response.status_code, 200)
+        self.assertIn(b"outside the allowed work location", outside_response.data)
+
+        with self.app.app_context():
+            rows = list_attendance_events(
+                date_from=date.today().isoformat(),
+                date_to=date.today().isoformat(),
+            )
+            self.assertEqual(rows, [])
+
+    def test_staff_mobile_clock_requires_gps_when_location_restricted(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+        self.client.post(
+            "/admin/settings",
+            data={
+                "form_name": "attendance_settings",
+                "organization_name": "Geo Locked Attendance",
+                "default_shift_start": "09:00",
+                "default_shift_end": "17:00",
+                "default_grace_minutes": "15",
+                "report_default_range_days": "30",
+                "working_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                "location_enforcement_enabled": "on",
+                "allowed_location_name": "Head Office",
+                "allowed_location_latitude": "5.60372",
+                "allowed_location_longitude": "-0.18696",
+                "allowed_location_radius_meters": "150",
+            },
+            follow_redirects=True,
+        )
+        self.client.get("/logout", follow_redirects=True)
+
+        self.client.post(
+            "/staff/login",
+            data={"staff_code": "EMP-100", "pin": "4321"},
+            follow_redirects=True,
+        )
+
+        response = self.client.post(
+            "/staff/clock",
+            data={"action": "check_in"},
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Location access is required", response.data)
 
     def test_staff_login_accepts_email_address(self) -> None:
         login_response = self.client.post(

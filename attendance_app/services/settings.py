@@ -26,6 +26,11 @@ DEFAULT_SETTINGS = {
     "default_grace_minutes": "15",
     "working_days": "Mon,Tue,Wed,Thu,Fri",
     "report_default_range_days": "30",
+    "location_enforcement_enabled": "0",
+    "allowed_location_name": "",
+    "allowed_location_latitude": "",
+    "allowed_location_longitude": "",
+    "allowed_location_radius_meters": "150",
 }
 
 ADMIN_PASSWORD_HASH_KEY = "platform_admin_password_hash"
@@ -47,6 +52,14 @@ def get_app_settings(default_app_name: str = "") -> dict[str, Any]:
         "working_days": working_days,
         "working_days_value": ",".join(working_days),
         "report_default_range_days": max(1, _to_int(merged.get("report_default_range_days"), 30)),
+        "location_enforcement_enabled": _to_bool(merged.get("location_enforcement_enabled")),
+        "allowed_location_name": str(merged.get("allowed_location_name", "") or "").strip(),
+        "allowed_location_latitude": _to_float(merged.get("allowed_location_latitude")),
+        "allowed_location_longitude": _to_float(merged.get("allowed_location_longitude")),
+        "allowed_location_radius_meters": max(
+            25,
+            _to_int(merged.get("allowed_location_radius_meters"), 150),
+        ),
     }
 
 
@@ -60,6 +73,13 @@ def save_app_settings(data: Mapping[str, Any], default_app_name: str = "") -> di
         "default_grace_minutes": str(max(0, _to_int(data.get("default_grace_minutes"), 15))),
         "working_days": ",".join(_normalize_working_days(data.get("working_days", ""))),
         "report_default_range_days": str(max(1, _to_int(data.get("report_default_range_days"), 30))),
+        "location_enforcement_enabled": "1" if _to_bool(data.get("location_enforcement_enabled")) else "0",
+        "allowed_location_name": str(data.get("allowed_location_name", "") or "").strip(),
+        "allowed_location_latitude": _normalize_optional_float(data.get("allowed_location_latitude")),
+        "allowed_location_longitude": _normalize_optional_float(data.get("allowed_location_longitude")),
+        "allowed_location_radius_meters": str(
+            max(25, _to_int(data.get("allowed_location_radius_meters"), 150))
+        ),
     }
     timestamp = datetime.now().isoformat(timespec="seconds")
     for key, value in normalized.items():
@@ -120,6 +140,27 @@ def _to_int(value: object, default: int) -> int:
         return int(str(value).strip())
     except (TypeError, ValueError):
         return default
+
+
+def _to_float(value: object) -> float | None:
+    try:
+        cleaned = str(value).strip()
+        if not cleaned:
+            return None
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_bool(value: object) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _normalize_optional_float(value: object) -> str:
+    parsed = _to_float(value)
+    if parsed is None:
+        return ""
+    return f"{parsed:.6f}"
 
 
 def _normalize_working_days(value: object) -> list[str]:
