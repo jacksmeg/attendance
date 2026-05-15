@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block content %}
+<section class="page-hero">
+    <div>
+        <h1>Welcome back, {{ session.get('admin_username', 'Admin') }}!</h1>
+        <p class="hero-subtitle">Here&apos;s what&apos;s happening with attendance today.</p>
+    </div>
+    <div class="timestamp-card">
+        <span class="timestamp-icon">{{ icon('calendar') }}</span>
+        <div class="timestamp-copy">
+            <span id="live-date">{{ today.strftime("%A, %d %B %Y") }}</span>
+            <strong id="live-clock">--:--:--</strong>
+        </div>
+        <span class="timestamp-trailing">{{ icon('clock') }}</span>
+    </div>
+</section>
+
+{% if last_result %}
+<section class="result-banner result-banner-staff">
+    {% set first_initial = last_result.staff_first_name[:1] if last_result.staff_first_name is defined and last_result.staff_first_name else last_result.staff_name[:1] %}
+    {% set last_initial = last_result.staff_last_name[:1] if last_result.staff_last_name is defined and last_result.staff_last_name else '' %}
+    <div class="staff-photo staff-photo-result">
+        {% if last_result.photo_filename %}
+            <img src="{{ url_for('app.staff_photo', filename=last_result.photo_filename) }}" alt="{{ last_result.staff_name }}">
+        {% else %}
+            <span>{{ first_initial }}{{ last_initial }}</span>
+        {% endif %}
+    </div>
+    <div class="result-banner-copy">
+        <strong>{{ last_result.staff_name }} recorded a {{ last_result.event_type|title_event }}.</strong>
+        {% if last_result.staff_code is defined or last_result.role is defined %}
+        <span>
+            {% if last_result.staff_code is defined %}{{ last_result.staff_code }}{% endif %}
+            {% if last_result.staff_code is defined and last_result.role is defined %} · {% endif %}
+            {% if last_result.role is defined %}{{ last_result.role }}{% endif %}
+        </span>
+        {% endif %}
+        <span>{{ last_result.department }} · {{ last_result.status_label }} · {{ last_result.event_time }}</span>
+    </div>
+    <div class="result-banner-icon">{{ icon('check-circle') }}</div>
+</section>
+{% endif %}
+
+<section class="kiosk-layout">
+    <article class="scan-stage-card">
+        <div class="scan-stage-copy">
+            <p class="section-kicker">Attendance Kiosk</p>
+            <h2>{% if is_cloud_fingerprint_mode %}Use quick access to record attendance{% else %}Scan a staff fingerprint{% endif %}</h2>
+            <p class="panel-subtitle">
+                {% if is_cloud_fingerprint_mode %}
+                The online system is live for QR, PIN/password, and staff mobile access. Fingerprint hardware remains on the local kiosk installation.
+                {% else %}
+                Place your finger on the scanner to check in or check out. The system automatically records the next attendance event.
+                {% endif %}
+            </p>
+
+            <form method="post" action="{{ url_for('app.kiosk_scan') }}" class="scan-form">
+                {% if fingerprint_backend == "mock" %}
+                    <label class="field">
+                        <span>Select a staff member to simulate the fingerprint scan</span>
+                        <select name="mock_template_ref" required>
+                            <option value="">Choose a staff member</option>
+                            {% for staff in staff_choices %}
+                                <option value="{{ staff.template_ref }}">
+                                    {{ staff.staff_code }} - {{ staff.first_name }} {{ staff.last_name }} ({{ staff.department }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                {% endif %}
+                <button class="primary-button cta-scan" type="submit" {% if fingerprint_backend == "disabled" %}disabled{% endif %}>
+                    <span class="button-icon">{{ icon('fingerprint') }}</span>
+                    <span>
+                        {% if fingerprint_backend == "mock" %}
+                            Simulate Scan
+                        {% elif fingerprint_backend == "disabled" %}
+                            Fingerprint Unavailable Online
+                        {% else %}
+                            Start Fingerprint Scan
+                        {% endif %}
+                    </span>
+                    <span class="button-icon">{{ icon('arrow-right') }}</span>
+                </button>
+            </form>
+
+            <div class="scan-status-line">
+                <span class="status-inline-icon">{{ icon('shield-check') }}</span>
+                <span>
+                    {% if health.status == "ready" %}
+                        MorphoSmart device is connected and ready.
+                    {% else %}
+                        {{ health.details }}
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="scan-stage-visual">
+            <div class="scan-stage-rings">
+                <div class="scan-stage-ring scan-stage-ring-outer"></div>
+                <div class="scan-stage-ring scan-stage-ring-inner"></div>
+                <div class="scan-stage-core">
+                    {{ icon('fingerprint') }}
+                </div>
+                <span class="scan-stage-dot"></span>
+            </div>
+        </div>
+    </article>
+
+    <div class="shortcut-stack">
+        <article class="panel-card quick-access-card">
+            <div class="panel-card-head">
+                <div>
+                    <p class="section-kicker">Quick Access</p>
+                    <h3>PIN / Password / QR</h3>
+                </div>
+                <span class="status-pill">{{ icon('pin') }} Alternate clock-in</span>
+            </div>
+
+            <form method="post" action="{{ url_for('app.kiosk_quick_access') }}" class="stack-form">
+                <label class="field">
+                    <span>Staff Code</span>
+                    <input type="text" name="staff_code" placeholder="EMP-001">
+                </label>
+                <label class="field">
+                    <span>PIN or Password</span>
+                    <input type="password" name="secret" placeholder="Enter PIN or password">
+                </label>
+                <label class="field">
+                    <span>Use secret as</span>
+                    <select name="secret_method">
+                        <option value="pin">PIN</option>
+                        <option value="password">Password</option>
+                    </select>
+                </label>
+                <div class="quick-divider"><span>OR</span></div>
+                <label class="field">
+                    <span>QR Token</span>
+                    <input type="text" name="qr_token" placeholder="Scan or paste QR token">
+                </label>
+                <button class="secondary-button" type="submit">
+                    <span class="button-icon">{{ icon('qr') }}</span>
+                    <span>Record Quick Attendance</span>
+                </button>
+            </form>
+        </article>
+
+        <a class="shortcut-card shortcut-card-blue" href="{{ url_for('app.staff_login') }}">
+            <span class="shortcut-icon">{{ icon('mobile') }}</span>
+            <div class="shortcut-copy">
+                <strong>Staff Mobile Portal</strong>
+                <span>Clock in, manage breaks, and view today's status from a phone.</span>
+            </div>
+            <span class="shortcut-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+
+        <a class="shortcut-card shortcut-card-orange" href="{{ url_for('app.admin_login') }}">
+            <span class="shortcut-icon">{{ icon('staff') }}</span>
+            <div class="shortcut-copy">
+                <strong>Admin Workspace</strong>
+                <span>Manage staff, fingerprint enrollment, reports, and settings.</span>
+            </div>
+            <span class="shortcut-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+    </div>
+</section>
+
+<section class="metric-strip">
+    <article class="metric-card">
+        <span class="metric-icon metric-icon-teal">{{ icon('staff') }}</span>
+        <div class="metric-copy">
+            <strong>{{ dashboard_snapshot.total_staff }}</strong>
+            <span>Total Staff</span>
+            <small>Active employees</small>
+        </div>
+        <span class="metric-trace">{{ icon('wave') }}</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon metric-icon-blue">{{ icon('check-circle') }}</span>
+        <div class="metric-copy">
+            <strong>{{ dashboard_snapshot.checked_in_today }}</strong>
+            <span>Checked In</span>
+            <small>Today so far</small>
+        </div>
+        <span class="metric-trace">{{ icon('wave') }}</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon metric-icon-orange">{{ icon('logs') }}</span>
+        <div class="metric-copy">
+            <strong>{{ dashboard_snapshot.late_today }}</strong>
+            <span>Late Today</span>
+            <small>Grace period exceeded</small>
+        </div>
+        <span class="metric-trace">{{ icon('wave') }}</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon metric-icon-lime">{{ icon('shield-check') }}</span>
+        <div class="metric-copy">
+            <strong>{{ dashboard_snapshot.currently_inside }}</strong>
+            <span>Currently Inside</span>
+            <small>Latest event is check-in</small>
+        </div>
+        <span class="metric-trace">{{ icon('wave') }}</span>
+    </article>
+</section>
+
+<section class="panel-grid panel-grid-wide">
+    <article class="panel-card">
+        <div class="panel-card-head">
+            <div>
+                <p class="section-kicker">Recent Attendance Logs</p>
+                <h3>Latest attendance activity</h3>
+            </div>
+            <a class="inline-link" href="{{ url_for('app.admin_attendance') }}">
+                <span>View all logs</span>
+                {{ icon('arrow-right') }}
+            </a>
+        </div>
+
+        {% if recent_events %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Event</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in recent_events %}
+                        <tr>
+                            <td>
+                                <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                <span class="cell-sub">{{ row.department }}</span>
+                            </td>
+                            <td>{{ row.event_type|title_event }}</td>
+                            <td>{{ row.status_label }}</td>
+                            <td>{{ row.event_time|human_dt }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No attendance has been recorded yet.</h3>
+                <p>Add staff and enroll fingerprints from the admin area to begin scanning.</p>
+            </div>
+        {% endif %}
+    </article>
+
+    <article class="panel-card panel-card-side">
+        <div class="panel-card-head">
+            <div>
+                <p class="section-kicker">Sensor Status</p>
+                <h3>Fingerprint backend health</h3>
+            </div>
+            <span class="status-pill status-{{ health.status }}">{{ health.status|replace('_', ' ')|title }}</span>
+        </div>
+        <div class="detail-stack">
+            <div class="detail-row">
+                <span>Backend</span>
+                <strong>{{ health.backend }}</strong>
+            </div>
+            {% if health.templates is defined %}
+            <div class="detail-row">
+                <span>Templates</span>
+                <strong>{{ health.templates }}</strong>
+            </div>
+            {% endif %}
+            {% if health.capacity is defined %}
+            <div class="detail-row">
+                <span>Capacity</span>
+                <strong>{{ health.capacity }}</strong>
+            </div>
+            {% endif %}
+            <div class="detail-row">
+                <span>Status</span>
+                <strong>{{ health.status|replace('_', ' ')|title }}</strong>
+            </div>
+        </div>
+        <p class="panel-note">{{ health.details }}</p>
+    </article>
+</section>
+
+<script>
+    const liveClockNode = document.getElementById("live-clock");
+    const liveDateNode = document.getElementById("live-date");
+    if (liveClockNode) {
+        const updateClock = () => {
+            const now = new Date();
+            liveClockNode.textContent = now.toLocaleTimeString();
+            if (liveDateNode) {
+                liveDateNode.textContent = now.toLocaleDateString(undefined, {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                });
+            }
+        };
+        updateClock();
+        window.setInterval(updateClock, 1000);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,254 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import avatar, section_title, stat_card, status_badge %}
+
+{% block toolbar_actions %}
+<a class="admin-toolbar-button" href="{{ url_for('app.admin_staff') }}">
+    {{ icon('chevron-right') }}
+    <span>Back to Staff</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-4">
+    {{ stat_card('staff', 'blue', 'Staff Member', staff.staff_code, 'Enrollment target') }}
+    {{ stat_card('fingerprint', 'green', 'Scanner Status', health.status|replace('_', ' ')|title, 'MorphoSmart bridge') }}
+    {{ stat_card('attendance', 'orange', 'Capture Step', enrollment_session.acquisition_number if enrollment_session and enrollment_session.acquisition_number is defined else '-', 'Live progress') }}
+    {{ stat_card('reports', 'purple', 'Quality', enrollment_session.quality if enrollment_session and enrollment_session.quality is defined else '-', 'Last sample score') }}
+</section>
+
+<section class="admin-content-grid wide-side">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Fingerprint Enrollment', 'Live scanner capture with preview, prompts, and quality feedback') }}
+                {% if staff.is_active %}
+                {{ status_badge('Active', 'green') }}
+                {% else %}
+                {{ status_badge('Inactive', 'neutral') }}
+                {% endif %}
+            </div>
+
+            <div class="admin-enroll-layout">
+                <div class="admin-enroll-preview-panel">
+                    <div class="admin-enroll-preview-head">
+                        <div>
+                            <p class="admin-mini-label">Live Preview</p>
+                            <h3>Fingerprint image stream</h3>
+                        </div>
+                        <span class="admin-mini-chip">Preview active</span>
+                    </div>
+
+                    <div class="admin-enroll-preview-stage">
+                        <div class="scan-stage-rings enroll-stage-rings">
+                            <div class="scan-stage-ring scan-stage-ring-outer"></div>
+                            <div class="scan-stage-ring scan-stage-ring-inner"></div>
+                            <div class="scan-stage-core">
+                                {{ icon('fingerprint') }}
+                            </div>
+                            <span class="scan-stage-dot"></span>
+                        </div>
+                        <img
+                            id="enroll-preview-image"
+                            class="admin-enroll-preview-image {% if not enrollment_session or not enrollment_session.preview_available %}is-hidden{% endif %}"
+                            {% if session_id %}src="{{ url_for('app.admin_enrollment_preview', session_id=session_id) }}?t={{ range(1, 999999)|random }}"{% endif %}
+                            alt="Fingerprint preview"
+                        >
+                        <div id="enroll-preview-placeholder" class="admin-enroll-preview-placeholder {% if enrollment_session and enrollment_session.preview_available %}is-hidden{% endif %}">
+                            Waiting for live fingerprint preview...
+                        </div>
+                    </div>
+
+                    <div class="admin-enroll-status-strip">
+                        <article class="admin-enroll-status-card">
+                            <span>State</span>
+                            <strong id="enroll-state-value">{{ enrollment_session.state if enrollment_session else "ready" }}</strong>
+                        </article>
+                        <article class="admin-enroll-status-card">
+                            <span>Capture Step</span>
+                            <strong id="enroll-acquisition-value">
+                                {% if enrollment_session and enrollment_session.acquisition_number is defined %}
+                                    {{ enrollment_session.acquisition_number }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </strong>
+                        </article>
+                        <article class="admin-enroll-status-card">
+                            <span>Quality</span>
+                            <strong id="enroll-quality-value">
+                                {% if enrollment_session and enrollment_session.quality is defined %}
+                                    {{ enrollment_session.quality }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </strong>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="admin-enroll-control-panel">
+                    <article class="admin-side-card admin-enroll-control-card">
+                        <div class="admin-card-head">
+                            {{ section_title('Operator Panel') }}
+                            <span class="admin-mini-chip">{{ health.backend|replace('_', ' ')|title }}</span>
+                        </div>
+
+                        <div class="admin-person-cell">
+                            {{ avatar(staff.first_name, staff.last_name, url_for('app.staff_photo', filename=staff.photo_filename) if staff.photo_filename else '', 'md') }}
+                            <div class="admin-table-meta">
+                                <strong>{{ staff.first_name }} {{ staff.last_name }}</strong>
+                                <span>{{ staff.staff_code }} | {{ staff.department }}</span>
+                            </div>
+                        </div>
+
+                        <div class="admin-enroll-instruction-box">
+                            <span>Instruction</span>
+                            <strong id="enroll-instruction-value">{{ enrollment_session.instruction if enrollment_session and enrollment_session.instruction else "Start enrollment to begin." }}</strong>
+                        </div>
+
+                        <form method="post" class="admin-inline-form" id="enroll-form">
+                            <button class="admin-toolbar-button tone-primary admin-enroll-start-button" type="submit" id="enroll-submit" {% if enrollment_session and not enrollment_session.complete %}disabled{% endif %}>
+                                {{ icon('fingerprint') }}
+                                <span>{% if enrollment_session and not enrollment_session.complete %}Enrollment Running...{% else %}Start Enrollment{% endif %}</span>
+                            </button>
+                            <p class="admin-card-caption" id="enroll-hint">
+                                {% if enrollment_session and not enrollment_session.complete %}
+                                    Follow the live scanner instruction below and keep watching this page.
+                                {% else %}
+                                    The page stays live while the scanner captures the fingerprint and updates the preview.
+                                {% endif %}
+                            </p>
+                        </form>
+                    </article>
+
+                    <article class="admin-side-card">
+                        <div class="admin-card-head">
+                            {{ section_title('Enrollment Guidance') }}
+                        </div>
+                        <div class="admin-note-list">
+                            <div class="admin-note-item">
+                                <strong>Prepare the finger</strong>
+                                <span>Clean the scanner glass and make sure the finger is dry and flat.</span>
+                            </div>
+                            <div class="admin-note-item">
+                                <strong>Use one finger only</strong>
+                                <span>Keep the same finger for every pass so the template can verify cleanly.</span>
+                            </div>
+                            <div class="admin-note-item">
+                                <strong>Lift when prompted</strong>
+                                <span>Remove the finger fully before placing it back for the next capture step.</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Live Scanner Status') }}
+            </div>
+            <div class="admin-enroll-banner" id="enroll-status-message">
+                {% if enrollment_session %}
+                    {{ enrollment_session.message }}
+                {% else %}
+                    {{ health.details }}
+                {% endif %}
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Enrollment Summary') }}
+            </div>
+            <div class="admin-summary-list">
+                <div class="admin-summary-row"><span>Shift</span><strong>{{ staff.shift_start }} - {{ staff.shift_end }}</strong></div>
+                <div class="admin-summary-row"><span>Current Link</span><strong class="admin-clip-value">{% if staff.template_ref %}{{ staff.fingerprint_adapter|replace('_', ' ')|title }} · {{ staff.template_ref }}{% else %}No fingerprint linked yet{% endif %}</strong></div>
+                <div class="admin-summary-row"><span>Scanner Status</span><strong>{{ health.status|replace('_', ' ')|title }}</strong></div>
+            </div>
+        </article>
+    </div>
+</section>
+
+<script>
+    const sessionId = {{ session_id|tojson }};
+    const enrollForm = document.getElementById("enroll-form");
+    const enrollSubmit = document.getElementById("enroll-submit");
+    const enrollHint = document.getElementById("enroll-hint");
+    const statusMessage = document.getElementById("enroll-status-message");
+    const stateValue = document.getElementById("enroll-state-value");
+    const instructionValue = document.getElementById("enroll-instruction-value");
+    const acquisitionValue = document.getElementById("enroll-acquisition-value");
+    const qualityValue = document.getElementById("enroll-quality-value");
+    const previewImage = document.getElementById("enroll-preview-image");
+    const previewPlaceholder = document.getElementById("enroll-preview-placeholder");
+
+    if (enrollForm && enrollSubmit && enrollHint) {
+        enrollForm.addEventListener("submit", () => {
+            enrollSubmit.disabled = true;
+            enrollHint.textContent = "The page will reload into live enrollment mode.";
+        });
+    }
+
+    const updatePreview = (activeSessionId) => {
+        if (!previewImage || !previewPlaceholder || !activeSessionId) {
+            return;
+        }
+        previewImage.src = `/admin/enrollment/${activeSessionId}/preview.png?t=${Date.now()}`;
+        previewImage.classList.remove("is-hidden");
+        previewPlaceholder.classList.add("is-hidden");
+    };
+
+    const pollStatus = async () => {
+        if (!sessionId) {
+            return;
+        }
+        try {
+            const response = await fetch(`/admin/enrollment/${sessionId}/status`, { cache: "no-store" });
+            if (!response.ok) {
+                return;
+            }
+            const data = await response.json();
+            if (stateValue) stateValue.textContent = data.state || "-";
+            if (instructionValue) instructionValue.textContent = data.instruction || "Waiting for scanner instruction...";
+            if (acquisitionValue) acquisitionValue.textContent = data.acquisition_number ?? "-";
+            if (qualityValue) qualityValue.textContent = data.quality ?? "-";
+            if (statusMessage) statusMessage.textContent = data.message || "";
+            if (enrollHint && !data.complete) {
+                enrollHint.textContent = "Touch the scanner and follow the live instruction shown on this page.";
+            }
+            if (data.preview_available) {
+                updatePreview(sessionId);
+            }
+            if (enrollSubmit) {
+                enrollSubmit.disabled = !data.complete;
+                const label = enrollSubmit.querySelector("span:last-child");
+                if (label) {
+                    label.textContent = data.complete ? "Start Enrollment Again" : "Enrollment Running...";
+                }
+            }
+            if (data.complete && data.success) {
+                if (enrollHint) {
+                    enrollHint.textContent = "Enrollment completed successfully. Returning to staff list...";
+                }
+                window.setTimeout(() => {
+                    window.location.href = "{{ url_for('app.admin_staff') }}";
+                }, 1800);
+                return;
+            }
+        } catch (error) {
+            if (statusMessage) {
+                statusMessage.textContent = "The enrollment page could not refresh live scanner status.";
+            }
+        }
+        window.setTimeout(pollStatus, 1200);
+    };
+
+    if (sessionId) {
+        pollStatus();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block content %}
+<section class="center-stage">
+    <div class="auth-layout">
+        <article class="panel-card auth-panel">
+            <div class="auth-brand-lockup">
+                <span class="auth-brand-mark">
+                    {% if app_logo_url %}
+                    <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                    {% else %}
+                    {{ icon('fingerprint') }}
+                    {% endif %}
+                </span>
+                <span class="auth-brand-copy">
+                    <span class="auth-brand-title">{{ app_name }}</span>
+                    <span class="auth-brand-subtitle">Staff self-service sign in</span>
+                </span>
+            </div>
+            <p class="section-kicker">Staff Access</p>
+            <h1>Sign in to clock in, manage breaks, and view today's attendance.</h1>
+            <p class="hero-subtitle">Use your staff code with either your password or your PIN to enter {{ app_name }} from any device.</p>
+
+            <form method="post" class="stack-form auth-form">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <label class="field">
+                    <span>Staff Code</span>
+                    <input type="text" name="staff_code" placeholder="EMP-001" required>
+                </label>
+                <label class="field">
+                    <span>Password</span>
+                    <input type="password" name="password" placeholder="Enter password">
+                </label>
+                <label class="field">
+                    <span>PIN</span>
+                    <input type="password" name="pin" placeholder="Enter PIN">
+                </label>
+                <button class="primary-button" type="submit">
+                    <span class="button-icon">{{ icon('mobile') }}</span>
+                    <span>Open Staff Portal</span>
+                </button>
+            </form>
+        </article>
+
+        <article class="panel-card auth-side-panel">
+            <p class="section-kicker">Access Options</p>
+            <h3>{{ app_name }} access options</h3>
+            <div class="detail-stack">
+                <div class="detail-row">
+                    <span>Fingerprint kiosk</span>
+                    <strong>Entrance clock-in</strong>
+                </div>
+                <div class="detail-row">
+                    <span>PIN / password</span>
+                    <strong>Fast self-service</strong>
+                </div>
+                <div class="detail-row">
+                    <span>QR badge</span>
+                    <strong>Mobile quick access</strong>
+                </div>
+            </div>
+            <p class="panel-note">If you do not have your portal password or PIN yet, ask HR or an administrator to update your staff profile.</p>
+        </article>
+    </div>
+</section>
+{% endblock %}

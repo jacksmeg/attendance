@@ -1,0 +1,202 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import avatar, section_title, stat_card, status_badge, toolbar_button %}
+
+{% block toolbar_center %}
+<form class="admin-toolbar-form" method="get" action="{{ url_for('app.admin_ghana_card_verification') }}">
+    <label class="admin-search-box">
+        {{ icon('search') }}
+        <input type="text" name="search" value="{{ search }}" placeholder="Search staff, Ghana Card number, department...">
+    </label>
+</form>
+{% endblock %}
+
+{% block toolbar_actions %}
+<a class="admin-toolbar-button" href="{{ url_for('app.admin_staff') }}">
+    {{ icon('staff') }}
+    <span>Manage Staff Records</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-4">
+    {% for stat in verification_stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Fingerprint Verification', 'Use the scanner to confirm identity, then generate a printable internal Ghana Card verification card') }}
+                {% if health.status == 'ready' %}
+                    {{ status_badge('Scanner Ready', 'green') }}
+                {% elif health.status in ['session_ready', 'cached_credentials_present'] %}
+                    {{ status_badge('Scanner Session Ready', 'blue') }}
+                {% else %}
+                    {{ status_badge(health.status|replace('_', ' ')|title, 'orange') }}
+                {% endif %}
+            </div>
+
+            <div class="admin-verify-panel">
+                <div class="admin-verify-intro">
+                    <div class="admin-verify-mark">{{ icon('shield-check') }}</div>
+                    <div>
+                        <strong>Internal Ghana Card verification only</strong>
+                        <p>This module confirms a staff identity with fingerprint and prints an internal verification record. It does not generate a national Ghana Card.</p>
+                    </div>
+                </div>
+
+                <form method="post" action="{{ url_for('app.admin_ghana_card_verification_scan') }}" class="admin-verify-form">
+                    {% if mock_scan_choices %}
+                    <label class="admin-field">
+                        <span>Mock Verification Staff</span>
+                        <select name="mock_template_ref">
+                            {% for choice in mock_scan_choices %}
+                            <option value="{{ choice.template_ref }}">{{ choice.staff_code }} · {{ choice.first_name }} {{ choice.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    {% endif %}
+                    <button class="admin-toolbar-button tone-primary admin-verify-button" type="submit" {% if is_cloud_fingerprint_mode %}disabled{% endif %}>
+                        {{ icon('fingerprint') }}
+                        <span>{% if is_cloud_fingerprint_mode %}Local Kiosk Required{% else %}Verify by Fingerprint{% endif %}</span>
+                    </button>
+                </form>
+
+                <div class="admin-verify-health">
+                    <div class="admin-summary-row"><span>Backend</span><strong>{{ health.backend }}</strong></div>
+                    <div class="admin-summary-row"><span>Status</span><strong>{{ health.status|replace('_', ' ')|title }}</strong></div>
+                    <div class="admin-summary-row"><span>Details</span><strong>{{ health.details or 'Scanner ready for verification.' }}</strong></div>
+                </div>
+                {% if is_cloud_fingerprint_mode %}
+                <div class="admin-inline-notice admin-inline-notice-orange">
+                    <strong>Cloud access is live.</strong>
+                    <span>Ghana Card fingerprint verification runs from the local kiosk installation. This online page remains available for profile review and printable records.</span>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Verification Records', 'Staff Ghana Card profile completeness and verification readiness') }}
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Ghana Card No.</th>
+                            <th>Department</th>
+                            <th>Completion</th>
+                            <th>Status</th>
+                            <th>Last Verified</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if verification_rows %}
+                        {% for row in verification_rows %}
+                        <tr>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(row.first_name, row.last_name, row.photo_url) }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                        <span>{{ row.staff_code }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ row.ghana_card_number or 'Not added' }}</td>
+                            <td>{{ row.department }}</td>
+                            <td>
+                                <div class="admin-progress-cell">
+                                    <strong>{{ row.ghana_completion_ratio }}%</strong>
+                                    <div class="admin-mini-progress"><span style="width: {{ row.ghana_completion_ratio }}%;"></span></div>
+                                </div>
+                            </td>
+                            <td>{{ status_badge(row.ghana_status_text, row.ghana_status_tone) }}</td>
+                            <td>{{ row.ghana_verified_at_display }}</td>
+                            <td>
+                                <div class="admin-table-actions">
+                                    <a class="admin-toolbar-button admin-button-compact" href="{{ url_for('app.admin_staff_edit', staff_id=row.id) }}">
+                                        {{ icon('edit') }}
+                                        <span>Edit</span>
+                                    </a>
+                                    <a class="admin-toolbar-button tone-primary admin-button-compact" href="{{ url_for('app.admin_ghana_card_card', staff_id=row.id) }}">
+                                        {{ icon('document') }}
+                                        <span>Open Card</span>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="admin-empty">
+                                    <strong>No staff records found.</strong>
+                                    <p>Add staff and complete their Ghana Card details to begin fingerprint verification.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Last Verification') }}</div>
+            {% if last_verification %}
+            <div class="admin-last-verify">
+                <div class="admin-person-cell">
+                    {{ avatar(last_verification.staff_name.split(' ')[0], last_verification.staff_name.split(' ')[1] if ' ' in last_verification.staff_name else '', last_verification.photo_url, 'md') }}
+                    <div class="admin-table-meta">
+                        <strong>{{ last_verification.staff_name }}</strong>
+                        <span>{{ last_verification.staff_code }}</span>
+                    </div>
+                </div>
+                <div class="admin-summary-list">
+                    <div class="admin-summary-row"><span>Ghana Card No.</span><strong>{{ last_verification.ghana_card_number }}</strong></div>
+                    <div class="admin-summary-row"><span>Backend</span><strong>{{ last_verification.backend }}</strong></div>
+                    <div class="admin-summary-row"><span>Confidence</span><strong>{{ last_verification.confidence if last_verification.confidence is not none else '—' }}</strong></div>
+                    <div class="admin-summary-row"><span>Verified At</span><strong>{{ last_verification.verified_at }}</strong></div>
+                </div>
+                <a class="admin-toolbar-button tone-primary" href="{{ url_for('app.admin_ghana_card_card', staff_id=last_verification.staff_id) }}">
+                    {{ icon('document') }}
+                    <span>Print Verification Card</span>
+                </a>
+            </div>
+            {% else %}
+            <div class="admin-empty">
+                <strong>No verification yet.</strong>
+                <p>Your last successful fingerprint verification will appear here.</p>
+            </div>
+            {% endif %}
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Required Fields') }}</div>
+            <div class="admin-note-list">
+                <div class="admin-note-item">
+                    <strong>Before Verification</strong>
+                    <span>Add Ghana Card Number, Nationality, Sex, Date of Birth, and Digital Address on the staff profile.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Fingerprint Match</strong>
+                    <span>The scanner confirms the person first, then the system stamps the verification date and printable record.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Print Output</strong>
+                    <span>The generated card is an internal verification record, not a replacement for the national Ghana Card.</span>
+                </div>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

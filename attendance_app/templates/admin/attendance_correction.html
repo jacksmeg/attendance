@@ -1,0 +1,149 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, avatar, status_badge, toolbar_button, table_icon_action, section_title %}
+
+{% block toolbar_actions %}
+{{ toolbar_button('calendar', 'May 1, 2024 - May 31, 2024') }}
+{{ toolbar_button('filter', 'Filter') }}
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-4">
+    {% for stat in correction_model.stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid wide-side">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-tabs">
+                <a class="admin-tab is-active" href="#">All Requests</a>
+                <a class="admin-tab" href="#">Pending</a>
+                <a class="admin-tab" href="#">Approved</a>
+                <a class="admin-tab" href="#">Rejected</a>
+            </div>
+            <div class="admin-filter-row">
+                <span class="admin-filter-control"><select><option>All Departments</option></select></span>
+                <span class="admin-filter-control"><select><option>All Correction Types</option></select></span>
+                <span class="admin-filter-control"><select><option>All Status</option></select></span>
+                <span class="admin-filter-control with-icon">{{ icon('calendar') }} Select Date Range</span>
+                {{ toolbar_button('filter', 'Filter') }}
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Date</th>
+                            <th>Shift</th>
+                            <th>Correction Type</th>
+                            <th>Requested Change</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Requested On</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if correction_rows %}
+                        {% for row in correction_rows %}
+                        <tr>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                        <span>{{ row.staff_code }} | {{ row.department }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ row.date }}</td>
+                            <td>{{ row.shift }}</td>
+                            <td>{{ status_badge(row.correction_type, row.type_tone) }}</td>
+                            <td>{{ row.requested_change }}</td>
+                            <td>{{ row.reason }}</td>
+                            <td>{{ status_badge(row.status, row.status_tone) }}</td>
+                            <td>{{ row.requested_on }}</td>
+                            <td><div class="admin-table-actions">{{ table_icon_action('eye', '#', 'View request') }}{{ table_icon_action('edit', '#', 'Edit request') }}</div></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="9">
+                                <div class="admin-empty">
+                                    <strong>No correction requests yet.</strong>
+                                    <p>Attendance correction requests will appear here after staff submit them.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="admin-table-footer">
+                <span>Showing 1 to {{ correction_rows|length }} of {{ correction_rows|length }} entries</span>
+                <div class="admin-pagination">
+                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+                    <span class="admin-page-chip is-active">1</span>
+                    <span class="admin-page-chip">2</span>
+                    <span class="admin-page-chip">3</span>
+                    <span class="admin-page-chip">4</span>
+                    <span class="admin-page-chip">5</span>
+                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+                    <span class="admin-page-chip admin-page-size">10 / page</span>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Request Details') }}
+                {% if correction_model.detail %}
+                {{ status_badge(correction_model.detail.status, 'orange') }}
+                {% endif %}
+            </div>
+            {% if correction_model.detail %}
+            <div class="admin-person-cell">
+                {{ avatar('John', 'Doe', '', 'md') }}
+                <div class="admin-table-meta">
+                    <strong>{{ correction_model.detail.name }}</strong>
+                    <span>{{ correction_model.detail.code }} | {{ correction_model.detail.department }}</span>
+                </div>
+            </div>
+            <div class="admin-request-detail">
+                <div class="admin-request-detail-row"><span>Request ID</span><span>{{ correction_model.detail.request_id }}</span></div>
+                <div class="admin-request-detail-row"><span>Date</span><span>{{ correction_model.detail.date }}</span></div>
+                <div class="admin-request-detail-row"><span>Shift</span><span>{{ correction_model.detail.shift }}</span></div>
+                <div class="admin-request-detail-row"><span>Correction Type</span><span>{{ correction_model.detail.type }}</span></div>
+                <div class="admin-request-detail-row"><span>Original Time</span><span>{{ correction_model.detail.original_time }}</span></div>
+                <div class="admin-request-detail-row"><span>Requested Time</span><span>{{ correction_model.detail.requested_time }}</span></div>
+                <div class="admin-request-detail-row"><span>Total Difference</span><span>{{ correction_model.detail.difference }}</span></div>
+                <div class="admin-request-detail-row"><span>Reason</span><span>{{ correction_model.detail.reason }}</span></div>
+                <div class="admin-request-detail-row"><span>Requested On</span><span>{{ correction_model.detail.requested_on }}</span></div>
+                <div class="admin-request-detail-row"><span>Attachments</span><span>{{ correction_model.detail.attachment }}</span></div>
+            </div>
+
+            <div class="admin-card-head">{{ section_title('Approval History') }}</div>
+            <div class="admin-approval-timeline">
+                <div class="admin-approval-item"><strong>May 20, 2024 10:15 AM</strong><span>Requested by John Doe</span></div>
+                <div class="admin-approval-item"><strong>Pending Approval</strong><span>Waiting for HR/Admin review</span></div>
+            </div>
+
+            <div class="admin-inline-grid-2">
+                <a class="admin-side-action tone-approve" href="#">{{ icon('check-circle') }} Approve</a>
+                <a class="admin-side-action tone-reject" href="#">{{ icon('close') }} Reject</a>
+            </div>
+            <a class="admin-side-action" href="#">{{ icon('document') }} Add Comment</a>
+            {% else %}
+            <div class="admin-empty">
+                <strong>No request selected.</strong>
+                <p>Once a correction request is submitted, its details and approval timeline will appear here.</p>
+            </div>
+            {% endif %}
+        </article>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, avatar, status_badge, toolbar_button, table_icon_action, section_title %}
+
+{% block toolbar_actions %}
+{{ toolbar_button('calendar', 'May 1, 2024 - May 31, 2024') }}
+{{ toolbar_button('export', 'Export', href=url_for('app.admin_reports_export', date_from=filters.date_from, date_to=filters.date_to, department=filters.department, search=filters.search)) }}
+{{ toolbar_button('calendar', 'Schedule Report') }}
+{% endblock %}
+
+{% block content %}
+<section class="admin-table-card">
+    <div class="admin-card-head">
+        {{ section_title('Attendance Report') }}
+    </div>
+    <div class="admin-filter-bar">
+        <span class="admin-filter-control"><select><option>All Departments</option></select></span>
+        <span class="admin-filter-control"><select><option>All Locations</option></select></span>
+        <span class="admin-filter-control"><select><option>All Shifts</option></select></span>
+        <span class="admin-filter-control"><select><option>All Employees</option></select></span>
+        <span class="admin-filter-control">{{ icon('filter') }} More Filters</span>
+        <button class="admin-toolbar-button tone-primary" type="button">{{ icon('search') }} <span>Apply Filter</span></button>
+    </div>
+</section>
+
+<section class="admin-stats-grid">
+    {% for stat in report_model.stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <div class="admin-chart-grid">
+            <article class="admin-line-chart-card">
+                <div class="admin-card-head">
+                    {{ section_title('Attendance Overview') }}
+                </div>
+                <div class="admin-chart-legend">
+                    <span><i class="legend-green"></i>Present</span>
+                    <span><i class="legend-red"></i>Absent</span>
+                    <span><i class="legend-orange"></i>Late</span>
+                    <span><i class="legend-purple"></i>Half Day</span>
+                </div>
+                <svg class="admin-line-chart-svg" viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    {% for y in [40, 72, 104, 136, 168] %}
+                    <line x1="22" y1="{{ y }}" x2="538" y2="{{ y }}" stroke="#edf2fd" stroke-width="1"/>
+                    {% endfor %}
+                    <polyline fill="none" stroke="#22c55e" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" points="{{ report_model.chart_series.present|join(' ') }}"/>
+                    <polyline fill="none" stroke="#ff5f54" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" points="{{ report_model.chart_series.absent|join(' ') }}"/>
+                    <polyline fill="none" stroke="#ff9f1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" points="{{ report_model.chart_series.late|join(' ') }}"/>
+                    <polyline fill="none" stroke="#8b5cf6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" points="{{ report_model.chart_series.half_day|join(' ') }}"/>
+                    {% for label in report_model.chart_labels %}
+                    <text x="{{ 30 + (loop.index0 * 82) }}" y="206" fill="#8a98b3" font-size="12">{{ label }}</text>
+                    {% endfor %}
+                </svg>
+            </article>
+
+            <article class="admin-donut-card">
+                <div class="admin-card-head">
+                    {{ section_title('Attendance Distribution') }}
+                </div>
+                <div class="admin-inline-grid-2" style="grid-template-columns: 180px 1fr; align-items: center;">
+                    <svg class="admin-donut-svg" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#edf2fd" stroke-width="24"/>
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#22c55e" stroke-width="24" stroke-linecap="round" stroke-dasharray="{{ report_model.distribution.segments.present.dasharray }}" transform="rotate(-90 90 90)"/>
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#ff5f54" stroke-width="24" stroke-linecap="round" stroke-dasharray="{{ report_model.distribution.segments.absent.dasharray }}" stroke-dashoffset="{{ report_model.distribution.segments.absent.dashoffset }}" transform="rotate(-90 90 90)"/>
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#ff9f1a" stroke-width="24" stroke-linecap="round" stroke-dasharray="{{ report_model.distribution.segments.late.dasharray }}" stroke-dashoffset="{{ report_model.distribution.segments.late.dashoffset }}" transform="rotate(-90 90 90)"/>
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#8b5cf6" stroke-width="24" stroke-linecap="round" stroke-dasharray="{{ report_model.distribution.segments.half_day.dasharray }}" stroke-dashoffset="{{ report_model.distribution.segments.half_day.dashoffset }}" transform="rotate(-90 90 90)"/>
+                        <circle cx="90" cy="90" r="30" fill="#ffffff"/>
+                        <text x="90" y="84" text-anchor="middle" fill="#1f2a44" font-size="30" font-weight="700">{{ report_model.distribution.total }}</text>
+                        <text x="90" y="108" text-anchor="middle" fill="#8a98b3" font-size="14">Total</text>
+                    </svg>
+                    <div class="admin-summary-list">
+                        <div class="admin-summary-row"><span>Present</span><strong style="color:#22c55e;">{{ report_model.distribution.present }} ({{ report_model.distribution.present_pct }})</strong></div>
+                        <div class="admin-summary-row"><span>Absent</span><strong style="color:#ff5f54;">{{ report_model.distribution.absent }} ({{ report_model.distribution.absent_pct }})</strong></div>
+                        <div class="admin-summary-row"><span>Late</span><strong style="color:#ff9f1a;">{{ report_model.distribution.late }} ({{ report_model.distribution.late_pct }})</strong></div>
+                        <div class="admin-summary-row"><span>Half Day</span><strong style="color:#8b5cf6;">{{ report_model.distribution.half_day }} ({{ report_model.distribution.half_day_pct }})</strong></div>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Attendance Details') }}
+                <label class="admin-search-box">
+                    {{ icon('search') }}
+                    <input type="text" value="{{ filters.search }}" placeholder="Search by name or employee ID...">
+                </label>
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Employee ID</th>
+                            <th>Employee Name</th>
+                            <th>Department</th>
+                            <th>Total Days</th>
+                            <th>Present</th>
+                            <th>Absent</th>
+                            <th>Late</th>
+                            <th>Half Day</th>
+                            <th>Overtime (hh:mm)</th>
+                            <th>Average Work Hours</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if detail_rows %}
+                        {% for row in detail_rows %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ row.staff_code }}</td>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ row.department }}</td>
+                            <td>{{ row.total_days }}</td>
+                            <td>{{ row.present }}</td>
+                            <td>{{ row.absent }}</td>
+                            <td>{{ row.late }}</td>
+                            <td>{{ row.half_day }}</td>
+                            <td>{{ row.overtime }}</td>
+                            <td>{{ row.avg_hours }}</td>
+                            <td>{{ status_badge(row.grade, row.grade_tone) }}</td>
+                            <td><div class="admin-table-actions">{{ table_icon_action('eye', '#', 'View report detail') }}</div></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="13">
+                                <div class="admin-empty">
+                                    <strong>No report data yet.</strong>
+                                    <p>Run the kiosk or staff clocking flow to generate attendance data for reporting.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="admin-table-footer">
+                <span>Showing 1 to {{ detail_rows|length }} of {{ detail_rows|length }} entries</span>
+                <div class="admin-pagination">
+                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+                    <span class="admin-page-chip is-active">1</span>
+                    <span class="admin-page-chip">2</span>
+                    <span class="admin-page-chip">3</span>
+                    <span class="admin-page-chip">4</span>
+                    <span class="admin-page-chip">5</span>
+                    <span class="admin-page-chip">26</span>
+                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+                    <span class="admin-page-chip admin-page-size">10 / page</span>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Summary') }}</div>
+            <div class="admin-summary-list">
+                {% for item in report_model.summary %}
+                <div class="admin-summary-row">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Quick Reports') }}</div>
+            <div class="admin-quick-links">
+                {% for label in report_model.quick_reports %}
+                <a class="admin-quick-link" href="{{ url_for('app.admin_reports') }}">
+                    <span>{{ label }}</span>
+                    {{ icon('chevron-right') }}
+                </a>
+                {% endfor %}
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

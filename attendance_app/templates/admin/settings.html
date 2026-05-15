@@ -1,0 +1,187 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import section_title, stat_card %}
+
+{% block toolbar_actions %}
+<a class="admin-toolbar-button tone-primary" href="#admin-password-card">
+    {{ icon('settings') }}
+    <span>Change Admin Password</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-4">
+    {{ stat_card('dashboard', 'blue', 'Organization', form_values.organization_name, 'System profile') }}
+    {{ stat_card('shift', 'green', 'Default Shift', form_values.default_shift_start ~ ' - ' ~ form_values.default_shift_end, 'New staff schedule') }}
+    {{ stat_card('attendance', 'orange', 'Grace Minutes', form_values.default_grace_minutes, 'Late arrival threshold') }}
+    {{ stat_card('reports', 'purple', 'Report Window', form_values.report_default_range_days ~ ' days', 'Auto-selected range') }}
+</section>
+
+<form id="attendance-settings-form" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="form_name" value="attendance_settings">
+</form>
+
+<form id="admin-password-form" method="post">
+    <input type="hidden" name="form_name" value="admin_password">
+</form>
+
+<section class="admin-content-grid wide-side">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('System Branding', 'Control the live system name and logo shown across the app') }}
+            </div>
+            <div class="admin-form-grid">
+                <label class="admin-field" style="grid-column: 1 / -1;">
+                    <span>Organization Name</span>
+                    <input form="attendance-settings-form" type="text" name="organization_name" value="{{ form_values.organization_name }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Upload System Logo</span>
+                    <input form="attendance-settings-form" type="file" name="system_logo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                </label>
+                <div class="admin-field">
+                    <span>Logo Preview</span>
+                    <div class="admin-brand-preview-card">
+                        <div class="admin-brand-preview-mark">
+                            {% if form_values.system_logo_filename %}
+                            <img src="{{ url_for('app.system_logo', filename=form_values.system_logo_filename) }}" alt="{{ form_values.organization_name }} logo">
+                            {% else %}
+                            {{ icon('fingerprint') }}
+                            {% endif %}
+                        </div>
+                        <div class="admin-brand-preview-copy">
+                            <strong>{{ form_values.organization_name }}</strong>
+                            <span>Live system branding</span>
+                        </div>
+                    </div>
+                    {% if form_values.system_logo_filename %}
+                    <label class="admin-check-row">
+                        <input form="attendance-settings-form" type="checkbox" name="remove_system_logo">
+                        <span>Remove current logo on save</span>
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Attendance Rules', 'Control the default organization-wide attendance settings') }}
+            </div>
+            <div class="admin-form-grid">
+                <label class="admin-field">
+                    <span>Default Shift Start</span>
+                    <input form="attendance-settings-form" type="time" name="default_shift_start" value="{{ form_values.default_shift_start }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Default Shift End</span>
+                    <input form="attendance-settings-form" type="time" name="default_shift_end" value="{{ form_values.default_shift_end }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Default Grace Minutes</span>
+                    <input form="attendance-settings-form" type="number" min="0" name="default_grace_minutes" value="{{ form_values.default_grace_minutes }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Default Report Range (Days)</span>
+                    <input form="attendance-settings-form" type="number" min="1" name="report_default_range_days" value="{{ form_values.report_default_range_days }}" required>
+                </label>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Working Week', 'Choose the official working days used by reports and staffing defaults') }}
+            </div>
+            <div class="admin-check-grid admin-check-grid-compact">
+                {% for day in workday_options %}
+                <label class="admin-check-card admin-check-card-inline">
+                    <input form="attendance-settings-form" type="checkbox" name="working_days" value="{{ day }}" {% if day in form_values.working_days %}checked{% endif %}>
+                    <div>
+                        <strong>{{ day }}</strong>
+                        <span>{% if day in ['Sat', 'Sun'] %}Weekend option{% else %}Workday{% endif %}</span>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="admin-form-actions">
+                <button class="admin-toolbar-button tone-primary" type="submit" form="attendance-settings-form">
+                    {{ icon('settings') }}
+                    <span>Save Settings</span>
+                </button>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Current Defaults') }}
+            </div>
+            <div class="admin-summary-list">
+                <div class="admin-summary-row"><span>Live system name</span><strong>{{ form_values.organization_name }}</strong></div>
+                <div class="admin-summary-row"><span>Logo</span><strong>{{ 'Uploaded' if form_values.system_logo_filename else 'Default mark' }}</strong></div>
+                <div class="admin-summary-row"><span>New staff shift</span><strong>{{ form_values.default_shift_start }} - {{ form_values.default_shift_end }}</strong></div>
+                <div class="admin-summary-row"><span>Grace period</span><strong>{{ form_values.default_grace_minutes }} mins</strong></div>
+                <div class="admin-summary-row"><span>Report range</span><strong>{{ form_values.report_default_range_days }} days</strong></div>
+                <div class="admin-summary-row"><span>Working week</span><strong>{{ form_values.working_days|join(', ') }}</strong></div>
+            </div>
+        </article>
+
+        <article class="admin-side-card" id="admin-password-card">
+            <div class="admin-card-head">
+                {{ section_title('Admin Security', 'Change the platform administrator password used for admin login') }}
+            </div>
+            <div class="admin-summary-list">
+                <div class="admin-summary-row"><span>Admin username</span><strong>{{ admin_security.admin_username }}</strong></div>
+                <div class="admin-summary-row"><span>Password source</span><strong>{% if admin_security.password_is_custom %}Custom password{% else %}Default launcher password{% endif %}</strong></div>
+                <div class="admin-summary-row"><span>Last changed</span><strong>{{ admin_security.password_updated_at if admin_security.password_updated_at else 'Not changed yet' }}</strong></div>
+            </div>
+            <div class="admin-form-grid full">
+                <label class="admin-field">
+                    <span>Current Password</span>
+                    <input form="admin-password-form" type="password" name="current_password" value="{{ password_form.current_password }}" autocomplete="current-password" required>
+                </label>
+                <label class="admin-field">
+                    <span>New Password</span>
+                    <input form="admin-password-form" type="password" name="new_password" value="{{ password_form.new_password }}" autocomplete="new-password" required>
+                </label>
+                <label class="admin-field">
+                    <span>Confirm New Password</span>
+                    <input form="admin-password-form" type="password" name="confirm_password" value="{{ password_form.confirm_password }}" autocomplete="new-password" required>
+                </label>
+            </div>
+            <div class="admin-form-actions">
+                <button class="admin-toolbar-button tone-primary" type="submit" form="admin-password-form">
+                    {{ icon('settings') }}
+                    <span>Update Admin Password</span>
+                </button>
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('How This Applies') }}
+            </div>
+            <div class="admin-note-list">
+                <div class="admin-note-item">
+                    <strong>Live Branding</strong>
+                    <span>The saved organization name and logo now appear across the kiosk, admin pages, and browser titles.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>New Staff Profiles</strong>
+                    <span>Every new employee record inherits these shift timings and grace rules.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Reports</strong>
+                    <span>The reports module uses this default range whenever no dates are selected.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Admin Login</strong>
+                    <span>Your new admin password is saved inside the system and will be used on the next login.</span>
+                </div>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

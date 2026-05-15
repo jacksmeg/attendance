@@ -1,0 +1,163 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, status_badge, toolbar_button, table_icon_action, section_title %}
+
+{% block toolbar_center %}
+<label class="admin-search-box">
+    {{ icon('search') }}
+    <input type="text" value="" placeholder="Search staff, department...">
+</label>
+{% endblock %}
+
+{% block toolbar_actions %}
+<a class="admin-toolbar-button tone-primary" href="#">
+    {{ icon('plus') }}
+    <span>Add New Shift</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-4">
+    {% for stat in shift_model.stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-tabs">
+                <a class="admin-tab is-active" href="#">Shift List</a>
+                <a class="admin-tab" href="#">Calendar View</a>
+            </div>
+            <div class="admin-table-wrap" style="margin-top:16px;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Shift Name</th>
+                            <th>Shift Code</th>
+                            <th>Time</th>
+                            <th>Break</th>
+                            <th>Working Hours</th>
+                            <th>Grace Period</th>
+                            <th>Late After</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if shift_model.shifts %}
+                        {% for row in shift_model.shifts %}
+                        <tr>
+                            <td><span class="admin-person-cell"><span class="admin-subnav-dot"></span><strong>{{ row.name }}</strong></span></td>
+                            <td>{{ status_badge(row.code, row.dot if row.dot != 'green' else 'green') }}</td>
+                            <td>{{ row.time }}</td>
+                            <td>{{ row.break }}</td>
+                            <td>{{ row.hours }}</td>
+                            <td>{{ row.grace }}</td>
+                            <td>{{ row.late_after }}</td>
+                            <td>{{ status_badge(row.status, 'green' if row.status == 'Active' else 'neutral') }}</td>
+                            <td><div class="admin-table-actions">{{ table_icon_action('edit', '#', 'Edit shift') }}{{ table_icon_action('more', '#', 'More actions') }}</div></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="9">
+                                <div class="admin-empty">
+                                    <strong>No shifts created yet.</strong>
+                                    <p>Create your first work shift before assigning staff attendance schedules.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="admin-table-footer">
+                <span>Showing 1 to {{ shift_model.shifts|length }} of {{ shift_model.shifts|length }} entries</span>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Shift Assignments Today') }}
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Shift Name</th>
+                            <th>Employees</th>
+                            <th>Departments</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if shift_model.assignments %}
+                        {% for row in shift_model.assignments %}
+                        <tr>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.employees }}</td>
+                            <td>{{ row.departments }}</td>
+                            <td>{{ row.start }}</td>
+                            <td>{{ row.end }}</td>
+                            <td><a class="admin-toolbar-button" href="#">View Employees {{ icon('chevron-right') }}</a></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="6">
+                                <div class="admin-empty">
+                                    <strong>No shift assignments yet.</strong>
+                                    <p>Assignments will appear here after you create shifts and link staff to them.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Shift Details') }}
+                {% if shift_model.detail %}
+                {{ status_badge(shift_model.detail.status, 'green' if shift_model.detail.status == 'Active' else 'neutral') }}
+                {% endif %}
+            </div>
+            {% if shift_model.detail %}
+            <div class="admin-request-detail">
+                <div class="admin-request-detail-row"><span>Shift Code</span><span>{{ shift_model.detail.code }}</span></div>
+                <div class="admin-request-detail-row"><span>Time</span><span>{{ shift_model.detail.time }}</span></div>
+                <div class="admin-request-detail-row"><span>Break</span><span>{{ shift_model.detail.break }}</span></div>
+                <div class="admin-request-detail-row"><span>Working Hours</span><span>{{ shift_model.detail.hours }}</span></div>
+                <div class="admin-request-detail-row"><span>Grace Period</span><span>{{ shift_model.detail.grace }}</span></div>
+                <div class="admin-request-detail-row"><span>Late After</span><span>{{ shift_model.detail.late_after }}</span></div>
+                <div class="admin-request-detail-row"><span>Early Leave Before</span><span>{{ shift_model.detail.early_leave }}</span></div>
+                <div class="admin-request-detail-row"><span>Overtime After</span><span>{{ shift_model.detail.overtime_after }}</span></div>
+                <div class="admin-request-detail-row"><span>Weekly Off</span><span>{{ shift_model.detail.weekly_off }}</span></div>
+                <div class="admin-request-detail-row"><span>Status</span><span>{{ shift_model.detail.status }}</span></div>
+                <div class="admin-request-detail-row"><span>Description</span><span>{{ shift_model.detail.description }}</span></div>
+            </div>
+            <div class="admin-summary-list">
+                <div class="admin-summary-row"><span>Shift Rules</span><strong></strong></div>
+                {% for rule in shift_model.detail.rules %}
+                <div class="admin-summary-muted">{{ rule }}</div>
+                {% endfor %}
+            </div>
+            <a class="admin-side-action tone-reject" href="#">{{ icon('trash') }} Delete Shift</a>
+            {% else %}
+            <div class="admin-empty">
+                <strong>No shift selected.</strong>
+                <p>Once you create a shift, its rules and timing details will appear here.</p>
+            </div>
+            {% endif %}
+        </article>
+    </div>
+</section>
+{% endblock %}

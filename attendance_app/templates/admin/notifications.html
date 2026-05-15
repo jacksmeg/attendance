@@ -1,0 +1,38 @@
+{% extends "admin_shell.html" %}
+{% from "_admin_macros.html" import section_title %}
+
+{% block content %}
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">{{ section_title('Notifications') }}</div>
+            <div class="admin-notification-list">
+                {% if notification_rows %}
+                {% for item in notification_rows %}
+                <div class="admin-notification-row">
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.meta }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="admin-empty">
+                    <strong>No notifications yet.</strong>
+                    <p>System alerts and approval reminders will show up here during live use.</p>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+    </div>
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Preferences') }}</div>
+            <div class="admin-summary-list">
+                <div class="admin-summary-row"><span>Attendance alerts</span><strong>Enabled</strong></div>
+                <div class="admin-summary-row"><span>Leave approvals</span><strong>Enabled</strong></div>
+                <div class="admin-summary-row"><span>Payroll reminders</span><strong>Enabled</strong></div>
+                <div class="admin-summary-row"><span>System warnings</span><strong>Enabled</strong></div>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

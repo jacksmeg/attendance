@@ -1,0 +1,168 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | {{ app_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="{{ body_class|default('') }}">
+    {% set endpoint = request.endpoint or '' %}
+    {% set admin_authed = session.get('admin_authenticated') %}
+    {% set staff_authed = session.get('staff_authenticated') %}
+    {% set dashboard_active = endpoint == 'app.admin_dashboard' %}
+    {% set staff_active = endpoint in ['app.admin_staff', 'app.admin_staff_new', 'app.admin_staff_edit', 'app.admin_staff_enroll', 'app.admin_staff_qr'] %}
+    {% set logs_active = endpoint == 'app.admin_attendance' %}
+    {% set reports_active = endpoint in ['app.admin_reports', 'app.admin_reports_export'] %}
+    {% set settings_active = endpoint == 'app.admin_settings' %}
+    {% set kiosk_active = endpoint == 'app.kiosk' %}
+    {% set staff_portal_active = endpoint in ['app.staff_root', 'app.staff_home', 'app.staff_clock', 'app.staff_quick_access'] %}
+    {% set current_role = current_access_role if current_access_role else ('Administrator' if admin_authed else ('Staff' if staff_authed else 'Public session')) %}
+    {% set display_name = display_name if display_name else (session.get('display_name') or session.get('admin_username') or 'Guest') %}
+    {% set initials = (display_name[:1] if display_name else 'G')|upper %}
+
+    <div class="desktop-shell">
+        <aside class="sidebar">
+            <a class="sidebar-brand" href="{{ url_for('app.kiosk') }}">
+                <span class="sidebar-brand-mark">
+                    {% if app_logo_url %}
+                    <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                    {% else %}
+                    {{ icon('fingerprint') }}
+                    {% endif %}
+                </span>
+                <span class="sidebar-brand-copy">
+                    <span class="sidebar-brand-title">{{ app_name }}</span>
+                    <span class="sidebar-brand-subtitle">Fingerprint attendance</span>
+                </span>
+            </a>
+
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <a class="sidebar-link {% if kiosk_active %}is-active{% endif %}" href="{{ url_for('app.kiosk') }}">
+                    {{ icon('kiosk') }}
+                    <span>Kiosk</span>
+                </a>
+                {% if staff_authed %}
+                    <a class="sidebar-link {% if staff_portal_active %}is-active{% endif %}" href="{{ url_for('app.staff_home') }}">
+                        {{ icon('mobile') }}
+                        <span>My Attendance</span>
+                    </a>
+                {% endif %}
+                {% if admin_authed %}
+                    <a class="sidebar-link {% if dashboard_active %}is-active{% endif %}" href="{{ url_for('app.admin_dashboard') }}">
+                        {{ icon('dashboard') }}
+                        <span>Dashboard</span>
+                    </a>
+                    <a class="sidebar-link {% if staff_active %}is-active{% endif %}" href="{{ url_for('app.admin_staff') }}">
+                        {{ icon('staff') }}
+                        <span>Staff</span>
+                    </a>
+                    <a class="sidebar-link {% if logs_active %}is-active{% endif %}" href="{{ url_for('app.admin_attendance') }}">
+                        {{ icon('logs') }}
+                        <span>Logs</span>
+                    </a>
+                    <a class="sidebar-link {% if reports_active %}is-active{% endif %}" href="{{ url_for('app.admin_reports') }}">
+                        {{ icon('reports') }}
+                        <span>Reports</span>
+                    </a>
+                    {% if current_role in ['Super Admin', 'HR/Admin'] %}
+                        <a class="sidebar-link {% if settings_active %}is-active{% endif %}" href="{{ url_for('app.admin_settings') }}">
+                            {{ icon('settings') }}
+                            <span>Settings</span>
+                        </a>
+                    {% endif %}
+                {% endif %}
+                {% if not admin_authed and not staff_authed %}
+                    <a class="sidebar-link {% if endpoint == 'app.staff_login' %}is-active{% endif %}" href="{{ url_for('app.staff_login') }}">
+                        {{ icon('mobile') }}
+                        <span>Staff Login</span>
+                    </a>
+                    <a class="sidebar-link {% if endpoint == 'app.admin_login' %}is-active{% endif %}" href="{{ url_for('app.admin_login') }}">
+                        {{ icon('staff') }}
+                        <span>Admin Login</span>
+                    </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-status">
+                    <span class="sidebar-status-icon">{{ icon('shield-check') }}</span>
+                    <div>
+                        <strong>{{ fingerprint_backend|replace('_', ' ')|title }}</strong>
+                        <span>
+                            {% if admin_authed %}
+                                {{ current_role }}
+                            {% elif staff_authed %}
+                                Staff self-service
+                            {% else %}
+                                Public kiosk mode
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="workspace">
+            <header class="workspace-topbar">
+                <nav class="tab-nav" aria-label="Workspace tabs">
+                    {% if staff_authed %}
+                        <a class="tab-link {% if staff_portal_active %}is-active{% endif %}" href="{{ url_for('app.staff_home') }}">My Attendance</a>
+                    {% endif %}
+                    {% if admin_authed %}
+                        <a class="tab-link {% if dashboard_active %}is-active{% endif %}" href="{{ url_for('app.admin_dashboard') }}">Dashboard</a>
+                        <a class="tab-link {% if staff_active %}is-active{% endif %}" href="{{ url_for('app.admin_staff') }}">Staff</a>
+                        <a class="tab-link {% if logs_active %}is-active{% endif %}" href="{{ url_for('app.admin_attendance') }}">Logs</a>
+                        <a class="tab-link {% if reports_active %}is-active{% endif %}" href="{{ url_for('app.admin_reports') }}">Reports</a>
+                        {% if current_role in ['Super Admin', 'HR/Admin'] %}
+                            <a class="tab-link {% if settings_active %}is-active{% endif %}" href="{{ url_for('app.admin_settings') }}">Settings</a>
+                        {% endif %}
+                    {% elif not staff_authed %}
+                        <a class="tab-link is-active" href="{{ url_for('app.kiosk') }}">Kiosk</a>
+                    {% endif %}
+                </nav>
+
+                <div class="topbar-meta">
+                    {% if admin_authed or staff_authed %}
+                        <a class="topbar-utility" href="{{ url_for('app.logout') }}">
+                            {{ icon('logout') }}
+                            <span>Logout</span>
+                        </a>
+                    {% else %}
+                        <a class="topbar-utility" href="{{ url_for('app.staff_login') }}">
+                            {{ icon('mobile') }}
+                            <span>Staff Login</span>
+                        </a>
+                        <a class="topbar-utility" href="{{ url_for('app.admin_login') }}">
+                            {{ icon('staff') }}
+                            <span>Admin Login</span>
+                        </a>
+                    {% endif %}
+                    <div class="profile-chip">
+                        <span class="profile-avatar">{{ initials }}</span>
+                        <span class="profile-copy">
+                            <strong>{{ display_name }}</strong>
+                            <span>{{ current_role }}</span>
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <section class="flash-stack">
+                        {% for category, message in messages %}
+                            <div class="flash flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </section>
+                {% endif %}
+            {% endwith %}
+
+            <main class="page-wrap">
+                {% block content %}{% endblock %}
+            </main>
+        </section>
+    </div>
+</body>
+</html>

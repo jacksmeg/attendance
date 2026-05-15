@@ -1,0 +1,55 @@
+Subject: Request for Onboarding to NIA Identity Verification System Platform (IVSP)
+
+To: idverification@nia.gov.gh
+
+Dear National Identification Authority,
+
+We write on behalf of [INSTITUTION NAME] to request onboarding to the NIA Identity
+Verification System Platform (IVSP) for official Ghana Card verification.
+
+Our institution intends to use Ghana Card verification in support of staff identity
+verification and internal compliance workflows within our attendance and HR operations.
+
+We are prepared to submit the required onboarding documents, including:
+
+- Business Registration Certificate
+- Business License
+- Legal basis permitting collection of personal data
+- Data Protection Commission certificate
+- SSNIT certificate
+- Organization profile
+- Process flow for Ghana Card usage in our operations
+- Dataset request summary
+
+Primary contact details:
+
+- Institution Name: [INSTITUTION NAME]
+- Focal Person: [FULL NAME]
+- Designation: [DESIGNATION]
+- Phone Number: [PHONE]
+- Email Address: [EMAIL]
+- Physical Address: [ADDRESS]
+- Digital Address: [DIGITAL ADDRESS]
+
+Requested initial datasets:
+
+- Surname
+- Forename(s)
+- Date of Birth
+- Sex
+- Nationality
+- Place of Birth
+- Residential Address
+- Digital Address
+- Telephone Number(s)
+
+Kindly provide the next onboarding steps, technical requirements, and any applicable
+documents or agreements needed to proceed.
+
+Thank you.
+
+Yours faithfully,
+
+[FULL NAME]
+[DESIGNATION]
+[INSTITUTION NAME]

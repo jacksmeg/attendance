@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block content %}
+<section class="page-hero page-hero-split">
+    <div>
+        <h1>{{ staff.first_name }}, here is your attendance for today.</h1>
+        <p class="hero-subtitle">Clock in, start or end a break, clock out, and confirm your status from any phone or browser.</p>
+    </div>
+    <div class="timestamp-card">
+        <span class="timestamp-icon">{{ icon('calendar') }}</span>
+        <div class="timestamp-copy">
+            <span>{{ today.strftime("%A, %d %B %Y") }}</span>
+            <strong>{{ today_status.current_state }}</strong>
+        </div>
+        <span class="timestamp-trailing">{{ icon('clock') }}</span>
+    </div>
+</section>
+
+<section class="metric-strip">
+    <article class="metric-card">
+        <span class="metric-icon metric-icon-teal">{{ icon('check-circle') }}</span>
+        <div class="metric-copy">
+            <strong>{{ today_status.check_in_at|human_time if today_status.check_in_at else '--' }}</strong>
+            <span>Check In</span>
+            <small>First check-in today</small>
+        </div>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon metric-icon-blue">{{ icon('clock') }}</span>
+        <div class="metric-copy">
+            <strong>{{ today_status.worked_minutes }}</strong>
+            <span>Worked Minutes</span>
+            <small>Net worked time today</small>
+        </div>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon metric-icon-orange">{{ icon('logs') }}</span>
+        <div class="metric-copy">
+            <strong>{{ today_status.total_break_minutes }}</strong>
+            <span>Break Minutes</span>
+            <small>Completed break time today</small>
+        </div>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon metric-icon-lime">{{ icon('shield-check') }}</span>
+        <div class="metric-copy">
+            <strong>{{ today_status.check_out_at|human_time if today_status.check_out_at else '--' }}</strong>
+            <span>Check Out</span>
+            <small>Latest checkout today</small>
+        </div>
+    </article>
+</section>
+
+<section class="panel-grid">
+    <article class="panel-card panel-card-large">
+        <div class="panel-card-head">
+            <div>
+                <p class="section-kicker">Today's Status</p>
+                <h3>{{ today_status.current_state }}</h3>
+            </div>
+            <div class="staff-head-status">
+                <span class="status-pill">{% if today_status.currently_inside %}Inside organization{% else %}Outside organization{% endif %}</span>
+                <div class="staff-photo staff-photo-sm">
+                    {% if staff.photo_filename %}
+                        <img src="{{ url_for('app.staff_photo', filename=staff.photo_filename) }}" alt="{{ staff.first_name }} {{ staff.last_name }}">
+                    {% else %}
+                        <span>{{ staff.first_name[:1] }}{{ staff.last_name[:1] }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-stack detail-stack-grid">
+            <div class="detail-row">
+                <span>Staff Code</span>
+                <strong>{{ staff.staff_code }}</strong>
+            </div>
+            <div class="detail-row">
+                <span>Department</span>
+                <strong>{{ staff.department }}</strong>
+            </div>
+            <div class="detail-row">
+                <span>Job Title</span>
+                <strong>{{ staff.role }}</strong>
+            </div>
+            <div class="detail-row">
+                <span>Access Role</span>
+                <strong>{{ staff.access_role }}</strong>
+            </div>
+        </div>
+
+        <div class="action-grid">
+            {% for action in ['check_in', 'break_start', 'break_end', 'check_out'] %}
+                <form method="post" action="{{ url_for('app.staff_clock') }}" class="gps-form action-form">
+                    <input type="hidden" name="action" value="{{ action }}">
+                    <input type="hidden" name="latitude">
+                    <input type="hidden" name="longitude">
+                    <input type="hidden" name="gps_accuracy">
+                    <button class="{% if action in today_status.next_actions %}primary-button{% else %}text-link{% endif %}" type="submit" {% if action not in today_status.next_actions %}disabled{% endif %}>
+                        <span>{{ action|title_event }}</span>
+                    </button>
+                </form>
+            {% endfor %}
+        </div>
+        <p class="panel-note">Your browser will try to attach GPS coordinates automatically when available. If location is blocked, the action still records as a web event.</p>
+    </article>
+
+    <article class="panel-card qr-panel">
+        <div class="panel-card-head">
+            <div>
+                <p class="section-kicker">QR Access</p>
+                <h3>Quick mobile badge</h3>
+            </div>
+            <span class="status-pill">{{ icon('qr') }} Active</span>
+        </div>
+        <div class="qr-card">
+            {{ mobile_qr_svg|safe }}
+        </div>
+        <p class="panel-note">Scan this code to open your personal quick-access attendance page.</p>
+        <div class="detail-row">
+            <span>Quick URL</span>
+            <strong class="truncate-value">{{ quick_url }}</strong>
+        </div>
+    </article>
+</section>
+
+<section class="panel-card">
+    <div class="panel-card-head">
+        <div>
+            <p class="section-kicker">Today's Timeline</p>
+            <h3>Your attendance events for {{ today.strftime("%d %b %Y") }}</h3>
+        </div>
+        <span class="status-pill">{{ today_status.rows|length }} events</span>
+    </div>
+    {% if today_status.rows %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Status</th>
+                        <th>Method</th>
+                        <th>Location</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in today_status.rows %}
+                    <tr>
+                        <td><strong>{{ row.event_type|title_event }}</strong></td>
+                        <td>{{ row.status_label }}</td>
+                        <td>{{ row.method }}</td>
+                        <td>
+                            {% if row.latitude is not none and row.longitude is not none %}
+                                <strong>{{ '%.5f'|format(row.latitude) }}, {{ '%.5f'|format(row.longitude) }}</strong>
+                            {% else %}
+                                <span class="cell-sub">No GPS captured</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.event_time|human_dt }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No attendance recorded yet today.</h3>
+            <p>Use the action buttons above or the kiosk to start your attendance day.</p>
+        </div>
+    {% endif %}
+</section>
+
+<script>
+    for (const form of document.querySelectorAll(".gps-form")) {
+        form.addEventListener("submit", (event) => {
+            if (form.dataset.gpsReady === "1" || !navigator.geolocation) {
+                return;
+            }
+            event.preventDefault();
+            navigator.geolocation.getCurrentPosition((position) => {
+                form.querySelector('input[name="latitude"]').value = position.coords.latitude;
+                form.querySelector('input[name="longitude"]').value = position.coords.longitude;
+                form.querySelector('input[name="gps_accuracy"]').value = position.coords.accuracy;
+                form.dataset.gpsReady = "1";
+                form.requestSubmit();
+            }, () => {
+                form.dataset.gpsReady = "1";
+                form.requestSubmit();
+            }, { timeout: 4000 });
+        });
+    }
+</script>
+{% endblock %}

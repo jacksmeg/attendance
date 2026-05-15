@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block content %}
+<section class="center-stage">
+    <div class="auth-layout quick-access-layout">
+        <article class="panel-card auth-panel">
+            <p class="section-kicker">QR Quick Access</p>
+            <h1>{{ staff.first_name }} {{ staff.last_name }}</h1>
+            <p class="hero-subtitle">{{ staff.staff_code }} · {{ staff.department }} · {{ today_status.current_state }}</p>
+
+            <div class="action-grid">
+                {% for action in ['check_in', 'break_start', 'break_end', 'check_out'] %}
+                    <form method="post" class="gps-form action-form">
+                        <input type="hidden" name="action" value="{{ action }}">
+                        <input type="hidden" name="latitude">
+                        <input type="hidden" name="longitude">
+                        <input type="hidden" name="gps_accuracy">
+                        <button class="{% if action in today_status.next_actions %}primary-button{% else %}text-link{% endif %}" type="submit" {% if action not in today_status.next_actions %}disabled{% endif %}>
+                            <span>{{ action|title_event }}</span>
+                        </button>
+                    </form>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="panel-card auth-side-panel">
+            <p class="section-kicker">Today's Snapshot</p>
+            <h3>Attendance state</h3>
+            <div class="detail-stack">
+                <div class="detail-row">
+                    <span>Check In</span>
+                    <strong>{{ today_status.check_in_at|human_time if today_status.check_in_at else '--' }}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Check Out</span>
+                    <strong>{{ today_status.check_out_at|human_time if today_status.check_out_at else '--' }}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Worked Minutes</span>
+                    <strong>{{ today_status.worked_minutes }}</strong>
+                </div>
+            </div>
+        </article>
+    </div>
+</section>
+
+<script>
+    for (const form of document.querySelectorAll(".gps-form")) {
+        form.addEventListener("submit", (event) => {
+            if (form.dataset.gpsReady === "1" || !navigator.geolocation) {
+                return;
+            }
+            event.preventDefault();
+            navigator.geolocation.getCurrentPosition((position) => {
+                form.querySelector('input[name="latitude"]').value = position.coords.latitude;
+                form.querySelector('input[name="longitude"]').value = position.coords.longitude;
+                form.querySelector('input[name="gps_accuracy"]').value = position.coords.accuracy;
+                form.dataset.gpsReady = "1";
+                form.requestSubmit();
+            }, () => {
+                form.dataset.gpsReady = "1";
+                form.requestSubmit();
+            }, { timeout: 4000 });
+        });
+    }
+</script>
+{% endblock %}

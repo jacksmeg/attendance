@@ -1,0 +1,140 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, avatar, status_badge, toolbar_button, table_icon_action, section_title %}
+
+{% block toolbar_actions %}
+{{ toolbar_button('calendar', 'May 19, 2024 - May 19, 2024') }}
+{{ toolbar_button('filter', 'Filter') }}
+{{ toolbar_button('export', 'Export') }}
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid">
+    {% for stat in overtime_model.stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-tabs">
+                <a class="admin-tab is-active" href="#">Overtime List</a>
+                <a class="admin-tab" href="#">Pending Approval</a>
+                <a class="admin-tab" href="#">Approved</a>
+                <a class="admin-tab" href="#">Rejected</a>
+            </div>
+            <div class="admin-filter-row">
+                <span class="admin-filter-control with-icon">{{ icon('calendar') }} May 19, 2024 - May 19, 2024</span>
+                <span class="admin-filter-control"><select><option>All Departments</option></select></span>
+                <span class="admin-filter-control"><select><option>All Shifts</option></select></span>
+                <span class="admin-filter-control"><select><option>All Status</option></select></span>
+                {{ toolbar_button('filter', 'Filter') }}
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Date</th>
+                            <th>Shift</th>
+                            <th>OT Start Time</th>
+                            <th>OT End Time</th>
+                            <th>OT Hours</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if overtime_rows %}
+                        {% for row in overtime_rows %}
+                        <tr>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                        <span>{{ row.staff_code }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ row.department }}</td>
+                            <td>{{ row.date }}</td>
+                            <td>{{ status_badge(row.shift, row.shift_tone) }}</td>
+                            <td>{{ row.ot_start }}</td>
+                            <td>{{ row.ot_end }}</td>
+                            <td>{{ row.ot_hours }}</td>
+                            <td>{{ row.reason }}</td>
+                            <td>{{ status_badge(row.status, row.status_tone) }}</td>
+                            <td><div class="admin-table-actions">{{ table_icon_action('eye', '#', 'View overtime') }}{{ table_icon_action('edit', '#', 'Edit overtime') }}</div></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="10">
+                                <div class="admin-empty">
+                                    <strong>No overtime records yet.</strong>
+                                    <p>Overtime requests and approvals will appear here after real staff activity starts.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="admin-table-footer">
+                <span>Showing 1 to {{ overtime_rows|length }} of {{ overtime_rows|length }} entries</span>
+                <div class="admin-pagination">
+                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+                    <span class="admin-page-chip is-active">1</span>
+                    <span class="admin-page-chip">2</span>
+                    <span class="admin-page-chip">3</span>
+                    <span class="admin-page-chip">4</span>
+                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+                    <span class="admin-page-chip admin-page-size">10 / page</span>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Overtime Summary') }}
+                <a class="admin-toolbar-button" href="#">This Month</a>
+            </div>
+            <div class="admin-summary-list">
+                {% for item in overtime_model.summary %}
+                <div class="admin-summary-row"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Top Overtime Employees') }}</div>
+            <div class="admin-top-users-list">
+                {% if overtime_model.top_employees %}
+                {% for item in overtime_model.top_employees %}
+                <div class="admin-top-users-row"><span>{{ loop.index }}. {{ item.name }}</span><strong>{{ item.hours }}</strong></div>
+                {% endfor %}
+                {% else %}
+                <div class="admin-empty">
+                    <strong>No overtime leaders yet.</strong>
+                    <p>Employee overtime rankings will show up after approved overtime is recorded.</p>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Quick Actions') }}</div>
+            <div class="admin-quick-links">
+                <a class="admin-quick-link" href="#"><span>Approve Overtime</span>{{ icon('chevron-right') }}</a>
+                <a class="admin-quick-link" href="#"><span>Overtime Report</span>{{ icon('chevron-right') }}</a>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block content %}
+<section class="center-stage">
+    <div class="auth-layout">
+        <article class="panel-card auth-panel">
+            <div class="auth-brand-lockup">
+                <span class="auth-brand-mark">
+                    {% if app_logo_url %}
+                    <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                    {% else %}
+                    {{ icon('fingerprint') }}
+                    {% endif %}
+                </span>
+                <span class="auth-brand-copy">
+                    <span class="auth-brand-title">{{ app_name }}</span>
+                    <span class="auth-brand-subtitle">Administrator sign in</span>
+                </span>
+            </div>
+            <p class="section-kicker">Administrator Access</p>
+            <h1>Sign in to manage staff, fingerprints, and reports.</h1>
+            <p class="hero-subtitle">Use the administrator username and password for {{ app_name }} to reach the full control workspace.</p>
+
+            <form method="post" class="stack-form auth-form">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <label class="field">
+                    <span>Username</span>
+                    <input type="text" name="username" placeholder="admin" required>
+                </label>
+                <label class="field">
+                    <span>Password</span>
+                    <input type="password" name="password" placeholder="Enter password" required>
+                </label>
+                <button class="primary-button" type="submit">
+                    <span class="button-icon">{{ icon('dashboard') }}</span>
+                    <span>Open Admin Dashboard</span>
+                </button>
+            </form>
+        </article>
+
+        <article class="panel-card auth-side-panel">
+            <p class="section-kicker">Quick Notes</p>
+            <h3>{{ app_name }} access overview</h3>
+            <div class="detail-stack">
+                <div class="detail-row">
+                    <span>Kiosk</span>
+                    <strong>Always available</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Staff tools</span>
+                    <strong>Admin only</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Attendance logs</span>
+                    <strong>Admin only</strong>
+                </div>
+            </div>
+            <p class="panel-note">Once you sign in, the full dashboard, staff directory, enrollment tools, reports, and settings become available from the left sidebar.</p>
+        </article>
+    </div>
+</section>
+{% endblock %}

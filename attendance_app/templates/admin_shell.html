@@ -1,0 +1,206 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | {{ app_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin_styles.css') }}">
+</head>
+<body class="admin-ui {{ body_class|default('') }}">
+    {% set nav_primary = nav_primary|default('dashboard') %}
+    {% set nav_secondary = nav_secondary|default('') %}
+    {% set page_title = page_title|default(title) %}
+    {% set breadcrumbs = breadcrumbs|default([]) %}
+    {% set display_name = display_name if display_name else (session.get('display_name') or session.get('admin_username') or 'Admin User') %}
+    {% set current_role = current_access_role if current_access_role else (session.get('access_role') or 'Super Admin') %}
+    {% set initials = (display_name[:1] if display_name else 'A')|upper %}
+
+    {% set sidebar_sections = [
+        {
+            "label": "Main",
+            "items": [
+                {"key": "dashboard", "label": "Dashboard", "icon": "dashboard", "endpoint": "app.admin_dashboard"},
+                {"key": "staff", "label": "Staff", "icon": "staff", "endpoint": "app.admin_staff"},
+                {"key": "ghana-card", "label": "Ghana Card Verification", "icon": "shield-check", "endpoint": "app.admin_ghana_card_verification"},
+                {"key": "attendance", "label": "Attendance", "icon": "attendance", "endpoint": "app.admin_attendance"},
+                {"key": "shift", "label": "Shift Management", "icon": "shift", "endpoint": "app.admin_shift_management"},
+                {"key": "leave", "label": "Leave Management", "icon": "leave", "endpoint": "app.admin_leave_management"},
+                {"key": "overtime", "label": "Overtime", "icon": "overtime", "endpoint": "app.admin_overtime"},
+                {"key": "reports", "label": "Reports", "icon": "reports", "endpoint": "app.admin_reports"},
+                {"key": "payroll", "label": "Payroll", "icon": "payroll", "endpoint": "app.admin_payroll"},
+                {"key": "correction", "label": "Attendance Correction", "icon": "correction", "endpoint": "app.admin_attendance_correction"},
+                {"key": "holidays", "label": "Holidays", "icon": "holiday", "endpoint": "app.admin_holidays"},
+                {"key": "notifications", "label": "Notifications", "icon": "bell", "endpoint": "app.admin_notifications", "badge": 5},
+            ]
+        },
+        {
+            "label": "System",
+            "items": [
+                {"key": "users", "label": "Users & Roles", "icon": "users", "endpoint": "app.admin_users_roles"},
+                {"key": "settings", "label": "Settings", "icon": "settings", "endpoint": "app.admin_settings"},
+                {"key": "audit", "label": "Audit Logs", "icon": "audit", "endpoint": "app.admin_audit_logs"},
+            ]
+        }
+    ] %}
+
+    {% set subnav_map = {
+        "leave": [
+            {"key": "requests", "label": "Leave Requests"},
+            {"key": "approve", "label": "Approve Leave"},
+            {"key": "balance", "label": "Leave Balance"},
+            {"key": "calendar", "label": "Leave Calendar"},
+            {"key": "types", "label": "Leave Types"},
+        ],
+        "reports": [
+            {"key": "attendance", "label": "Attendance Report"},
+            {"key": "daily", "label": "Daily Summary"},
+            {"key": "monthly", "label": "Monthly Summary"},
+            {"key": "late", "label": "Late Report"},
+            {"key": "absence", "label": "Absence Report"},
+            {"key": "overtime", "label": "Overtime Report"},
+            {"key": "leave", "label": "Leave Report"},
+            {"key": "shift", "label": "Shift Report"},
+        ],
+        "payroll": [
+            {"key": "dashboard", "label": "Payroll Dashboard"},
+            {"key": "processing", "label": "Salary Processing"},
+            {"key": "history", "label": "Payslip History"},
+            {"key": "components", "label": "Salary Components"},
+            {"key": "settings", "label": "Pay Settings"},
+            {"key": "bank", "label": "Bank & Tax Settings"},
+        ],
+        "correction": [
+            {"key": "requests", "label": "Correction Requests"},
+            {"key": "approve", "label": "Approve Requests"},
+            {"key": "mine", "label": "My Requests"},
+            {"key": "settings", "label": "Correction Settings"},
+        ],
+        "shift": [
+            {"key": "shifts", "label": "Shifts"},
+            {"key": "assignments", "label": "Shift Assignments"},
+            {"key": "rotations", "label": "Rotations"},
+            {"key": "requests", "label": "Shift Requests"},
+        ]
+    } %}
+
+    <div class="admin-app-shell">
+        <aside class="admin-sidebar">
+            <a class="admin-brand" href="{{ url_for('app.admin_dashboard') }}">
+                <span class="admin-brand-mark">
+                    {% if app_logo_url %}
+                    <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                    {% else %}
+                    <span class="admin-brand-mark-grid">
+                        <span></span><span></span><span></span><span></span>
+                    </span>
+                    {% endif %}
+                </span>
+                <div class="admin-brand-copy">
+                    <strong>{{ app_name }}</strong>
+                    <span>Attendance system</span>
+                </div>
+            </a>
+
+            <nav class="admin-side-nav" aria-label="Admin navigation">
+                {% for section in sidebar_sections %}
+                <div class="admin-side-group">
+                    <span class="admin-side-label">{{ section["label"] }}</span>
+                    {% for item in section["items"] %}
+                    {% set is_active = nav_primary == item["key"] %}
+                    <a class="admin-side-link {% if is_active %}is-active{% endif %}" href="{{ url_for(item["endpoint"]) }}">
+                        <span class="admin-side-link-icon">{{ icon(item["icon"]) }}</span>
+                        <span>{{ item["label"] }}</span>
+                        {% if item["badge"] is defined %}
+                        <span class="admin-link-badge">{{ item["badge"] }}</span>
+                        {% endif %}
+                    </a>
+                    {% if is_active and item["key"] in subnav_map %}
+                    <div class="admin-subnav">
+                        {% for subitem in subnav_map[item["key"]] %}
+                        <a class="admin-subnav-link {% if nav_secondary == subitem["key"] %}is-active{% endif %}" href="{{ url_for(item["endpoint"]) }}">
+                            <span class="admin-subnav-dot"></span>
+                            <span>{{ subitem["label"] }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </nav>
+
+            <a class="admin-side-link admin-side-link-logout" href="{{ url_for('app.logout') }}">
+                <span class="admin-side-link-icon">{{ icon('logout') }}</span>
+                <span>Logout</span>
+            </a>
+
+            <div class="admin-sidebar-user">
+                <div class="admin-user-avatar">{{ initials }}</div>
+                <div class="admin-sidebar-user-copy">
+                    <strong>{{ display_name }}</strong>
+                    <span>{{ current_role }}</span>
+                </div>
+                <span class="admin-user-caret">{{ icon('chevron-down') }}</span>
+            </div>
+        </aside>
+
+        <section class="admin-workspace">
+            <header class="admin-topbar">
+                <div class="admin-topbar-left">
+                    <button class="admin-icon-button" type="button" aria-label="Toggle navigation">
+                        {{ icon('menu') }}
+                    </button>
+                    <div class="admin-page-heading">
+                        <h1>{{ page_title }}</h1>
+                        {% if breadcrumbs %}
+                        <nav class="admin-breadcrumbs" aria-label="Breadcrumb">
+                            {% for crumb in breadcrumbs %}
+                                <span class="admin-breadcrumb-item">{{ crumb }}</span>
+                                {% if not loop.last %}<span class="admin-breadcrumb-sep">{{ icon('chevron-right') }}</span>{% endif %}
+                            {% endfor %}
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="admin-topbar-tools">
+                    <div class="admin-topbar-center">
+                        {% block toolbar_center %}{% endblock %}
+                    </div>
+                    <div class="admin-topbar-actions">
+                        {% block toolbar_actions %}{% endblock %}
+                        <button class="admin-icon-button admin-notification-button" type="button" aria-label="Notifications">
+                            {{ icon('bell') }}
+                            <span class="admin-notification-badge">5</span>
+                        </button>
+                        <div class="admin-profile-chip">
+                            <div class="admin-profile-avatar">{{ initials }}</div>
+                            <div class="admin-profile-copy">
+                                <strong>{{ display_name }}</strong>
+                                <span>{{ current_role }}</span>
+                            </div>
+                            <span class="admin-profile-caret">{{ icon('chevron-down') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <section class="admin-flash-stack">
+                    {% for category, message in messages %}
+                    <div class="admin-flash admin-flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </section>
+                {% endif %}
+            {% endwith %}
+
+            <main class="admin-page-content">
+                {% block content %}{% endblock %}
+            </main>
+        </section>
+    </div>
+</body>
+</html>

@@ -1,0 +1,128 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, avatar, status_badge, toolbar_button, table_icon_action, section_title %}
+
+{% block toolbar_actions %}
+{{ toolbar_button('calendar', 'May 19, 2024 - May 19, 2024') }}
+<label class="admin-search-box">
+    {{ icon('search') }}
+    <input type="text" value="" placeholder="Search by name or ID...">
+</label>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid">
+    {% for stat in leave_model.stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-tabs">
+                <a class="admin-tab is-active" href="#">Leave Requests</a>
+                <a class="admin-tab" href="#">Approve Leave</a>
+                <a class="admin-tab" href="#">All Requests</a>
+            </div>
+            <div class="admin-filter-row">
+                <span class="admin-filter-control"><select><option>All Status</option></select></span>
+                <span class="admin-filter-control"><select><option>All Departments</option></select></span>
+                <span class="admin-filter-control"><select><option>All Leave Types</option></select></span>
+                {{ toolbar_button('filter', 'Filter') }}
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Leave Type</th>
+                            <th>Duration</th>
+                            <th>Dates</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Applied On</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if leave_rows %}
+                        {% for row in leave_rows %}
+                        <tr>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                        <span>{{ row.staff_code }} | {{ row.department }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ status_badge(row.leave_type, row.leave_tone) }}</td>
+                            <td>{{ row.duration }}</td>
+                            <td>{{ row.dates }}</td>
+                            <td>{{ row.reason }}</td>
+                            <td>{{ status_badge(row.status, row.status_tone) }}</td>
+                            <td>{{ row.applied_on }}</td>
+                            <td><div class="admin-table-actions">{{ table_icon_action('eye', '#', 'View leave request') }}{{ table_icon_action('edit', '#', 'Edit leave request') }}</div></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8">
+                                <div class="admin-empty">
+                                    <strong>No leave requests yet.</strong>
+                                    <p>Leave applications will appear here once your team starts submitting them.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="admin-table-footer">
+                <span>Showing 1 to {{ leave_rows|length }} of {{ leave_rows|length }} entries</span>
+                <div class="admin-pagination">
+                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+                    <span class="admin-page-chip is-active">1</span>
+                    <span class="admin-page-chip">2</span>
+                    <span class="admin-page-chip">3</span>
+                    <span class="admin-page-chip">4</span>
+                    <span class="admin-page-chip">7</span>
+                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+                    <span class="admin-page-chip admin-page-size">10 / page</span>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Leave Balance Overview') }}
+                <a class="admin-toolbar-button" href="#">More</a>
+            </div>
+            <div class="admin-balance-list">
+                {% for item in leave_model.balances %}
+                <div class="admin-balance-row tone-{{ item.tone }}">
+                    <div style="width:100%;">
+                        <div class="admin-summary-row"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+                        <div class="admin-balance-meter"><span style="width: {{ item.ratio }}%;"></span></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Quick Actions') }}</div>
+            <div class="admin-quick-links">
+                <a class="admin-quick-link" href="#"><span>Apply for Leave</span>{{ icon('chevron-right') }}</a>
+                <a class="admin-quick-link" href="#"><span>Leave Calendar</span>{{ icon('chevron-right') }}</a>
+                <a class="admin-quick-link" href="#"><span>Leave Balance</span>{{ icon('chevron-right') }}</a>
+                <a class="admin-quick-link" href="#"><span>Leave Policies</span>{{ icon('chevron-right') }}</a>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

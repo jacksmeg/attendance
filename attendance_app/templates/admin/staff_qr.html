@@ -1,0 +1,108 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import avatar, section_title, stat_card, toolbar_button, status_badge %}
+
+{% block toolbar_actions %}
+<a class="admin-toolbar-button" href="{{ url_for('app.admin_staff') }}">
+    {{ icon('chevron-right') }}
+    <span>Back to Staff</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-4">
+    {{ stat_card('staff', 'blue', 'Staff Code', staff.staff_code, 'Directory record') }}
+    {{ stat_card('qr', 'green', 'Portal QR', 'Ready', 'Phone sign-in link') }}
+    {{ stat_card('attendance', 'orange', 'Kiosk Token', 'Ready', 'Desk scan access') }}
+    {{ stat_card('settings', 'purple', 'Clock Method', 'QR Enabled', 'Quick access flow') }}
+</section>
+
+<section class="admin-content-grid wide-side">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Staff QR Access', 'Generate and manage the QR codes used across kiosk and mobile access') }}
+            </div>
+
+            <div class="admin-inline-grid-2">
+                <article class="admin-qr-card">
+                    <div class="admin-qr-card-head">
+                        <div>
+                            <p class="admin-mini-label">Mobile QR</p>
+                            <h3>Portal quick sign-in</h3>
+                        </div>
+                        {{ status_badge('Ready', 'green') }}
+                    </div>
+                    <div class="admin-qr-stage">
+                        {{ mobile_qr_svg|safe }}
+                    </div>
+                    <div class="admin-summary-row">
+                        <span>Quick URL</span>
+                        <strong class="admin-clip-value">{{ quick_url }}</strong>
+                    </div>
+                </article>
+
+                <article class="admin-qr-card">
+                    <div class="admin-qr-card-head">
+                        <div>
+                            <p class="admin-mini-label">Kiosk QR</p>
+                            <h3>Desk scanner token</h3>
+                        </div>
+                        {{ status_badge('Active', 'blue') }}
+                    </div>
+                    <div class="admin-qr-stage">
+                        {{ kiosk_qr_svg|safe }}
+                    </div>
+                    <div class="admin-summary-row">
+                        <span>Token</span>
+                        <strong class="admin-clip-value">{{ staff.qr_token }}</strong>
+                    </div>
+                </article>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Staff Summary') }}
+            </div>
+            <div class="admin-person-cell">
+                {{ avatar(staff.first_name, staff.last_name, url_for('app.staff_photo', filename=staff.photo_filename) if staff.photo_filename else '', 'md') }}
+                <div class="admin-table-meta">
+                    <strong>{{ staff.first_name }} {{ staff.last_name }}</strong>
+                    <span>{{ staff.staff_code }} | {{ staff.department }}</span>
+                </div>
+            </div>
+            <div class="admin-summary-list">
+                <div class="admin-summary-row"><span>Role</span><strong>{{ staff.role }}</strong></div>
+                <div class="admin-summary-row"><span>Access Role</span><strong>{{ staff.access_role }}</strong></div>
+                <div class="admin-summary-row"><span>Phone</span><strong>{{ staff.phone or '—' }}</strong></div>
+                <div class="admin-summary-row"><span>Email</span><strong>{{ staff.email or '—' }}</strong></div>
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('QR Actions') }}
+            </div>
+            <div class="admin-quick-links">
+                <a class="admin-quick-link" href="{{ quick_url }}">
+                    <span>Open staff quick access</span>
+                    {{ icon('chevron-right') }}
+                </a>
+                <a class="admin-quick-link" href="{{ url_for('app.admin_staff_edit', staff_id=staff.id) }}">
+                    <span>Edit staff profile</span>
+                    {{ icon('chevron-right') }}
+                </a>
+            </div>
+            <form method="post" action="{{ url_for('app.admin_staff_rotate_qr', staff_id=staff.id) }}" class="admin-inline-form">
+                <button class="admin-toolbar-button tone-primary" type="submit">
+                    {{ icon('qr') }}
+                    <span>Generate New QR Token</span>
+                </button>
+            </form>
+        </article>
+    </div>
+</section>
+{% endblock %}

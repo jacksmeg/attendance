@@ -1,0 +1,160 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, avatar, status_badge, section_title %}
+
+{% block toolbar_center %}
+<form class="admin-toolbar-form" method="get" action="{{ url_for('app.admin_users_roles') }}">
+    <input type="hidden" name="department" value="{{ selected_department }}">
+    <input type="hidden" name="active_only" value="{{ '1' if active_only else '0' }}">
+    <label class="admin-search-box">
+        {{ icon('search') }}
+        <input type="text" name="search" value="{{ search }}" placeholder="Search staff, role, department...">
+    </label>
+</form>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-4">
+    {% for stat in user_stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('User Access Control', 'Assign built-in access roles to live staff accounts') }}
+                <form method="get" action="{{ url_for('app.admin_users_roles') }}" class="admin-filter-actions">
+                    <span class="admin-filter-control">
+                        <select name="department">
+                            <option value="">All Departments</option>
+                            {% for department in departments %}
+                            <option value="{{ department }}" {% if department == selected_department %}selected{% endif %}>{{ department }}</option>
+                            {% endfor %}
+                        </select>
+                    </span>
+                    <span class="admin-filter-control">
+                        <select name="active_only">
+                            <option value="0" {% if not active_only %}selected{% endif %}>All Status</option>
+                            <option value="1" {% if active_only %}selected{% endif %}>Active Only</option>
+                        </select>
+                    </span>
+                    <input type="hidden" name="search" value="{{ search }}">
+                    <button class="admin-toolbar-button" type="submit">
+                        {{ icon('filter') }}
+                        <span>Filter</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Current Role</th>
+                            <th>Access Methods</th>
+                            <th>Status</th>
+                            <th>Save</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if user_rows %}
+                        {% for user in user_rows %}
+                        {% set form_id = 'role-form-' ~ user.id %}
+                        <tr>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(user.first_name, user.last_name, user.photo_url if user.photo_url is defined else '') }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+                                        <span>{{ user.staff_code }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ user.department }}</td>
+                            <td>{{ user.role }}</td>
+                            <td>
+                                <form id="{{ form_id }}" method="post" action="{{ url_for('app.admin_users_roles') }}">
+                                    <input type="hidden" name="staff_id" value="{{ user.id }}">
+                                    <input type="hidden" name="search" value="{{ search }}">
+                                    <input type="hidden" name="department" value="{{ selected_department }}">
+                                    <input type="hidden" name="active_only" value="{{ '1' if active_only else '0' }}">
+                                </form>
+                                <label class="admin-field admin-field-compact">
+                                    <select name="access_role" form="{{ form_id }}">
+                                        {% for role_name in access_role_choices %}
+                                        <option value="{{ role_name }}" {% if role_name == user.access_role %}selected{% endif %}>{{ role_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                            </td>
+                            <td>
+                                <div class="admin-role-methods">
+                                    {% if user.password_hash %}<span class="admin-method-pill">Password</span>{% endif %}
+                                    {% if user.pin_hash %}<span class="admin-method-pill">PIN</span>{% endif %}
+                                    {% if user.allow_qr_clock %}<span class="admin-method-pill">QR</span>{% endif %}
+                                    {% if user.allow_mobile_clock %}<span class="admin-method-pill">Mobile</span>{% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <label class="admin-check-row admin-inline-check">
+                                    <input type="checkbox" name="is_active" value="1" form="{{ form_id }}" {% if user.is_active %}checked{% endif %}>
+                                    <span>{% if user.is_active %}Active{% else %}Inactive{% endif %}</span>
+                                </label>
+                            </td>
+                            <td>
+                                <button class="admin-toolbar-button tone-primary admin-button-compact" type="submit" form="{{ form_id }}">
+                                    {{ icon('settings') }}
+                                    <span>Save</span>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="admin-empty">
+                                    <strong>No user accounts yet.</strong>
+                                    <p>Add staff members first, then assign the right access role from this page.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Platform Admin') }}</div>
+            <div class="admin-summary-list">
+                <div class="admin-summary-row"><span>Username</span><strong>{{ admin_security.admin_username }}</strong></div>
+                <div class="admin-summary-row"><span>Password source</span><strong>{% if admin_security.password_is_custom %}Custom password{% else %}Default password{% endif %}</strong></div>
+                <div class="admin-summary-row"><span>Password changed</span><strong>{{ admin_security.password_updated_at if admin_security.password_updated_at else 'Not changed yet' }}</strong></div>
+            </div>
+            <a class="admin-toolbar-button tone-primary" href="{{ url_for('app.admin_settings') }}#admin-password-card">
+                {{ icon('settings') }}
+                <span>Change Admin Password</span>
+            </a>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Built-in Roles') }}</div>
+            <div class="admin-role-list">
+                {% for item in role_rows %}
+                <div class="admin-role-row">
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.meta }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

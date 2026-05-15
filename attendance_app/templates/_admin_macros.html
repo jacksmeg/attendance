@@ -1,0 +1,54 @@
+{% from "_icons.html" import icon %}
+
+{% macro status_badge(label, tone='neutral') -%}
+<span class="admin-status-badge tone-{{ tone }}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro stat_card(icon_name, tone, label, value, sublabel='', note='') -%}
+<article class="admin-stat-card">
+    <span class="admin-stat-icon tone-{{ tone }}">{{ icon(icon_name) }}</span>
+    <div class="admin-stat-copy">
+        <span>{{ label }}</span>
+        <strong>{{ value }}</strong>
+        {% if sublabel %}<small>{{ sublabel }}</small>{% endif %}
+        {% if note %}<em>{{ note }}</em>{% endif %}
+    </div>
+</article>
+{%- endmacro %}
+
+{% macro avatar(first_name='', last_name='', photo_url='', size='sm') -%}
+<div class="admin-avatar avatar-{{ size }}">
+    {% if photo_url %}
+    <img src="{{ photo_url }}" alt="{{ first_name }} {{ last_name }}">
+    {% else %}
+    <span>{{ (first_name[:1] if first_name else 'A') }}{{ (last_name[:1] if last_name else '') }}</span>
+    {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro table_icon_action(icon_name, href='#', label='') -%}
+<a class="admin-icon-action" href="{{ href }}" aria-label="{{ label or icon_name }}">
+    {{ icon(icon_name) }}
+</a>
+{%- endmacro %}
+
+{% macro toolbar_button(icon_name, label, tone='default', href='') -%}
+    {% if href %}
+    <a class="admin-toolbar-button tone-{{ tone }}" href="{{ href }}">
+        {{ icon(icon_name) }}
+        <span>{{ label }}</span>
+    </a>
+    {% else %}
+    <button class="admin-toolbar-button tone-{{ tone }}" type="button">
+        {{ icon(icon_name) }}
+        <span>{{ label }}</span>
+    </button>
+    {% endif %}
+{%- endmacro %}
+
+{% macro section_title(title, subtitle='') -%}
+<div class="admin-section-title">
+    <h2>{{ title }}</h2>
+    {% if subtitle %}<p>{{ subtitle }}</p>{% endif %}
+</div>
+{%- endmacro %}

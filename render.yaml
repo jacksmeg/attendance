@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: attendance-system
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    healthCheckPath: /health
+    disk:
+      name: attendance-data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: ATTENDANCE_APP_NAME
+        value: Staff Attendance System
+      - key: ATTENDANCE_SECRET_KEY
+        generateValue: true
+      - key: ATTENDANCE_ADMIN_USER
+        sync: false
+      - key: ATTENDANCE_ADMIN_PASSWORD
+        sync: false
+      - key: ATTENDANCE_DEBUG
+        value: "false"
+      - key: ATTENDANCE_FINGERPRINT_BACKEND
+        value: disabled
+      - key: ATTENDANCE_INSTANCE_DIR
+        value: /var/data/instance
+      - key: ATTENDANCE_DB_PATH
+        value: /var/data/instance/attendance.db
+      - key: ATTENDANCE_MOCK_STORE_PATH
+        value: /var/data/instance/mock_fingerprint_store.json

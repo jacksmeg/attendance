@@ -1,0 +1,41 @@
+{% extends "admin_shell.html" %}
+{% from "_admin_macros.html" import section_title, toolbar_button %}
+{% from "_icons.html" import icon %}
+
+{% block toolbar_actions %}
+{{ toolbar_button('plus', 'Add Holiday', 'primary') }}
+{% endblock %}
+
+{% block content %}
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">{{ section_title('Holiday Calendar') }}</div>
+            <div class="admin-holiday-list">
+                {% if holiday_rows %}
+                {% for item in holiday_rows %}
+                <div class="admin-holiday-row">
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.meta }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="admin-empty">
+                    <strong>No holidays added yet.</strong>
+                    <p>Add your organization’s public holidays and special off days here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+    </div>
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Quick Actions') }}</div>
+            <div class="admin-quick-links">
+                <a class="admin-quick-link" href="#"><span>Add Public Holiday</span>{{ icon('chevron-right') }}</a>
+                <a class="admin-quick-link" href="#"><span>Download Calendar</span>{{ icon('chevron-right') }}</a>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

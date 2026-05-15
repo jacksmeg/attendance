@@ -1,0 +1,137 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import avatar, section_title, status_badge %}
+
+{% block toolbar_actions %}
+<a class="admin-toolbar-button" href="{{ url_for('app.admin_ghana_card_verification') }}">
+    {{ icon('chevron-right') }}
+    <span>Back to Verification</span>
+</a>
+<button class="admin-toolbar-button tone-primary" type="button" onclick="window.print()">
+    {{ icon('document') }}
+    <span>Print Card</span>
+</button>
+{% endblock %}
+
+{% block content %}
+<section class="admin-content-grid wide-side ghana-card-print-layout">
+    <div class="admin-main-stack">
+        <article class="admin-table-card ghana-card-sheet">
+            <div class="admin-card-head ghana-card-sheet-head">
+                {{ section_title('Ghana Card Verification Record', 'Printable internal card generated after fingerprint confirmation') }}
+                {{ status_badge('Verified', 'green') }}
+            </div>
+
+            <div class="ghana-card-record">
+                <div class="ghana-card-header">
+                    <div class="ghana-card-brand">
+                        <span class="ghana-card-brand-mark">{{ icon('shield-check') }}</span>
+                        <div>
+                            <strong>{{ app_name }}</strong>
+                            <span>Internal Ghana Card Verification Record</span>
+                        </div>
+                    </div>
+                    <div class="ghana-card-meta">
+                        <span>Verified By Fingerprint</span>
+                        <strong>{{ card_model.verified_at }}</strong>
+                    </div>
+                </div>
+
+                <div class="ghana-card-body">
+                    <div class="ghana-card-photo-panel">
+                        <div class="ghana-card-photo-frame">
+                            {% if card_model.photo_url %}
+                            <img src="{{ card_model.photo_url }}" alt="{{ card_model.full_name }}">
+                            {% else %}
+                            {{ avatar(staff.first_name, staff.last_name, '', 'lg') }}
+                            {% endif %}
+                        </div>
+                        <div class="ghana-card-stamp">
+                            {{ icon('fingerprint') }}
+                            <span>Fingerprint Verified</span>
+                        </div>
+                    </div>
+
+                    <div class="ghana-card-details-grid">
+                        <div class="ghana-card-detail">
+                            <span>Full Name</span>
+                            <strong>{{ card_model.full_name }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Ghana Card Number</span>
+                            <strong>{{ card_model.ghana_card_number }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Staff Code</span>
+                            <strong>{{ card_model.staff_code }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Department</span>
+                            <strong>{{ card_model.department }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Position</span>
+                            <strong>{{ card_model.role }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Nationality</span>
+                            <strong>{{ card_model.nationality }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Sex</span>
+                            <strong>{{ card_model.sex }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Date of Birth</span>
+                            <strong>{{ card_model.date_of_birth }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Place of Birth</span>
+                            <strong>{{ card_model.place_of_birth or '—' }}</strong>
+                        </div>
+                        <div class="ghana-card-detail">
+                            <span>Digital Address</span>
+                            <strong>{{ card_model.digital_address }}</strong>
+                        </div>
+                        <div class="ghana-card-detail ghana-card-detail-wide">
+                            <span>Residential Address</span>
+                            <strong>{{ card_model.residential_address or '—' }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ghana-card-footer">
+                    <div class="ghana-card-footer-item">
+                        <span>Verified By</span>
+                        <strong>{{ card_model.verified_by }}</strong>
+                    </div>
+                    <div class="ghana-card-footer-item">
+                        <span>Verification Note</span>
+                        <strong>{{ card_model.verification_note }}</strong>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack ghana-card-print-sidebar">
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Print Notes') }}</div>
+            <div class="admin-note-list">
+                <div class="admin-note-item">
+                    <strong>Use for Internal Records</strong>
+                    <span>This printout is meant for organizational verification and filing after biometric confirmation.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Not an Official ID</strong>
+                    <span>Do not present this as a Ghana Card or attempt to imitate the national card format.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Re-Verify Anytime</strong>
+                    <span>Run fingerprint verification again from the Ghana Card Verification page to refresh the timestamp.</span>
+                </div>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

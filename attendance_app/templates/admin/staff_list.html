@@ -1,0 +1,134 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, avatar, status_badge, toolbar_button, table_icon_action, section_title %}
+
+{% block toolbar_center %}
+<label class="admin-search-box">
+    {{ icon('search') }}
+    <input type="text" value="{{ search }}" placeholder="Search staff by name, ID, department...">
+</label>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-4">
+    {% for stat in staff_stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+{% if is_cloud_fingerprint_mode %}
+<section class="admin-table-card admin-info-banner-card">
+    <div class="admin-inline-notice admin-inline-notice-blue">
+        <strong>Online mode is active.</strong>
+        <span>Fingerprint enrollment stays on the local kiosk installation. This online workspace is ready for QR, PIN/password, and mobile attendance across devices.</span>
+    </div>
+</section>
+{% endif %}
+
+<section class="admin-table-card">
+    <div class="admin-card-head">
+        {{ section_title('All Staff') }}
+        <div class="admin-filter-actions">
+            <span class="admin-filter-control">
+                <select name="department">
+                    <option value="">All Departments</option>
+                    {% for department in departments %}
+                    <option value="{{ department }}" {% if department == selected_department %}selected{% endif %}>{{ department }}</option>
+                    {% endfor %}
+                </select>
+            </span>
+            <span class="admin-filter-control">
+                <select>
+                    <option>All Status</option>
+                    <option {% if active_only %}selected{% endif %}>Active</option>
+                    <option {% if not active_only %}selected{% endif %}>Inactive</option>
+                </select>
+            </span>
+            {{ toolbar_button('filter', 'Filter') }}
+            <a class="admin-toolbar-button tone-primary" href="{{ url_for('app.admin_staff_new') }}">
+                {{ icon('plus') }}
+                <span>Add New Staff</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox"></th>
+                    <th>Staff ID</th>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if display_rows %}
+                {% for staff in display_rows %}
+                <tr>
+                    <td><input type="checkbox"></td>
+                    <td>{{ staff.staff_code }}</td>
+                    <td>{{ avatar(staff.first_name, staff.last_name, staff.photo_url if staff.photo_url is defined else staff_photo_urls.get(staff.id, '')) }}</td>
+                    <td>{{ staff.first_name }} {{ staff.last_name }}</td>
+                    <td>{{ staff.department }}</td>
+                    <td>{{ staff.role }}</td>
+                    <td>{{ staff.email or '—' }}</td>
+                    <td>{{ staff.phone or '—' }}</td>
+                    <td>
+                        {% if staff.status_text == 'On Leave' %}
+                            {{ status_badge('On Leave', 'orange') }}
+                        {% elif staff.status_text == 'Inactive' %}
+                            {{ status_badge('Inactive', 'neutral') }}
+                        {% else %}
+                            {{ status_badge('Active', 'green') }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="admin-table-actions">
+                            {{ table_icon_action('eye', url_for('app.admin_staff_qr', staff_id=staff.id if staff.id is defined else 1), 'View QR') }}
+                            {{ table_icon_action('edit', url_for('app.admin_staff_edit', staff_id=staff.id if staff.id is defined else 1), 'Edit staff') }}
+                            {% if is_cloud_fingerprint_mode %}
+                                {{ table_icon_action('qr', url_for('app.admin_staff_qr', staff_id=staff.id if staff.id is defined else 1), 'Open QR badge') }}
+                            {% else %}
+                                {{ table_icon_action('more', url_for('app.admin_staff_enroll', staff_id=staff.id if staff.id is defined else 1), 'Enroll fingerprint') }}
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="10">
+                        <div class="admin-empty">
+                            <strong>No staff records yet.</strong>
+                            <p>Add your first staff member to begin using the live attendance system.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-table-footer">
+        <span>Showing 1 to {{ display_rows|length }} of {{ display_total }} entries</span>
+        <div class="admin-pagination">
+            <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+            <span class="admin-page-chip is-active">1</span>
+            <span class="admin-page-chip">2</span>
+            <span class="admin-page-chip">3</span>
+            <span class="admin-page-chip">4</span>
+            <span class="admin-page-chip">5</span>
+            <span class="admin-page-chip">26</span>
+            <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
+            <span class="admin-page-chip admin-page-size">10 / page</span>
+        </div>
+    </div>
+</section>
+{% endblock %}

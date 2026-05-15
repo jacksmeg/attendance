@@ -1,0 +1,41 @@
+{% extends "admin_shell.html" %}
+{% from "_admin_macros.html" import section_title %}
+
+{% block content %}
+<article class="admin-table-card">
+    <div class="admin-card-head">{{ section_title('Audit Logs') }}</div>
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Actor</th>
+                    <th>Event</th>
+                    <th>Area</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if audit_rows %}
+                {% for row in audit_rows %}
+                <tr>
+                    <td>{{ row.time }}</td>
+                    <td>{{ row.actor }}</td>
+                    <td>{{ row.event }}</td>
+                    <td>{{ row.area }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="4">
+                        <div class="admin-empty">
+                            <strong>No audit activity yet.</strong>
+                            <p>Administrative actions will begin to appear here as you use the system.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</article>
+{% endblock %}

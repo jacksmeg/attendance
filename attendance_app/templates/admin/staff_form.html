@@ -1,0 +1,288 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import avatar, section_title, status_badge, stat_card, toolbar_button %}
+
+{% block toolbar_actions %}
+<a class="admin-toolbar-button" href="{{ url_for('app.admin_staff') }}">
+    {{ icon('chevron-right') }}
+    <span>Back to Staff</span>
+</a>
+{% endblock %}
+
+{% block content %}
+{% set full_name = ((form_values.first_name or 'New') ~ ' ' ~ (form_values.last_name or 'Staff'))|trim %}
+{% set shift_range = (form_values.shift_start or '--:--') ~ ' - ' ~ (form_values.shift_end or '--:--') %}
+<section class="admin-stats-grid cols-4">
+    {{ stat_card('staff', 'blue', 'Profile Status', 'Editing' if staff else 'New', 'Staff record') }}
+    {{ stat_card('shift', 'green', 'Default Shift', shift_range, 'Assigned hours') }}
+    {{ stat_card('settings', 'orange', 'Access Role', form_values.access_role or 'Staff', 'Portal privilege') }}
+    {{ stat_card('fingerprint', 'purple', 'Fingerprint Link', 'Linked' if staff and staff.template_ref else 'Pending', 'Scanner profile') }}
+</section>
+
+<form method="post" action="{{ form_action }}" enctype="multipart/form-data" class="admin-content-grid wide-side">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Staff Profile', 'Core identity and contact information') }}
+            </div>
+            <div class="admin-form-grid">
+                <label class="admin-field">
+                    <span>Staff Code</span>
+                    <input type="text" name="staff_code" value="{{ form_values.staff_code }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Access Role</span>
+                    <select name="access_role" required>
+                        {% for role_name in access_role_choices %}
+                        <option value="{{ role_name }}" {% if role_name == form_values.access_role %}selected{% endif %}>{{ role_name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="admin-field">
+                    <span>First Name</span>
+                    <input type="text" name="first_name" value="{{ form_values.first_name }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Last Name</span>
+                    <input type="text" name="last_name" value="{{ form_values.last_name }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Email</span>
+                    <input type="email" name="email" value="{{ form_values.email }}">
+                </label>
+                <label class="admin-field">
+                    <span>Phone</span>
+                    <input type="text" name="phone" value="{{ form_values.phone }}" placeholder="+233...">
+                </label>
+                <label class="admin-field">
+                    <span>Department</span>
+                    <input type="text" name="department" value="{{ form_values.department }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Job Title</span>
+                    <input type="text" name="role" value="{{ form_values.role }}" required>
+                </label>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Ghana Card Details', 'Internal verification data used for fingerprint-based Ghana Card confirmation') }}
+            </div>
+            <div class="admin-form-grid">
+                <label class="admin-field">
+                    <span>Ghana Card Number</span>
+                    <input type="text" name="ghana_card_number" value="{{ form_values.ghana_card_number }}" placeholder="GHA-XXXXXXXXX-X">
+                </label>
+                <label class="admin-field">
+                    <span>Nationality</span>
+                    <input type="text" name="nationality" value="{{ form_values.nationality }}" placeholder="Ghanaian">
+                </label>
+                <label class="admin-field">
+                    <span>Sex</span>
+                    <select name="sex">
+                        <option value="">Select sex</option>
+                        <option value="Male" {% if form_values.sex == 'Male' %}selected{% endif %}>Male</option>
+                        <option value="Female" {% if form_values.sex == 'Female' %}selected{% endif %}>Female</option>
+                    </select>
+                </label>
+                <label class="admin-field">
+                    <span>Date of Birth</span>
+                    <input type="date" name="date_of_birth" value="{{ form_values.date_of_birth }}">
+                </label>
+                <label class="admin-field">
+                    <span>Place of Birth</span>
+                    <input type="text" name="place_of_birth" value="{{ form_values.place_of_birth }}" placeholder="Accra">
+                </label>
+                <label class="admin-field">
+                    <span>Digital Address</span>
+                    <input type="text" name="digital_address" value="{{ form_values.digital_address }}" placeholder="GA-000-0000">
+                </label>
+                <label class="admin-field" style="grid-column: 1 / -1;">
+                    <span>Residential Address</span>
+                    <textarea name="residential_address" placeholder="Residential address for internal verification card">{{ form_values.residential_address }}</textarea>
+                </label>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Attendance Setup', 'Shift timings, grace period, and login credentials') }}
+            </div>
+            <div class="admin-form-grid">
+                <label class="admin-field">
+                    <span>Shift Start</span>
+                    <input type="time" name="shift_start" value="{{ form_values.shift_start }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Shift End</span>
+                    <input type="time" name="shift_end" value="{{ form_values.shift_end }}" required>
+                </label>
+                <label class="admin-field">
+                    <span>Grace Minutes</span>
+                    <input type="number" min="0" name="grace_minutes" value="{{ form_values.grace_minutes }}" required>
+                </label>
+                <div class="admin-field admin-field-note">
+                    <span>Fingerprint Status</span>
+                    <div class="admin-readonly-pill">
+                        {% if is_cloud_fingerprint_mode %}
+                        Online deployment uses QR / PIN / mobile access
+                        {% elif staff and staff.template_ref %}
+                        {{ staff.fingerprint_adapter|replace('_', ' ')|title }} · {{ staff.template_ref }}
+                        {% else %}
+                        No fingerprint enrolled yet
+                        {% endif %}
+                    </div>
+                </div>
+                <label class="admin-field">
+                    <span>{% if staff %}New Portal Password{% else %}Portal Password{% endif %}</span>
+                    <input type="password" name="portal_password" value="" placeholder="{% if staff %}Leave blank to keep current password{% else %}Create password{% endif %}">
+                </label>
+                <label class="admin-field">
+                    <span>{% if staff %}New PIN{% else %}PIN{% endif %}</span>
+                    <input type="password" name="portal_pin" value="" placeholder="{% if staff %}Leave blank to keep current PIN{% else %}4+ digits{% endif %}">
+                </label>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Access Controls', 'Choose how this staff member can clock and access the system') }}
+            </div>
+            <div class="admin-form-grid full">
+                <div class="admin-check-grid">
+                    <label class="admin-check-card">
+                        <input type="checkbox" name="is_active" {% if form_values.is_active %}checked{% endif %}>
+                        <div>
+                            <strong>Staff member is active</strong>
+                            <span>Inactive staff are hidden from live attendance actions.</span>
+                        </div>
+                    </label>
+                    <label class="admin-check-card">
+                        <input type="checkbox" name="allow_mobile_clock" {% if form_values.allow_mobile_clock %}checked{% endif %}>
+                        <div>
+                            <strong>Allow mobile/web clocking</strong>
+                            <span>Lets the staff member use the responsive staff portal.</span>
+                        </div>
+                    </label>
+                    <label class="admin-check-card">
+                        <input type="checkbox" name="allow_pin_clock" {% if form_values.allow_pin_clock %}checked{% endif %}>
+                        <div>
+                            <strong>Allow kiosk PIN/password clocking</strong>
+                            <span>Enables quick access when fingerprint is unavailable.</span>
+                        </div>
+                    </label>
+                    <label class="admin-check-card">
+                        <input type="checkbox" name="allow_qr_clock" {% if form_values.allow_qr_clock %}checked{% endif %}>
+                        <div>
+                            <strong>Allow QR quick access</strong>
+                            <span>Allows the QR badge to be scanned at the kiosk or phone portal.</span>
+                        </div>
+                    </label>
+                    {% if staff %}
+                    <label class="admin-check-card admin-check-card-wide">
+                        <input type="checkbox" name="regenerate_qr">
+                        <div>
+                            <strong>Regenerate QR token on save</strong>
+                            <span>Use this if a previous QR badge should stop working immediately.</span>
+                        </div>
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="admin-form-actions">
+                <a class="admin-toolbar-button" href="{{ url_for('app.admin_staff') }}">Cancel</a>
+                <button class="admin-toolbar-button tone-primary" type="submit">
+                    {{ icon('plus') }}
+                    <span>Save Staff Record</span>
+                </button>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Profile Preview') }}
+                {% if form_values.is_active %}
+                {{ status_badge('Active', 'green') }}
+                {% else %}
+                {{ status_badge('Inactive', 'neutral') }}
+                {% endif %}
+            </div>
+            <div class="admin-profile-preview">
+                <div class="admin-profile-preview-avatar">
+                    {% if form_values.photo_filename %}
+                    <img src="{{ url_for('app.staff_photo', filename=form_values.photo_filename) }}" alt="{{ full_name }}">
+                    {% else %}
+                    <span>{{ (form_values.first_name[:1] if form_values.first_name else 'S') }}{{ (form_values.last_name[:1] if form_values.last_name else 'F') }}</span>
+                    {% endif %}
+                </div>
+                <div class="admin-profile-preview-copy">
+                    <strong>{{ full_name }}</strong>
+                    <span>{{ form_values.staff_code or 'No code yet' }}</span>
+                    <small>{{ form_values.role or 'Job title pending' }}</small>
+                </div>
+            </div>
+            <label class="admin-field">
+                <span>Upload Image</span>
+                <input type="file" name="staff_photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+            </label>
+            {% if staff and form_values.photo_filename %}
+            <label class="admin-check-row">
+                <input type="checkbox" name="remove_photo">
+                <span>Remove current staff photo on save</span>
+            </label>
+            {% endif %}
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Access Summary') }}
+            </div>
+            <div class="admin-summary-list">
+                <div class="admin-summary-row"><span>Department</span><strong>{{ form_values.department or '-' }}</strong></div>
+                <div class="admin-summary-row"><span>Shift Window</span><strong>{{ shift_range }}</strong></div>
+                <div class="admin-summary-row"><span>Grace Period</span><strong>{{ form_values.grace_minutes }} mins</strong></div>
+                <div class="admin-summary-row"><span>Portal Access</span><strong>{{ form_values.access_role or 'Staff' }}</strong></div>
+                <div class="admin-summary-row"><span>Ghana Card</span><strong>{{ form_values.ghana_card_number or 'Not added' }}</strong></div>
+                {% if staff %}
+                <div class="admin-summary-row"><span>QR Token</span><strong class="admin-clip-value">{{ form_values.qr_token }}</strong></div>
+                {% endif %}
+            </div>
+        </article>
+
+        {% if staff %}
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Next Actions') }}
+            </div>
+            {% if is_cloud_fingerprint_mode %}
+            <div class="admin-note-list">
+                <div class="admin-note-item">
+                    <strong>Online fingerprint note</strong>
+                    <span>Fingerprint enrollment stays on the local kiosk installation. Use QR, PIN/password, and mobile portal access from this online workspace.</span>
+                </div>
+            </div>
+            {% endif %}
+            <div class="admin-quick-links">
+                {% if not is_cloud_fingerprint_mode %}
+                    <a class="admin-quick-link" href="{{ url_for('app.admin_staff_enroll', staff_id=staff.id) }}">
+                        <span>Enroll Fingerprint</span>
+                        {{ icon('chevron-right') }}
+                    </a>
+                {% endif %}
+                <a class="admin-quick-link" href="{{ url_for('app.admin_staff_qr', staff_id=staff.id) }}">
+                    <span>Open QR Badge</span>
+                    {{ icon('chevron-right') }}
+                </a>
+                <a class="admin-quick-link" href="{{ url_for('app.admin_ghana_card_card', staff_id=staff.id) }}">
+                    <span>Open Verification Card</span>
+                    {{ icon('chevron-right') }}
+                </a>
+            </div>
+        </article>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}

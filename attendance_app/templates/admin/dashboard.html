@@ -1,0 +1,201 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, avatar, status_badge, toolbar_button, table_icon_action, section_title %}
+
+{% block toolbar_center %}
+<form class="admin-toolbar-form" method="get" action="{{ url_for('app.admin_dashboard') }}">
+    <input type="hidden" name="target_date" value="{{ dashboard_target_date }}">
+    <label class="admin-search-box">
+        {{ icon('search') }}
+        <input type="text" name="search" value="{{ dashboard_search }}" placeholder="Search staff, ID, department...">
+    </label>
+</form>
+{% endblock %}
+
+{% block toolbar_actions %}
+<form class="admin-toolbar-form" method="get" action="{{ url_for('app.admin_dashboard') }}">
+    <input type="hidden" name="search" value="{{ dashboard_search }}">
+    <label class="admin-topbar-input admin-date-input">
+        {{ icon('calendar') }}
+        <input type="date" name="target_date" value="{{ dashboard_target_date }}" onchange="this.form.submit()">
+    </label>
+</form>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid">
+    {% for stat in dashboard_model.stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <div class="admin-chart-grid">
+            <article class="admin-line-chart-card">
+                <div class="admin-card-head">
+                    {{ section_title('Attendance Overview') }}
+                    <span class="admin-toolbar-button">Last 7 Days {{ icon('chevron-down') }}</span>
+                </div>
+                <div class="admin-chart-legend">
+                    <span><i class="legend-green"></i>Present</span>
+                    <span><i class="legend-red"></i>Absent</span>
+                    <span><i class="legend-orange"></i>Late</span>
+                </div>
+                <svg class="admin-line-chart-svg" viewBox="0 0 560 230" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="dashboardGlow" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stop-color="#ffffff"/>
+                            <stop offset="100%" stop-color="#f9fbff"/>
+                        </linearGradient>
+                    </defs>
+                    <rect x="0" y="0" width="560" height="230" rx="16" fill="url(#dashboardGlow)"/>
+                    {% for axis in dashboard_model.chart_axes %}
+                    <text x="14" y="{{ axis.y + 4 }}" fill="#9aa6bf" font-size="11" font-weight="600">{{ axis.label }}</text>
+                    <line x1="54" y1="{{ axis.y }}" x2="502" y2="{{ axis.y }}" stroke="#edf2fd" stroke-width="1"/>
+                    {% endfor %}
+                    <line x1="54" y1="170" x2="502" y2="170" stroke="#edf2fd" stroke-width="1"/>
+                    <polyline fill="none" stroke="#22c55e" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" points="{{ dashboard_model.chart_series.present|join(' ') }}"/>
+                    <polyline fill="none" stroke="#ff5f54" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" points="{{ dashboard_model.chart_series.absent|join(' ') }}"/>
+                    <polyline fill="none" stroke="#ff9f1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" points="{{ dashboard_model.chart_series.late|join(' ') }}"/>
+                    {% for point in dashboard_model.chart_series.present %}
+                        {% set parts = point.split(',') %}
+                        <circle cx="{{ parts[0] }}" cy="{{ parts[1] }}" r="3.6" fill="#22c55e"/>
+                    {% endfor %}
+                    {% for point in dashboard_model.chart_series.absent %}
+                        {% set parts = point.split(',') %}
+                        <circle cx="{{ parts[0] }}" cy="{{ parts[1] }}" r="3.6" fill="#ff5f54"/>
+                    {% endfor %}
+                    {% for point in dashboard_model.chart_series.late %}
+                        {% set parts = point.split(',') %}
+                        <circle cx="{{ parts[0] }}" cy="{{ parts[1] }}" r="3.6" fill="#ff9f1a"/>
+                    {% endfor %}
+                    {% for label in dashboard_model.chart_label_positions %}
+                    <text x="{{ label.x }}" y="{{ label.y }}" fill="#8a98b3" font-size="12" text-anchor="middle">{{ label.label }}</text>
+                    {% endfor %}
+                </svg>
+            </article>
+
+            <article class="admin-donut-card">
+                <div class="admin-card-head">
+                    {{ section_title("Today's Status") }}
+                </div>
+                <div class="admin-inline-grid-2" style="grid-template-columns: 180px 1fr; align-items: center;">
+                    <svg class="admin-donut-svg" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#edf2fd" stroke-width="24"/>
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#22c55e" stroke-width="24" stroke-linecap="round" stroke-dasharray="{{ dashboard_model.today_status.segments.present.dasharray }}" transform="rotate(-90 90 90)"/>
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#ff5f54" stroke-width="24" stroke-linecap="round" stroke-dasharray="{{ dashboard_model.today_status.segments.absent.dasharray }}" stroke-dashoffset="{{ dashboard_model.today_status.segments.absent.dashoffset }}" transform="rotate(-90 90 90)"/>
+                        <circle cx="90" cy="90" r="54" fill="none" stroke="#ff9f1a" stroke-width="24" stroke-linecap="round" stroke-dasharray="{{ dashboard_model.today_status.segments.late.dasharray }}" stroke-dashoffset="{{ dashboard_model.today_status.segments.late.dashoffset }}" transform="rotate(-90 90 90)"/>
+                        <circle cx="90" cy="90" r="30" fill="#ffffff"/>
+                        <text x="90" y="84" text-anchor="middle" fill="#1f2a44" font-size="30" font-weight="700">{{ dashboard_model.today_status.total }}</text>
+                        <text x="90" y="108" text-anchor="middle" fill="#8a98b3" font-size="14">Total</text>
+                    </svg>
+                    <div class="admin-summary-list">
+                        <div class="admin-summary-row"><span>Present</span><strong style="color:#22c55e;">{{ dashboard_model.today_status.present }} ({{ dashboard_model.today_status.present_pct }})</strong></div>
+                        <div class="admin-summary-row"><span>Absent</span><strong style="color:#ff5f54;">{{ dashboard_model.today_status.absent }} ({{ dashboard_model.today_status.absent_pct }})</strong></div>
+                        <div class="admin-summary-row"><span>Late</span><strong style="color:#ff9f1a;">{{ dashboard_model.today_status.late }} ({{ dashboard_model.today_status.late_pct }})</strong></div>
+                    </div>
+                </div>
+                <p class="admin-card-caption">Last updated: 10:30 AM</p>
+            </article>
+        </div>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Recent Attendance') }}
+                <a class="admin-toolbar-button" href="{{ url_for('app.admin_attendance') }}">View All</a>
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Staff ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Clock In</th>
+                            <th>Clock Out</th>
+                            <th>Status</th>
+                            <th>Work Hours</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_rows %}
+                        {% for row in recent_rows %}
+                        {% set row_status = row.status_text if row.status_text is defined else (row.status_label if row.status_label is defined else 'Absent') %}
+                        {% set row_tone = row.status_tone if row.status_tone is defined else 'red' %}
+                        <tr>
+                            <td>{{ row.staff_code }}</td>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                        <span>{{ row.department }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ row.department }}</td>
+                            <td>{{ row.clock_in if row.clock_in is defined else '08:55 AM' }}</td>
+                            <td>{{ row.clock_out if row.clock_out is defined else '05:45 PM' }}</td>
+                            <td>
+                                {{ status_badge(row_status, row_tone) }}
+                            </td>
+                            <td>{{ row.work_hours if row.work_hours is defined else '8h 50m' }}</td>
+                            <td><div class="admin-table-actions">{{ table_icon_action('more', '#', 'More actions') }}</div></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8">
+                                <div class="admin-empty">
+                                    <strong>No attendance records yet.</strong>
+                                    <p>Start using the kiosk or staff portal and recent activity will appear here.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Quick Actions') }}
+            </div>
+            <div class="admin-quick-links">
+                {% for action in dashboard_model.quick_actions %}
+                <a class="admin-quick-link" href="{{ url_for(action.href) }}">
+                    <span>{{ action.label }}</span>
+                    {{ icon('chevron-right') }}
+                </a>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Leave Summary') }}
+                <a class="admin-toolbar-button" href="{{ url_for('app.admin_leave_management') }}">View All</a>
+            </div>
+            <div class="admin-summary-list">
+                {% for item in dashboard_model.leave_summary %}
+                <div class="admin-summary-row">
+                    <div class="admin-summary-item">
+                        <span class="admin-summary-item-icon tone-{{ item.tone }}">{{ icon('leave') }}</span>
+                        <div class="admin-summary-item-copy">
+                            <strong>{{ item.label }}</strong>
+                            <span>{{ item.suffix }}</span>
+                        </div>
+                    </div>
+                    <strong class="admin-summary-item-value">{{ item.value }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}
