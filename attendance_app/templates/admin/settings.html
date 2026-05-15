@@ -119,6 +119,18 @@
                     <span>Longitude</span>
                     <input form="attendance-settings-form" type="number" step="any" name="allowed_location_longitude" value="{{ '' if form_values.allowed_location_longitude is none else form_values.allowed_location_longitude }}" placeholder="-0.1870">
                 </label>
+                <div class="admin-field" style="grid-column: 1 / -1;">
+                    <span>Capture Coordinates with GPS</span>
+                    <div class="admin-form-actions" style="justify-content: flex-start;">
+                        <button class="admin-toolbar-button tone-primary" type="button" id="capture-admin-location">
+                            {{ icon('location') }}
+                            <span>Use My Current GPS Location</span>
+                        </button>
+                    </div>
+                    <small id="admin-location-capture-status" class="admin-side-note">
+                        Open this page on the office device, allow location access, then save the settings after the coordinates fill in.
+                    </small>
+                </div>
             </div>
             <div class="admin-note-list">
                 <div class="admin-note-item">
@@ -234,4 +246,68 @@
         </article>
     </div>
 </section>
+
+<script>
+    (() => {
+        const button = document.querySelector("#capture-admin-location");
+        const latitudeField = document.querySelector('input[name="allowed_location_latitude"]');
+        const longitudeField = document.querySelector('input[name="allowed_location_longitude"]');
+        const radiusField = document.querySelector('input[name="allowed_location_radius_meters"]');
+        const locationNameField = document.querySelector('input[name="allowed_location_name"]');
+        const status = document.querySelector("#admin-location-capture-status");
+
+        if (!button || !latitudeField || !longitudeField || !status) {
+            return;
+        }
+
+        const setStatus = (message, tone = "normal") => {
+            status.textContent = message;
+            status.dataset.tone = tone;
+        };
+
+        button.addEventListener("click", () => {
+            if (!navigator.geolocation) {
+                setStatus("This browser does not support GPS location capture.", "error");
+                return;
+            }
+
+            button.disabled = true;
+            setStatus("Getting your current GPS location...", "normal");
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                latitudeField.value = position.coords.latitude.toFixed(6);
+                longitudeField.value = position.coords.longitude.toFixed(6);
+
+                if (radiusField && (!radiusField.value || Number(radiusField.value) < 25)) {
+                    radiusField.value = Math.max(25, Math.ceil(position.coords.accuracy || 50));
+                }
+
+                if (locationNameField && !locationNameField.value.trim()) {
+                    locationNameField.value = "Current Office Location";
+                }
+
+                setStatus(
+                    `GPS captured successfully. Accuracy: about ${Math.round(position.coords.accuracy || 0)} meters. Review the values and click Save Settings.`,
+                    "success"
+                );
+                button.disabled = false;
+            }, (error) => {
+                let message = "Location access was not completed. Allow GPS permission and try again.";
+                if (error && error.code === 1) {
+                    message = "Location permission was denied. Allow GPS access in the browser and try again.";
+                } else if (error && error.code === 2) {
+                    message = "The browser could not detect your position. Move to an open area or check the device GPS.";
+                } else if (error && error.code === 3) {
+                    message = "Location request timed out. Try again while the device has a better GPS signal.";
+                }
+                setStatus(message, "error");
+                button.disabled = false;
+            }, {
+                enableHighAccuracy: true,
+                timeout: 12000,
+                maximumAge: 0
+            });
+        });
+    })();
+</script>
 {% endblock %}

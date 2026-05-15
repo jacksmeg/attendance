@@ -214,6 +214,17 @@ class AttendanceAppTests(unittest.TestCase):
             self.assertAlmostEqual(settings["allowed_location_longitude"], -0.18696)
             self.assertEqual(settings["allowed_location_radius_meters"], 180)
 
+    def test_settings_page_includes_gps_capture_button_for_location(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        response = self.client.get("/admin/settings")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Use My Current GPS Location", response.data)
+
     def test_settings_branding_name_and_logo_reflect_across_system(self) -> None:
         self.client.post(
             "/admin/login",

@@ -1380,6 +1380,14 @@ body.admin-ui {
     line-height: 1.55;
 }
 
+#admin-location-capture-status[data-tone="success"] {
+    color: #1d8f47;
+}
+
+#admin-location-capture-status[data-tone="error"] {
+    color: #d54444;
+}
+
 .admin-check-card-wide {
     grid-column: 1 / -1;
 }
