@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from io import BytesIO
 import json
 from pathlib import Path
@@ -10,7 +10,7 @@ import uuid
 from unittest.mock import Mock, patch
 
 from attendance_app import create_app
-from attendance_app.services.attendance import list_attendance_events
+from attendance_app.services.attendance import get_staff_today_status, list_attendance_events, record_attendance
 from attendance_app.services.staff import create_staff, get_staff, upsert_fingerprint
 
 TEST_SELFIE_DATA_URL = (
@@ -853,6 +853,85 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(settings_response.status_code, 200)
         self.assertIn(b"You are not authorized", settings_response.data)
         self.assertIn(b"attendance for today", settings_response.data)
+
+    def test_staff_form_includes_hospital_shift_presets(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        response = self.client.get("/admin/staff/new")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Hospital Shift Presets", response.data)
+        self.assertIn(b"Morning 8AM - 2PM", response.data)
+        self.assertIn(b"Night 8PM - 8AM", response.data)
+
+    def test_theme_script_is_loaded_on_staff_login_and_dashboard(self) -> None:
+        staff_login_response = self.client.get("/staff/login")
+        self.assertEqual(staff_login_response.status_code, 200)
+        self.assertIn(b"theme.js", staff_login_response.data)
+        self.assertIn(b"root.dataset.theme = theme", staff_login_response.data)
+
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+        dashboard_response = self.client.get("/admin/dashboard")
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertIn(b"theme.js", dashboard_response.data)
+
+    def test_overnight_shift_auto_resolves_check_out_next_morning(self) -> None:
+        with self.app.app_context():
+            night_staff_id = create_staff(
+                {
+                    "staff_code": "NIGHT-300",
+                    "first_name": "Night",
+                    "last_name": "Nurse",
+                    "email": "night@example.com",
+                    "department": "Ward",
+                    "role": "Nurse",
+                    "access_role": "Staff",
+                    "portal_password": "Night@123",
+                    "portal_pin": "8300",
+                    "shift_start": "20:00",
+                    "shift_end": "08:00",
+                    "grace_minutes": 15,
+                    "is_active": True,
+                }
+            )
+            night_staff = get_staff(night_staff_id)
+
+            first_event = record_attendance(
+                staff=night_staff,
+                template_ref=night_staff["staff_code"],
+                confidence=None,
+                method="test",
+                captured_at=datetime(2026, 5, 16, 20, 5),
+            )
+            active_status = get_staff_today_status(
+                night_staff_id,
+                reference_dt=datetime(2026, 5, 17, 7, 30),
+            )
+            second_event = record_attendance(
+                staff=night_staff,
+                template_ref=night_staff["staff_code"],
+                confidence=None,
+                method="test",
+                captured_at=datetime(2026, 5, 17, 8, 2),
+            )
+
+            self.assertEqual(first_event["event_type"], "check_in")
+            self.assertEqual(active_status["attendance_date"], "2026-05-16")
+            self.assertEqual(active_status["current_state"], "Working")
+            self.assertEqual(second_event["event_type"], "check_out")
+            self.assertEqual(second_event["status_label"], "Completed shift")
+
+            rows = list_attendance_events(date_from="2026-05-16", date_to="2026-05-16")
+            night_rows = [row for row in rows if row["staff_id"] == night_staff_id]
+            self.assertEqual([row["event_type"] for row in night_rows], ["check_out", "check_in"])
+            self.assertTrue(all(row["attendance_date"] == "2026-05-16" for row in night_rows))
 
 
 if __name__ == "__main__":

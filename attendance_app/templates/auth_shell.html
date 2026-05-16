@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }} | {{ app_name }}</title>
-    <meta name="theme-color" content="#2f6bff">
+    {% include "_theme_head.html" %}
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="{{ app_name }}">
@@ -13,6 +13,7 @@
     <link rel="apple-touch-icon" href="{{ url_for('app.pwa_icon_png', size=192) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="{{ url_for('static', filename='pwa.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
 </head>
 <body class="auth-shell-body {{ body_class|default('') }}">
     {% with messages = get_flashed_messages(with_categories=true) %}

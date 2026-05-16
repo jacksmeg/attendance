@@ -29,6 +29,22 @@
     --radius-pill: 999px;
 }
 
+html[data-theme="dark"] {
+    --page-bg: #07111f;
+    --shell-bg: rgba(8, 18, 34, 0.96);
+    --panel-bg: #0c1729;
+    --panel-tint: #0f1d33;
+    --panel-soft: #0d192c;
+    --line: #18304f;
+    --line-strong: #24446f;
+    --text: #edf4ff;
+    --muted: #8ea4c6;
+    --muted-strong: #bfd0ea;
+    --shell-shadow: 0 36px 84px rgba(0, 0, 0, 0.42);
+    --panel-shadow: 0 22px 40px rgba(0, 0, 0, 0.28);
+    --button-shadow: 0 18px 34px rgba(10, 167, 255, 0.22);
+}
+
 * {
     box-sizing: border-box;
 }
@@ -1864,8 +1880,8 @@ tbody tr:hover {
 .staff-login-minimal-body {
     background:
         radial-gradient(circle at top center, rgba(78, 219, 12, 0.08), transparent 22%),
-        linear-gradient(180deg, #1c2118 0%, #171b14 100%);
-    color: #f2f6e7;
+        linear-gradient(180deg, #f7fbf3 0%, #eef6e8 100%);
+    color: #20301a;
     font-family: "Segoe UI", "Aptos", sans-serif;
 }
 
@@ -1880,9 +1896,9 @@ tbody tr:hover {
     width: min(100%, 480px);
     padding: 38px 34px 28px;
     border-radius: 24px;
-    background: linear-gradient(180deg, rgba(43, 48, 35, 0.98), rgba(38, 43, 31, 0.98));
-    border: 1px solid rgba(103, 118, 86, 0.26);
-    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.28);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 241, 0.98));
+    border: 1px solid rgba(161, 191, 139, 0.26);
+    box-shadow: 0 24px 54px rgba(73, 99, 46, 0.14);
 }
 
 .staff-login-brand {
@@ -1932,7 +1948,7 @@ tbody tr:hover {
 
 .staff-login-intro p {
     margin: 0;
-    color: rgba(236, 243, 224, 0.78);
+    color: rgba(42, 61, 31, 0.74);
     font-size: 1rem;
     line-height: 1.6;
 }
@@ -1943,8 +1959,8 @@ tbody tr:hover {
     gap: 10px;
     padding: 6px;
     border-radius: 18px;
-    background: rgba(60, 67, 49, 0.52);
-    border: 1px solid rgba(108, 118, 93, 0.18);
+    background: rgba(205, 222, 189, 0.52);
+    border: 1px solid rgba(161, 181, 140, 0.2);
     margin-bottom: 28px;
 }
 
@@ -1953,7 +1969,7 @@ tbody tr:hover {
     border-radius: 14px;
     border: 0;
     background: transparent;
-    color: rgba(244, 248, 236, 0.72);
+    color: rgba(42, 61, 31, 0.7);
     font-weight: 700;
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
@@ -1965,9 +1981,9 @@ tbody tr:hover {
 }
 
 .staff-login-tab.is-active {
-    background: rgba(31, 35, 27, 0.92);
-    color: #ffffff;
-    box-shadow: inset 0 0 0 1px rgba(92, 103, 78, 0.34);
+    background: rgba(255, 255, 255, 0.96);
+    color: #1f2e18;
+    box-shadow: inset 0 0 0 1px rgba(147, 172, 123, 0.26);
 }
 
 .staff-login-form {
@@ -1981,7 +1997,7 @@ tbody tr:hover {
 }
 
 .staff-login-field > span {
-    color: #f4f8ec;
+    color: #25351d;
     font-size: 0.98rem;
     font-weight: 700;
 }
@@ -1991,14 +2007,14 @@ tbody tr:hover {
     min-height: 54px;
     padding: 15px 16px;
     border-radius: 14px;
-    border: 1px solid rgba(89, 99, 76, 0.56);
-    background: rgba(39, 44, 31, 0.96);
-    color: #f2f7e7;
+    border: 1px solid rgba(150, 176, 124, 0.42);
+    background: rgba(255, 255, 255, 0.96);
+    color: #1f2d19;
     font-size: 1rem;
 }
 
 .staff-login-field input::placeholder {
-    color: rgba(214, 222, 198, 0.55);
+    color: rgba(84, 104, 65, 0.48);
 }
 
 .staff-login-field input:focus {
@@ -2008,7 +2024,7 @@ tbody tr:hover {
 }
 
 .staff-login-field small {
-    color: rgba(226, 232, 212, 0.72);
+    color: rgba(68, 88, 52, 0.78);
     font-size: 0.92rem;
     line-height: 1.5;
 }
@@ -2026,8 +2042,8 @@ tbody tr:hover {
     gap: 16px;
     padding: 18px;
     border-radius: 18px;
-    background: rgba(34, 39, 28, 0.9);
-    border: 1px solid rgba(92, 103, 78, 0.34);
+    background: rgba(244, 249, 238, 0.94);
+    border: 1px solid rgba(163, 185, 140, 0.28);
 }
 
 .staff-login-camera-head {
@@ -2039,13 +2055,13 @@ tbody tr:hover {
 
 .staff-login-camera-head strong {
     display: block;
-    color: #f5f8ef;
+    color: #203018;
     font-size: 1rem;
 }
 
 .staff-login-camera-head p {
     margin: 6px 0 0;
-    color: rgba(226, 232, 212, 0.72);
+    color: rgba(68, 88, 52, 0.74);
     font-size: 0.92rem;
     line-height: 1.5;
 }
@@ -2065,8 +2081,8 @@ tbody tr:hover {
     overflow: hidden;
     min-height: 248px;
     border-radius: 18px;
-    background: #11150e;
-    border: 1px solid rgba(92, 103, 78, 0.32);
+    background: #dfe9d7;
+    border: 1px solid rgba(163, 185, 140, 0.3);
 }
 
 .staff-login-video,
@@ -2083,8 +2099,8 @@ tbody tr:hover {
     inset: 0;
     display: grid;
     place-items: center;
-    background: linear-gradient(180deg, rgba(17, 21, 14, 0.18), rgba(17, 21, 14, 0.84));
-    color: rgba(236, 243, 224, 0.82);
+    background: linear-gradient(180deg, rgba(231, 240, 223, 0.2), rgba(37, 49, 28, 0.68));
+    color: rgba(255, 255, 255, 0.9);
     font-weight: 700;
     letter-spacing: 0.02em;
 }
@@ -2099,9 +2115,9 @@ tbody tr:hover {
     min-height: 46px;
     padding: 0 16px;
     border-radius: 14px;
-    border: 1px solid rgba(89, 99, 76, 0.58);
-    background: rgba(43, 48, 35, 0.96);
-    color: #f1f6e8;
+    border: 1px solid rgba(150, 176, 124, 0.48);
+    background: rgba(255, 255, 255, 0.98);
+    color: #22321a;
     font-weight: 700;
     cursor: pointer;
     transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
@@ -2122,7 +2138,7 @@ tbody tr:hover {
 
 .staff-login-camera-note {
     margin: 0;
-    color: rgba(226, 232, 212, 0.78);
+    color: rgba(68, 88, 52, 0.82);
     font-size: 0.92rem;
     line-height: 1.5;
 }
@@ -2151,7 +2167,7 @@ tbody tr:hover {
     border-radius: 12px;
     border: 0;
     background: transparent;
-    color: rgba(225, 232, 212, 0.72);
+    color: rgba(70, 90, 54, 0.72);
     cursor: pointer;
 }
 
@@ -2219,7 +2235,7 @@ tbody tr:hover {
 .staff-login-help {
     margin: 22px 0 18px;
     text-align: center;
-    color: rgba(230, 236, 218, 0.72);
+    color: rgba(65, 83, 50, 0.7);
     font-size: 0.96rem;
 }
 
@@ -2227,17 +2243,17 @@ tbody tr:hover {
     display: grid;
     gap: 6px;
     padding-top: 18px;
-    border-top: 1px solid rgba(103, 118, 86, 0.22);
+    border-top: 1px solid rgba(159, 181, 136, 0.24);
     text-align: center;
 }
 
 .staff-login-footer strong {
     font-size: 1.02rem;
-    color: #f5f8ef;
+    color: #21311a;
 }
 
 .staff-login-footer span {
-    color: rgba(226, 232, 212, 0.68);
+    color: rgba(71, 89, 54, 0.68);
     font-size: 0.9rem;
 }
 
@@ -2277,4 +2293,229 @@ tbody tr:hover {
         width: auto;
         justify-content: center;
     }
+}
+
+html[data-theme="dark"] {
+    background: #07111f;
+}
+
+html[data-theme="dark"] body {
+    background:
+        radial-gradient(circle at top right, rgba(17, 111, 255, 0.18), transparent 18%),
+        radial-gradient(circle at left center, rgba(24, 210, 196, 0.13), transparent 18%),
+        linear-gradient(180deg, #07111f 0%, #091525 100%);
+    color: var(--text);
+}
+
+html[data-theme="dark"] .desktop-shell,
+html[data-theme="dark"] .workspace-topbar,
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .topbar-utility,
+html[data-theme="dark"] .profile-chip,
+html[data-theme="dark"] .timestamp-card,
+html[data-theme="dark"] .scan-stage-card,
+html[data-theme="dark"] .panel-card,
+html[data-theme="dark"] .metric-card,
+html[data-theme="dark"] .result-banner,
+html[data-theme="dark"] .shortcut-card,
+html[data-theme="dark"] .department-card,
+html[data-theme="dark"] .detail-row,
+html[data-theme="dark"] .table-wrap,
+html[data-theme="dark"] .flash,
+html[data-theme="dark"] .sidebar-status,
+html[data-theme="dark"] .auth-panel,
+html[data-theme="dark"] .auth-side-panel,
+html[data-theme="dark"] .qr-card,
+html[data-theme="dark"] .staff-photo-panel,
+html[data-theme="dark"] .auth-brand-mark,
+html[data-theme="dark"] .enroll-staff-card,
+html[data-theme="dark"] .enroll-guide-step,
+html[data-theme="dark"] .enroll-status-tile,
+html[data-theme="dark"] .enroll-widget-card,
+html[data-theme="dark"] .enroll-preview-card,
+html[data-theme="dark"] .enroll-preview-card-large,
+html[data-theme="dark"] .enroll-status-banner,
+html[data-theme="dark"] .shortcut-icon,
+html[data-theme="dark"] .metric-icon,
+html[data-theme="dark"] .timestamp-icon,
+html[data-theme="dark"] .timestamp-trailing {
+    background: linear-gradient(180deg, #0c1729, #0f1d33);
+    border-color: var(--line);
+    box-shadow: var(--panel-shadow);
+}
+
+html[data-theme="dark"] .desktop-shell {
+    background: linear-gradient(180deg, rgba(10, 19, 35, 0.98), rgba(8, 16, 28, 0.98));
+    border-color: rgba(30, 57, 92, 0.8);
+}
+
+html[data-theme="dark"] .sidebar {
+    background: linear-gradient(180deg, rgba(8, 18, 34, 0.98), rgba(8, 17, 31, 0.98));
+}
+
+html[data-theme="dark"] .sidebar-link:hover,
+html[data-theme="dark"] .tab-link:hover,
+html[data-theme="dark"] tbody tr:hover,
+html[data-theme="dark"] .quick-divider span {
+    background: #10203a;
+}
+
+html[data-theme="dark"] .sidebar-brand-subtitle,
+html[data-theme="dark"] .sidebar-status span,
+html[data-theme="dark"] .profile-copy span,
+html[data-theme="dark"] .hero-subtitle,
+html[data-theme="dark"] .panel-subtitle,
+html[data-theme="dark"] .panel-note,
+html[data-theme="dark"] .section-kicker,
+html[data-theme="dark"] .shortcut-copy span,
+html[data-theme="dark"] .metric-copy small,
+html[data-theme="dark"] .detail-row span,
+html[data-theme="dark"] .cell-sub,
+html[data-theme="dark"] .empty-state p,
+html[data-theme="dark"] .staff-photo-panel-copy span,
+html[data-theme="dark"] .staff-photo-panel-copy small,
+html[data-theme="dark"] .auth-brand-subtitle,
+html[data-theme="dark"] .quick-divider span,
+html[data-theme="dark"] th,
+html[data-theme="dark"] .staff-login-help,
+html[data-theme="dark"] .staff-login-footer span {
+    color: var(--muted);
+}
+
+html[data-theme="dark"] .metric-copy strong,
+html[data-theme="dark"] .timestamp-copy strong,
+html[data-theme="dark"] .page-hero h1,
+html[data-theme="dark"] .center-stage h1,
+html[data-theme="dark"] .auth-panel h1,
+html[data-theme="dark"] .scan-stage-card h2,
+html[data-theme="dark"] .panel-card h3,
+html[data-theme="dark"] .sidebar-brand-title,
+html[data-theme="dark"] .detail-row strong,
+html[data-theme="dark"] td,
+html[data-theme="dark"] .shortcut-copy strong,
+html[data-theme="dark"] .staff-login-intro h1,
+html[data-theme="dark"] .staff-login-field > span,
+html[data-theme="dark"] .staff-login-footer strong,
+html[data-theme="dark"] .staff-login-camera-head strong {
+    color: var(--text);
+}
+
+html[data-theme="dark"] th {
+    background: #0c1729;
+}
+
+html[data-theme="dark"] .quick-divider::before {
+    border-top-color: var(--line);
+}
+
+html[data-theme="dark"] .scan-stage-core,
+html[data-theme="dark"] .profile-avatar,
+html[data-theme="dark"] .staff-photo,
+html[data-theme="dark"] .status-inline-icon,
+html[data-theme="dark"] .pwa-install-fab {
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .metric-icon-teal,
+html[data-theme="dark"] .shortcut-icon,
+html[data-theme="dark"] .timestamp-icon {
+    background: rgba(24, 210, 196, 0.14);
+    color: #24d2c6;
+}
+
+html[data-theme="dark"] .metric-icon-blue,
+html[data-theme="dark"] .shortcut-card-blue .shortcut-icon,
+html[data-theme="dark"] .timestamp-trailing {
+    background: rgba(77, 136, 255, 0.16);
+    color: #6ea0ff;
+}
+
+html[data-theme="dark"] .metric-icon-orange,
+html[data-theme="dark"] .shortcut-card-orange .shortcut-icon {
+    background: rgba(255, 176, 85, 0.18);
+    color: #ffb055;
+}
+
+html[data-theme="dark"] .metric-icon-lime {
+    background: rgba(112, 199, 68, 0.18);
+    color: #93dd62;
+}
+
+html[data-theme="dark"] .staff-login-minimal-body {
+    background:
+        radial-gradient(circle at top center, rgba(78, 219, 12, 0.08), transparent 22%),
+        linear-gradient(180deg, #1c2118 0%, #171b14 100%);
+    color: #f2f6e7;
+}
+
+html[data-theme="dark"] .staff-login-card {
+    background: linear-gradient(180deg, rgba(43, 48, 35, 0.98), rgba(38, 43, 31, 0.98));
+    border-color: rgba(103, 118, 86, 0.26);
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .staff-login-intro p,
+html[data-theme="dark"] .staff-login-field small,
+html[data-theme="dark"] .staff-login-camera-head p,
+html[data-theme="dark"] .staff-login-camera-note,
+html[data-theme="dark"] .staff-login-help,
+html[data-theme="dark"] .staff-login-footer span {
+    color: rgba(226, 232, 212, 0.76);
+}
+
+html[data-theme="dark"] .staff-login-switcher {
+    background: rgba(60, 67, 49, 0.52);
+    border-color: rgba(108, 118, 93, 0.18);
+}
+
+html[data-theme="dark"] .staff-login-tab {
+    color: rgba(244, 248, 236, 0.72);
+}
+
+html[data-theme="dark"] .staff-login-tab.is-active {
+    background: rgba(31, 35, 27, 0.92);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(92, 103, 78, 0.34);
+}
+
+html[data-theme="dark"] .staff-login-field input,
+html[data-theme="dark"] .staff-login-camera-button {
+    border-color: rgba(89, 99, 76, 0.56);
+    background: rgba(39, 44, 31, 0.96);
+    color: #f2f7e7;
+}
+
+html[data-theme="dark"] .staff-login-field input::placeholder {
+    color: rgba(214, 222, 198, 0.55);
+}
+
+html[data-theme="dark"] .staff-login-camera-card {
+    background: rgba(34, 39, 28, 0.9);
+    border-color: rgba(92, 103, 78, 0.34);
+}
+
+html[data-theme="dark"] .staff-login-camera-button.is-primary {
+    border-color: transparent;
+    background: linear-gradient(180deg, #49d40f 0%, #3bc408 100%);
+    color: #10140b;
+}
+
+html[data-theme="dark"] .staff-login-camera-stage {
+    background: #11150e;
+    border-color: rgba(92, 103, 78, 0.32);
+}
+
+html[data-theme="dark"] .staff-login-camera-overlay {
+    background: linear-gradient(180deg, rgba(17, 21, 14, 0.18), rgba(17, 21, 14, 0.84));
+    color: rgba(236, 243, 224, 0.82);
+}
+
+html[data-theme="dark"] .staff-login-eye {
+    color: rgba(225, 232, 212, 0.72);
+}
+
+html[data-theme="dark"] .staff-login-eye:hover,
+html[data-theme="dark"] .staff-login-eye:focus-visible {
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
 }

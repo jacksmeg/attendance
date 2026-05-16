@@ -1,0 +1,14 @@
+<meta name="theme-color" content="#f8fbff">
+<script>
+    (() => {
+        const hour = new Date().getHours();
+        const theme = (hour >= 18 || hour < 6) ? "dark" : "light";
+        const root = document.documentElement;
+        root.dataset.theme = theme;
+        root.style.colorScheme = theme;
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            meta.setAttribute("content", theme === "dark" ? "#081426" : "#f8fbff");
+        }
+    })();
+</script>

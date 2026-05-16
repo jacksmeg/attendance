@@ -24,9 +24,14 @@ def record_attendance(
 ) -> dict[str, Any]:
     db = get_db()
     event_dt = captured_at or datetime.now()
-    attendance_date = event_dt.date().isoformat()
+    attendance_day = _resolve_event_attendance_day(
+        staff,
+        event_dt,
+        event_type=event_type,
+    )
+    attendance_date = attendance_day.isoformat()
     resolved_event_type = event_type or _resolve_event_type(staff["id"], attendance_date)
-    status_label = _status_label(staff, resolved_event_type, event_dt)
+    status_label = _status_label(staff, resolved_event_type, event_dt, attendance_day)
 
     cursor = db.execute(
         """
@@ -268,9 +273,25 @@ def report_summary(rows: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
-def get_staff_today_status(staff_id: int, target_date: date | None = None) -> dict[str, Any]:
-    current_date = target_date or date.today()
-    rows = _staff_events_for_day(staff_id, current_date.isoformat())
+def get_staff_today_status(
+    staff_id: int,
+    target_date: date | None = None,
+    reference_dt: datetime | None = None,
+) -> dict[str, Any]:
+    current_reference = reference_dt or datetime.now()
+    shift_row = _staff_shift_row(staff_id)
+    if target_date is not None:
+        attendance_day = target_date
+    elif shift_row:
+        attendance_day = resolve_shift_attendance_date(
+            shift_row.get("shift_start"),
+            shift_row.get("shift_end"),
+            current_reference,
+        )
+    else:
+        attendance_day = current_reference.date()
+
+    rows = _staff_events_for_day(staff_id, attendance_day.isoformat())
     check_in_at = None
     check_out_at = None
     active_break_started_at = None
@@ -319,7 +340,7 @@ def get_staff_today_status(staff_id: int, target_date: date | None = None) -> di
         )
 
     return {
-        "attendance_date": current_date.isoformat(),
+        "attendance_date": attendance_day.isoformat(),
         "rows": rows,
         "check_in_at": check_in_at,
         "check_out_at": check_out_at,
@@ -342,10 +363,18 @@ def _resolve_event_type(staff_id: int, attendance_date: str) -> str:
     return "check_out"
 
 
-def _status_label(staff: dict[str, Any], event_type: str, event_dt: datetime) -> str:
-    event_day = event_dt.date()
+def _status_label(
+    staff: dict[str, Any],
+    event_type: str,
+    event_dt: datetime,
+    attendance_day: date,
+) -> str:
     if event_type == "check_in":
-        shift_start = _combine_date_and_clock(event_day, staff["shift_start"])
+        shift_start, _ = shift_bounds_for_date(
+            attendance_day,
+            staff.get("shift_start"),
+            staff.get("shift_end"),
+        )
         grace_deadline = shift_start + timedelta(minutes=int(staff["grace_minutes"]))
         if event_dt <= grace_deadline:
             return "On time"
@@ -355,15 +384,87 @@ def _status_label(staff: dict[str, Any], event_type: str, event_dt: datetime) ->
     if event_type == "break_end":
         return "Break ended"
 
-    shift_end = _combine_date_and_clock(event_day, staff["shift_end"])
+    _, shift_end = shift_bounds_for_date(
+        attendance_day,
+        staff.get("shift_start"),
+        staff.get("shift_end"),
+    )
     if event_dt < shift_end:
         return "Early checkout"
     return "Completed shift"
 
 
 def _combine_date_and_clock(current_date: date, clock_value: str) -> datetime:
-    clock = time.fromisoformat(clock_value)
+    clock = _parse_clock(clock_value, time(9, 0))
     return datetime.combine(current_date, clock)
+
+
+def shift_spans_overnight(shift_start: str | None, shift_end: str | None) -> bool:
+    start_clock = _parse_clock(shift_start, time(9, 0))
+    end_clock = _parse_clock(shift_end, time(17, 0))
+    return end_clock <= start_clock
+
+
+def shift_bounds_for_date(
+    attendance_day: date,
+    shift_start: str | None,
+    shift_end: str | None,
+) -> tuple[datetime, datetime]:
+    start_clock = _parse_clock(shift_start, time(9, 0))
+    end_clock = _parse_clock(shift_end, time(17, 0))
+    shift_start_dt = datetime.combine(attendance_day, start_clock)
+    shift_end_dt = datetime.combine(attendance_day, end_clock)
+    if shift_end_dt <= shift_start_dt:
+        shift_end_dt += timedelta(days=1)
+    return shift_start_dt, shift_end_dt
+
+
+def resolve_shift_attendance_date(
+    shift_start: str | None,
+    shift_end: str | None,
+    event_dt: datetime,
+) -> date:
+    start_clock = _parse_clock(shift_start, time(9, 0))
+    end_clock = _parse_clock(shift_end, time(17, 0))
+    if end_clock <= start_clock and event_dt.time() <= end_clock:
+        return event_dt.date() - timedelta(days=1)
+    return event_dt.date()
+
+
+def _resolve_event_attendance_day(
+    staff: dict[str, Any],
+    event_dt: datetime,
+    event_type: str | None = None,
+) -> date:
+    shift_start = staff.get("shift_start")
+    shift_end = staff.get("shift_end")
+    event_day = event_dt.date()
+    resolved_day = resolve_shift_attendance_date(shift_start, shift_end, event_dt)
+    if not shift_spans_overnight(shift_start, shift_end):
+        return resolved_day
+
+    if event_type == "check_in":
+        return event_day
+
+    previous_day = event_day - timedelta(days=1)
+    previous_latest = _latest_event_for_staff_day(staff["id"], previous_day.isoformat())
+    current_latest = _latest_event_for_staff_day(staff["id"], event_day.isoformat())
+    shift_start_clock = _parse_clock(shift_start, time(9, 0))
+    if (
+        previous_latest
+        and previous_latest["event_type"] != "check_out"
+        and current_latest is None
+        and event_dt.time() < shift_start_clock
+    ):
+        return previous_day
+    return resolved_day
+
+
+def _parse_clock(clock_value: str | None, fallback: time) -> time:
+    try:
+        return time.fromisoformat(clock_value or fallback.isoformat(timespec="minutes"))
+    except ValueError:
+        return fallback
 
 
 def _latest_events_map(attendance_date: str, department_scope: str = "") -> dict[int, dict[str, Any]]:
@@ -467,3 +568,17 @@ def _staff_events_for_day(staff_id: int, attendance_date: str) -> list[dict[str,
         (staff_id, attendance_date),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def _staff_shift_row(staff_id: int) -> dict[str, Any] | None:
+    db = get_db()
+    row = db.execute(
+        """
+        SELECT shift_start, shift_end
+        FROM staff
+        WHERE id = ?
+        LIMIT 1
+        """,
+        (staff_id,),
+    ).fetchone()
+    return dict(row) if row else None

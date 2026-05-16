@@ -20,6 +20,20 @@
     --admin-font: "Inter", "Segoe UI", "Aptos", sans-serif;
 }
 
+html[data-theme="dark"] {
+    --admin-bg: #07111f;
+    --admin-surface: #0c1729;
+    --admin-surface-soft: #0f1c31;
+    --admin-line: #18304f;
+    --admin-line-strong: #24446f;
+    --admin-text: #edf4ff;
+    --admin-muted: #8ea4c6;
+    --admin-muted-strong: #bfd0ea;
+    --admin-shadow: 0 22px 56px rgba(0, 0, 0, 0.3);
+    --admin-card-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
+    --admin-nav-bg: linear-gradient(180deg, #040c1b 0%, #071323 100%);
+}
+
 body.admin-ui {
     margin: 0;
     min-height: 100vh;
@@ -1255,6 +1269,60 @@ body.admin-ui {
     gap: 8px;
 }
 
+.admin-shift-preset-stack {
+    display: grid;
+    gap: 14px;
+    grid-column: 1 / -1;
+}
+
+.admin-shift-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.admin-shift-preset-card {
+    position: relative;
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid var(--admin-line);
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-shift-preset-card:hover,
+.admin-shift-preset-card:focus-visible {
+    transform: translateY(-2px);
+    border-color: rgba(47, 107, 255, 0.28);
+    box-shadow: 0 12px 26px rgba(47, 107, 255, 0.12);
+    outline: none;
+}
+
+.admin-shift-preset-card.is-selected {
+    border-color: rgba(47, 107, 255, 0.35);
+    box-shadow: 0 14px 28px rgba(47, 107, 255, 0.18);
+    background: linear-gradient(180deg, rgba(47, 107, 255, 0.08), rgba(18, 184, 217, 0.05));
+}
+
+.admin-shift-preset-card strong {
+    font-size: 0.88rem;
+}
+
+.admin-shift-preset-card span {
+    color: var(--admin-muted);
+    font-size: 0.76rem;
+    line-height: 1.5;
+}
+
+.admin-shift-preset-card small {
+    color: var(--admin-muted-strong);
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
 .admin-field.admin-field-compact {
     gap: 0;
 }
@@ -2055,6 +2123,7 @@ body.admin-ui {
     .admin-stats-grid.cols-6,
     .admin-info-grid,
     .admin-form-grid,
+    .admin-shift-preset-grid,
     .admin-inline-grid-2,
     .admin-check-grid,
     .admin-check-grid.admin-check-grid-compact,
@@ -2129,4 +2198,115 @@ body.admin-ui {
         box-shadow: none;
         border-color: #d5def5;
     }
+}
+
+html[data-theme="dark"] body.admin-ui {
+    background:
+        radial-gradient(circle at top left, rgba(47, 107, 255, 0.12), transparent 22%),
+        linear-gradient(180deg, #07111f 0%, #091525 100%);
+    color: var(--admin-text);
+}
+
+html[data-theme="dark"] .admin-topbar,
+html[data-theme="dark"] .admin-stat-card,
+html[data-theme="dark"] .admin-surface-card,
+html[data-theme="dark"] .admin-table-card,
+html[data-theme="dark"] .admin-side-card,
+html[data-theme="dark"] .admin-summary-card,
+html[data-theme="dark"] .admin-overview-card,
+html[data-theme="dark"] .admin-line-chart-card,
+html[data-theme="dark"] .admin-donut-card,
+html[data-theme="dark"] .admin-quick-filters-card,
+html[data-theme="dark"] .admin-right-detail-card,
+html[data-theme="dark"] .admin-icon-button,
+html[data-theme="dark"] .admin-toolbar-button,
+html[data-theme="dark"] .admin-search-box,
+html[data-theme="dark"] .admin-topbar-input,
+html[data-theme="dark"] .admin-filter-control,
+html[data-theme="dark"] .admin-select-like,
+html[data-theme="dark"] .admin-profile-chip,
+html[data-theme="dark"] .admin-icon-action,
+html[data-theme="dark"] .admin-check-card,
+html[data-theme="dark"] .admin-note-item,
+html[data-theme="dark"] .admin-readonly-pill,
+html[data-theme="dark"] .admin-brand-preview-card,
+html[data-theme="dark"] .admin-inline-notice,
+html[data-theme="dark"] .admin-field input,
+html[data-theme="dark"] .admin-field select,
+html[data-theme="dark"] .admin-field textarea,
+html[data-theme="dark"] .admin-table-wrap,
+html[data-theme="dark"] .admin-empty,
+html[data-theme="dark"] .admin-shift-preset-card,
+html[data-theme="dark"] .admin-enroll-preview-stage,
+html[data-theme="dark"] .admin-enroll-status-card,
+html[data-theme="dark"] .admin-enroll-instruction-box,
+html[data-theme="dark"] .admin-qr-card,
+html[data-theme="dark"] .admin-qr-stage,
+html[data-theme="dark"] .ghana-card-record,
+html[data-theme="dark"] .ghana-card-detail,
+html[data-theme="dark"] .ghana-card-photo-frame {
+    background: linear-gradient(180deg, #0c1729 0%, #0f1d33 100%);
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+    box-shadow: var(--admin-card-shadow);
+}
+
+html[data-theme="dark"] .admin-table th {
+    color: var(--admin-muted-strong);
+}
+
+html[data-theme="dark"] .admin-table td,
+html[data-theme="dark"] .admin-section-title h2,
+html[data-theme="dark"] .admin-card-head h2,
+html[data-theme="dark"] .admin-card-head h3,
+html[data-theme="dark"] .admin-side-card h3,
+html[data-theme="dark"] .admin-table-card h3,
+html[data-theme="dark"] .admin-overview-card h3,
+html[data-theme="dark"] .admin-summary-card h3,
+html[data-theme="dark"] .admin-page-heading h1,
+html[data-theme="dark"] .admin-brand-preview-copy strong,
+html[data-theme="dark"] .admin-profile-preview-copy strong,
+html[data-theme="dark"] .admin-shift-preset-card strong,
+html[data-theme="dark"] .ghana-card-brand strong,
+html[data-theme="dark"] .ghana-card-meta strong,
+html[data-theme="dark"] .ghana-card-detail strong,
+html[data-theme="dark"] .ghana-card-footer-item strong {
+    color: var(--admin-text);
+}
+
+html[data-theme="dark"] .admin-breadcrumbs,
+html[data-theme="dark"] .admin-section-title p,
+html[data-theme="dark"] .admin-card-head p,
+html[data-theme="dark"] .admin-card-caption,
+html[data-theme="dark"] .admin-summary-muted,
+html[data-theme="dark"] .admin-side-note,
+html[data-theme="dark"] .admin-empty p,
+html[data-theme="dark"] .admin-field span,
+html[data-theme="dark"] .admin-check-card span,
+html[data-theme="dark"] .admin-note-item span,
+html[data-theme="dark"] .admin-profile-preview-copy span,
+html[data-theme="dark"] .admin-profile-preview-copy small,
+html[data-theme="dark"] .admin-shift-preset-card span,
+html[data-theme="dark"] .admin-shift-preset-card small,
+html[data-theme="dark"] .ghana-card-brand span,
+html[data-theme="dark"] .ghana-card-meta span,
+html[data-theme="dark"] .ghana-card-detail span,
+html[data-theme="dark"] .ghana-card-footer-item span {
+    color: var(--admin-muted);
+}
+
+html[data-theme="dark"] .admin-table th,
+html[data-theme="dark"] .admin-table td {
+    border-bottom-color: rgba(36, 68, 111, 0.72);
+}
+
+html[data-theme="dark"] .admin-table tr:hover {
+    background: rgba(17, 32, 58, 0.78);
+}
+
+html[data-theme="dark"] .admin-toolbar-button.tone-primary {
+    background: linear-gradient(135deg, #2f6bff 0%, #2356f5 100%);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(47, 107, 255, 0.25);
 }

@@ -56,6 +56,9 @@ from .services.attendance import (
     list_attendance_events,
     record_attendance,
     report_summary,
+    resolve_shift_attendance_date,
+    shift_bounds_for_date,
+    shift_spans_overnight,
 )
 from .services.enrollment_sessions import (
     get_enrollment_preview_path,
@@ -103,6 +106,63 @@ AUDIT_SELFIE_MIME_TYPES = {
     "image/webp": ".webp",
 }
 MAX_AUDIT_SELFIE_BYTES = 3 * 1024 * 1024
+
+HOSPITAL_SHIFT_PRESETS = [
+    {
+        "key": "hospital_morning_8_2",
+        "label": "Morning 8AM - 2PM",
+        "summary": "Short clinical day shift",
+        "shift_start": "08:00",
+        "shift_end": "14:00",
+        "badge_label": "Morning",
+        "badge_tone": "blue",
+    },
+    {
+        "key": "hospital_afternoon_2_8",
+        "label": "Afternoon 2PM - 8PM",
+        "summary": "Second six-hour hospital shift",
+        "shift_start": "14:00",
+        "shift_end": "20:00",
+        "badge_label": "Afternoon",
+        "badge_tone": "orange",
+    },
+    {
+        "key": "hospital_night_8_8",
+        "label": "Night 8PM - 8AM",
+        "summary": "Three-shift overnight coverage",
+        "shift_start": "20:00",
+        "shift_end": "08:00",
+        "badge_label": "Night",
+        "badge_tone": "purple",
+    },
+    {
+        "key": "hospital_day_8_6",
+        "label": "Day 8AM - 6PM",
+        "summary": "Two-shift daytime coverage",
+        "shift_start": "08:00",
+        "shift_end": "18:00",
+        "badge_label": "Long Day",
+        "badge_tone": "cyan",
+    },
+    {
+        "key": "hospital_night_6_8",
+        "label": "Night 6PM - 8AM",
+        "summary": "Two-shift overnight coverage",
+        "shift_start": "18:00",
+        "shift_end": "08:00",
+        "badge_label": "Night",
+        "badge_tone": "purple",
+    },
+    {
+        "key": "hospital_day_8_4",
+        "label": "Day 8AM - 4PM",
+        "summary": "Standard eight-hour day shift",
+        "shift_start": "08:00",
+        "shift_end": "16:00",
+        "badge_label": "Day",
+        "badge_tone": "blue",
+    },
+]
 
 
 def register_routes(app: Flask) -> None:
@@ -233,6 +293,7 @@ def register_routes(app: Flask) -> None:
             url_for("static", filename="styles.css"),
             url_for("static", filename="admin_styles.css"),
             url_for("static", filename="pwa.js"),
+            url_for("static", filename="theme.js"),
             url_for("app.pwa_icon_png", size=192),
             url_for("app.pwa_icon_png", size=512),
         ]
@@ -668,6 +729,7 @@ self.addEventListener("fetch", (event) => {{
             staff=None,
             form_action=url_for("app.admin_staff_new"),
             access_role_choices=ACCESS_ROLE_CHOICES,
+            shift_presets=_hospital_shift_presets(),
             **_admin_context("Staff", "staff", ["Dashboard", "Staff", "Add New Staff"]),
         )
 
@@ -720,6 +782,7 @@ self.addEventListener("fetch", (event) => {{
             staff=staff,
             form_action=url_for("app.admin_staff_edit", staff_id=staff_id),
             access_role_choices=ACCESS_ROLE_CHOICES,
+            shift_presets=_hospital_shift_presets(),
             **_admin_context("Staff", "staff", ["Dashboard", "Staff", "Edit Staff"]),
         )
 
@@ -1066,10 +1129,11 @@ self.addEventListener("fetch", (event) => {{
     @bp.route("/admin/shift-management")
     @roles_required(*REPORTING_ROLES)
     def admin_shift_management():
+        department_scope = current_department_scope()
         return render_template(
             "admin/shift_management.html",
             title="Shift Management",
-            shift_model=_shift_empty_model(),
+            shift_model=_hospital_shift_management_model(department_scope=department_scope),
             **_admin_context("Shift Management", "shift", ["Dashboard", "Shift Management", "Shifts"], nav_secondary="shifts"),
         )
 
@@ -1602,6 +1666,10 @@ def _staff_form_defaults(staff: dict[str, Any] | None = None) -> dict[str, Any]:
             "access_role": staff.get("access_role", STAFF),
             "shift_start": staff["shift_start"],
             "shift_end": staff["shift_end"],
+            "shift_preset_key": _match_shift_preset_key(
+                staff.get("shift_start"),
+                staff.get("shift_end"),
+            ),
             "grace_minutes": staff["grace_minutes"],
             "is_active": bool(staff["is_active"]),
             "allow_mobile_clock": bool(staff.get("allow_mobile_clock", 1)),
@@ -1635,6 +1703,10 @@ def _staff_form_defaults(staff: dict[str, Any] | None = None) -> dict[str, Any]:
         "access_role": STAFF,
         "shift_start": app_defaults["default_shift_start"],
         "shift_end": app_defaults["default_shift_end"],
+        "shift_preset_key": _match_shift_preset_key(
+            app_defaults["default_shift_start"],
+            app_defaults["default_shift_end"],
+        ),
         "grace_minutes": app_defaults["default_grace_minutes"],
         "is_active": True,
         "allow_mobile_clock": True,
@@ -1667,6 +1739,7 @@ def _read_staff_form(form) -> dict[str, Any]:
         "access_role": form.get("access_role", STAFF).strip(),
         "shift_start": form.get("shift_start", "09:00"),
         "shift_end": form.get("shift_end", "17:00"),
+        "shift_preset_key": form.get("shift_preset_key", "").strip(),
         "grace_minutes": int(grace_minutes),
         "is_active": form.get("is_active") == "on",
         "allow_mobile_clock": form.get("allow_mobile_clock") == "on",
@@ -1685,6 +1758,14 @@ def _validate_staff_form(form_values: dict[str, Any], creating: bool) -> str | N
 
     if form_values.get("access_role") not in ACCESS_ROLE_CHOICES:
         return "Choose a valid platform access role."
+
+    if not form_values.get("shift_start") or not form_values.get("shift_end"):
+        return "Shift start and shift end are required."
+    try:
+        time.fromisoformat(str(form_values.get("shift_start")))
+        time.fromisoformat(str(form_values.get("shift_end")))
+    except ValueError:
+        return "Shift start and shift end must use valid time values."
 
     pin_value = str(form_values.get("portal_pin", ""))
     if pin_value and (not pin_value.isdigit() or len(pin_value) < 4):
@@ -2359,16 +2440,183 @@ def _ghana_card_print_model(staff: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _shift_badge_from_clock(clock_value: str | None) -> tuple[str, str]:
+def _hospital_shift_presets() -> list[dict[str, Any]]:
+    presets: list[dict[str, Any]] = []
+    for preset in HOSPITAL_SHIFT_PRESETS:
+        item = dict(preset)
+        duration_minutes = _shift_duration_minutes(
+            str(item["shift_start"]),
+            str(item["shift_end"]),
+        )
+        item["time_window"] = (
+            f"{_format_clock_label(str(item['shift_start']))} - "
+            f"{_format_clock_label(str(item['shift_end']))}"
+        )
+        item["working_hours_label"] = _format_minutes_as_hours(duration_minutes)
+        presets.append(item)
+    return presets
+
+
+def _match_shift_preset(
+    shift_start: str | None,
+    shift_end: str | None,
+) -> dict[str, Any] | None:
+    normalized_start = str(shift_start or "").strip()
+    normalized_end = str(shift_end or "").strip()
+    for preset in HOSPITAL_SHIFT_PRESETS:
+        if (
+            normalized_start == str(preset["shift_start"])
+            and normalized_end == str(preset["shift_end"])
+        ):
+            return dict(preset)
+    return None
+
+
+def _match_shift_preset_key(shift_start: str | None, shift_end: str | None) -> str:
+    preset = _match_shift_preset(shift_start, shift_end)
+    return str(preset["key"]) if preset else ""
+
+
+def _hospital_shift_management_model(department_scope: str = "") -> dict[str, Any]:
+    staff_rows = list_staff(active_only=True, department_scope=department_scope)
+    presets = _hospital_shift_presets()
+    assignments = []
+    shift_rows = []
+
+    for index, preset in enumerate(presets):
+        matching_staff = [
+            row
+            for row in staff_rows
+            if str(row.get("shift_start", "")) == str(preset["shift_start"])
+            and str(row.get("shift_end", "")) == str(preset["shift_end"])
+        ]
+        departments = sorted(
+            {str(row.get("department", "")).strip() for row in matching_staff if row.get("department")}
+        )
+        shift_rows.append(
+            {
+                "name": preset["label"],
+                "code": f"H{index + 1:02d}",
+                "dot": preset["badge_tone"],
+                "time": preset["time_window"],
+                "break": "Flexible",
+                "hours": preset["working_hours_label"],
+                "grace": "15 mins",
+                "late_after": _format_clock_label(
+                    _minutes_after_clock(str(preset["shift_start"]), 15)
+                ),
+                "status": "Active",
+                "employees": len(matching_staff),
+                "departments": departments,
+            }
+        )
+        assignments.append(
+            {
+                "name": preset["label"],
+                "employees": len(matching_staff),
+                "departments": len(departments),
+                "start": _format_clock_label(str(preset["shift_start"])),
+                "end": _format_clock_label(str(preset["shift_end"])),
+            }
+        )
+
+    detail_preset = presets[0] if presets else None
+    detail = None
+    if detail_preset:
+        detail = {
+            "name": detail_preset["label"],
+            "code": "H01",
+            "time": detail_preset["time_window"],
+            "break": "Flexible by unit",
+            "hours": detail_preset["working_hours_label"],
+            "grace": "15 minutes",
+            "late_after": _format_clock_label(
+                _minutes_after_clock(str(detail_preset["shift_start"]), 15)
+            ),
+            "early_leave": _format_clock_label(
+                _minutes_after_clock(str(detail_preset["shift_end"]), -15)
+            ),
+            "overtime_after": _format_clock_label(str(detail_preset["shift_end"])),
+            "weekly_off": "Configured per department",
+            "status": "Active",
+            "description": detail_preset["summary"],
+            "rules": [
+                f"Late if clock-in is after {_format_clock_label(_minutes_after_clock(str(detail_preset['shift_start']), 15))}",
+                f"Half day if work is under 4h 00m",
+                f"Overtime begins after {_format_clock_label(str(detail_preset['shift_end']))}",
+                "Overnight shifts continue into the next calendar day automatically",
+            ],
+        }
+
+    assigned_total = sum(1 for row in staff_rows if _match_shift_preset(row.get("shift_start"), row.get("shift_end")))
+    open_shift_count = sum(1 for row in shift_rows if row["employees"] == 0)
+    overnight_count = sum(
+        1
+        for preset in presets
+        if shift_spans_overnight(str(preset["shift_start"]), str(preset["shift_end"]))
+    )
+
+    return {
+        "stats": [
+            {"icon": "shift", "tone": "blue", "label": "Total Shifts", "value": str(len(shift_rows)), "sub": "Hospital presets"},
+            {"icon": "staff", "tone": "green", "label": "Assigned Today", "value": str(assigned_total), "sub": "Employees"},
+            {"icon": "clock", "tone": "orange", "label": "Open Shifts", "value": str(open_shift_count), "sub": "No staff assigned"},
+            {"icon": "overtime", "tone": "purple", "label": "Night Patterns", "value": str(overnight_count), "sub": "Overnight coverage"},
+        ],
+        "shifts": shift_rows,
+        "assignments": assignments,
+        "detail": detail,
+    }
+
+
+def _shift_badge_from_window(
+    shift_start: str | None,
+    shift_end: str | None,
+) -> tuple[str, str]:
+    preset = _match_shift_preset(shift_start, shift_end)
+    if preset:
+        return str(preset["badge_label"]), str(preset["badge_tone"])
+
     try:
-        hour = time.fromisoformat(clock_value or "09:00").hour
+        hour = time.fromisoformat(shift_start or "09:00").hour
     except ValueError:
         hour = 9
+    if shift_spans_overnight(shift_start, shift_end):
+        return "Night", "purple"
     if hour < 12:
         return "Morning", "blue"
     if hour < 18:
         return "Afternoon", "orange"
     return "Night", "purple"
+
+
+def _shift_duration_minutes(shift_start: str, shift_end: str) -> int:
+    start_dt, end_dt = shift_bounds_for_date(
+        date(2000, 1, 1),
+        shift_start,
+        shift_end,
+    )
+    return max(int((end_dt - start_dt).total_seconds() // 60), 0)
+
+
+def _format_minutes_as_hours(total_minutes: int) -> str:
+    hours, minutes = divmod(max(total_minutes, 0), 60)
+    return f"{hours}h {minutes:02d}m"
+
+
+def _format_clock_label(clock_value: str) -> str:
+    try:
+        return time.fromisoformat(clock_value).strftime("%I:%M %p")
+    except ValueError:
+        return clock_value
+
+
+def _minutes_after_clock(clock_value: str, minutes_delta: int) -> str:
+    try:
+        base_dt = datetime.combine(date(2000, 1, 1), time.fromisoformat(clock_value))
+    except ValueError:
+        return clock_value
+    return (base_dt + timedelta(minutes=minutes_delta)).time().isoformat(timespec="minutes")
 
 
 def _format_duration_hhmm(total_minutes: int | None) -> str:
@@ -2410,6 +2658,8 @@ def _attendance_status_display(
     latest_event_type: str,
     latest_status_label: str,
     worked_minutes: int | None,
+    attendance_date: str,
+    shift_start: str | None,
     shift_end: str | None,
     check_out_at: datetime | None,
 ) -> tuple[str, str]:
@@ -2420,11 +2670,12 @@ def _attendance_status_display(
     if latest_event_type == "check_out":
         if worked_minutes is not None and worked_minutes > 0 and worked_minutes < 240:
             return "Half Day", "purple"
-        if check_out_at and shift_end:
+        if check_out_at and shift_start and shift_end and attendance_date:
             try:
-                scheduled_end = datetime.combine(
-                    check_out_at.date(),
-                    time.fromisoformat(shift_end),
+                _, scheduled_end = shift_bounds_for_date(
+                    date.fromisoformat(attendance_date),
+                    shift_start,
+                    shift_end,
                 )
                 if check_out_at >= scheduled_end + timedelta(minutes=45):
                     return "Overtime", "cyan"
@@ -2484,11 +2735,16 @@ def _attendance_activity_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]
                 0,
             )
 
-        shift_label, shift_tone = _shift_badge_from_clock(base.get("shift_start"))
+        shift_label, shift_tone = _shift_badge_from_window(
+            base.get("shift_start"),
+            base.get("shift_end"),
+        )
         status_text, status_tone = _attendance_status_display(
             latest_event_type=str(latest["event_type"]),
             latest_status_label=str(latest["status_label"]),
             worked_minutes=worked_minutes,
+            attendance_date=str(base["attendance_date"]),
+            shift_start=str(base.get("shift_start") or ""),
             shift_end=str(base.get("shift_end") or ""),
             check_out_at=check_out_at,
         )

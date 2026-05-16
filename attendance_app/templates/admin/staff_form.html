@@ -12,6 +12,13 @@
 {% block content %}
 {% set full_name = ((form_values.first_name or 'New') ~ ' ' ~ (form_values.last_name or 'Staff'))|trim %}
 {% set shift_range = (form_values.shift_start or '--:--') ~ ' - ' ~ (form_values.shift_end or '--:--') %}
+{% set selected_preset = namespace(label='Custom Shift', summary='Manual start and end time') %}
+{% for preset in shift_presets %}
+    {% if preset.key == form_values.shift_preset_key %}
+        {% set selected_preset.label = preset.label %}
+        {% set selected_preset.summary = preset.summary %}
+    {% endif %}
+{% endfor %}
 <section class="admin-stats-grid cols-4">
     {{ stat_card('staff', 'blue', 'Profile Status', 'Editing' if staff else 'New', 'Staff record') }}
     {{ stat_card('shift', 'green', 'Default Shift', shift_range, 'Assigned hours') }}
@@ -110,13 +117,34 @@
                 {{ section_title('Attendance Setup', 'Shift timings, grace period, and login credentials') }}
             </div>
             <div class="admin-form-grid">
+                <div class="admin-shift-preset-stack">
+                    <input type="hidden" name="shift_preset_key" id="shift_preset_key" value="{{ form_values.shift_preset_key }}">
+                    <span>Hospital Shift Presets</span>
+                    <div class="admin-shift-preset-grid">
+                        {% for preset in shift_presets %}
+                        <button
+                            class="admin-shift-preset-card {% if form_values.shift_preset_key == preset.key %}is-selected{% endif %}"
+                            type="button"
+                            data-shift-preset
+                            data-preset-key="{{ preset.key }}"
+                            data-start="{{ preset.shift_start }}"
+                            data-end="{{ preset.shift_end }}"
+                            aria-pressed="{% if form_values.shift_preset_key == preset.key %}true{% else %}false{% endif %}"
+                        >
+                            <strong>{{ preset.label }}</strong>
+                            <span>{{ preset.summary }}</span>
+                            <small>{{ preset.time_window }} · {{ preset.working_hours_label }}</small>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
                 <label class="admin-field">
                     <span>Shift Start</span>
-                    <input type="time" name="shift_start" value="{{ form_values.shift_start }}" required>
+                    <input type="time" id="shift_start" name="shift_start" value="{{ form_values.shift_start }}" required>
                 </label>
                 <label class="admin-field">
                     <span>Shift End</span>
-                    <input type="time" name="shift_end" value="{{ form_values.shift_end }}" required>
+                    <input type="time" id="shift_end" name="shift_end" value="{{ form_values.shift_end }}" required>
                 </label>
                 <label class="admin-field">
                     <span>Grace Minutes</span>
@@ -242,6 +270,7 @@
             </div>
             <div class="admin-summary-list">
                 <div class="admin-summary-row"><span>Department</span><strong>{{ form_values.department or '-' }}</strong></div>
+                <div class="admin-summary-row"><span>Shift Template</span><strong>{{ selected_preset.label }}</strong></div>
                 <div class="admin-summary-row"><span>Shift Window</span><strong>{{ shift_range }}</strong></div>
                 <div class="admin-summary-row"><span>Grace Period</span><strong>{{ form_values.grace_minutes }} mins</strong></div>
                 <div class="admin-summary-row"><span>Portal Access</span><strong>{{ form_values.access_role or 'Staff' }}</strong></div>
@@ -285,4 +314,51 @@
         {% endif %}
     </div>
 </form>
+
+<script>
+    (() => {
+        const presetInput = document.getElementById("shift_preset_key");
+        const shiftStartInput = document.getElementById("shift_start");
+        const shiftEndInput = document.getElementById("shift_end");
+        const presetButtons = Array.from(document.querySelectorAll("[data-shift-preset]"));
+
+        function updateSelectedPreset(selectedKey) {
+            presetButtons.forEach((button) => {
+                const isSelected = button.dataset.presetKey === selectedKey;
+                button.classList.toggle("is-selected", isSelected);
+                button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+            });
+        }
+
+        presetButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                if (shiftStartInput) {
+                    shiftStartInput.value = button.dataset.start || "";
+                }
+                if (shiftEndInput) {
+                    shiftEndInput.value = button.dataset.end || "";
+                }
+                if (presetInput) {
+                    presetInput.value = button.dataset.presetKey || "";
+                }
+                updateSelectedPreset(button.dataset.presetKey || "");
+            });
+        });
+
+        function clearPresetIfCustom() {
+            const matching = presetButtons.find((button) =>
+                button.dataset.start === shiftStartInput?.value && button.dataset.end === shiftEndInput?.value
+            );
+            const selectedKey = matching ? (matching.dataset.presetKey || "") : "";
+            if (presetInput) {
+                presetInput.value = selectedKey;
+            }
+            updateSelectedPreset(selectedKey);
+        }
+
+        shiftStartInput?.addEventListener("change", clearPresetIfCustom);
+        shiftEndInput?.addEventListener("change", clearPresetIfCustom);
+        updateSelectedPreset(presetInput?.value || "");
+    })();
+</script>
 {% endblock %}
