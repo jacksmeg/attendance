@@ -5,7 +5,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }} | {{ app_name }}</title>
+    <meta name="theme-color" content="#2f6bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ app_name }}">
+    <link rel="manifest" href="{{ url_for('app.pwa_manifest') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('app.pwa_icon_png', size=192) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='pwa.js') }}" defer></script>
 </head>
 <body class="{{ body_class|default('') }}">
     {% set endpoint = request.endpoint or '' %}
@@ -168,5 +175,6 @@
             </main>
         </section>
     </div>
+    <button class="pwa-install-fab" type="button" data-pwa-install hidden>Install App</button>
 </body>
 </html>

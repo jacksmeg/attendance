@@ -1,0 +1,43 @@
+{% extends "auth_shell.html" %}
+{% from "_icons.html" import icon %}
+
+{% block content %}
+<section class="staff-login-screen">
+    <article class="staff-login-card pwa-offline-card">
+        <div class="staff-login-brand">
+            <span class="staff-login-logo">
+                {{ icon('mobile') }}
+            </span>
+            <div class="staff-login-intro">
+                <h1>Offline Mode</h1>
+                <p>You are temporarily offline. Reconnect to continue clocking attendance, opening staff pages, or signing in again.</p>
+            </div>
+        </div>
+
+        <div class="staff-login-camera-card">
+            <div class="staff-login-camera-head">
+                <div>
+                    <strong>{{ app_name }}</strong>
+                    <p>Your installed attendance app is still available, but live actions need internet access.</p>
+                </div>
+                <span class="staff-login-camera-badge">PWA Ready</span>
+            </div>
+            <div class="detail-stack">
+                <div class="detail-row">
+                    <span>Reconnect</span>
+                    <strong>Turn on mobile data or Wi-Fi</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Then open</span>
+                    <strong>Staff Login or My Attendance</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="staff-login-camera-actions">
+            <a class="staff-login-camera-button is-primary" href="{{ url_for('app.staff_login') }}">Open Staff Login</a>
+            <a class="staff-login-camera-button" href="{{ url_for('app.home') }}">Try Again</a>
+        </div>
+    </article>
+</section>
+{% endblock %}

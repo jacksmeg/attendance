@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from io import BytesIO
+import json
 from pathlib import Path
 import shutil
 import unittest
@@ -226,6 +227,26 @@ class AttendanceAppTests(unittest.TestCase):
         response = self.client.get("/admin/settings")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Use My Current GPS Location", response.data)
+
+    def test_pwa_endpoints_are_available(self) -> None:
+        manifest_response = self.client.get("/pwa/manifest.webmanifest")
+        self.assertEqual(manifest_response.status_code, 200)
+        manifest = json.loads(manifest_response.get_data(as_text=True))
+        self.assertEqual(manifest["display"], "standalone")
+        self.assertIn("/pwa/icon-192.png", manifest["icons"][0]["src"])
+
+        service_worker_response = self.client.get("/service-worker.js")
+        self.assertEqual(service_worker_response.status_code, 200)
+        self.assertIn("CACHE_NAME", service_worker_response.get_data(as_text=True))
+
+        icon_response = self.client.get("/pwa/icon-192.png")
+        self.assertEqual(icon_response.status_code, 200)
+        self.assertEqual(icon_response.mimetype, "image/png")
+        self.assertTrue(icon_response.data.startswith(b"\x89PNG"))
+
+        offline_response = self.client.get("/pwa/offline")
+        self.assertEqual(offline_response.status_code, 200)
+        self.assertIn(b"Offline Mode", offline_response.data)
 
     def test_settings_branding_name_and_logo_reflect_across_system(self) -> None:
         self.client.post(

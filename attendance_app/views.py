@@ -3,11 +3,14 @@ from __future__ import annotations
 from collections import defaultdict
 from base64 import b64decode
 from datetime import date, datetime, time, timedelta
+import json
 import math
 from pathlib import Path
+import struct
 from typing import Any
 import sqlite3
 from uuid import uuid4
+import zlib
 
 from flask import (
     Blueprint,
@@ -160,6 +163,154 @@ def register_routes(app: Flask) -> None:
                 "service": live_settings["organization_name"],
                 "fingerprint": provider.healthcheck(),
             }
+        )
+
+    @bp.route("/pwa/manifest.webmanifest")
+    def pwa_manifest():
+        live_settings = get_app_settings(
+            default_app_name=current_app.config["APP_SETTINGS"].app_name
+        )
+        app_name = live_settings["organization_name"]
+        manifest = {
+            "name": app_name,
+            "short_name": _pwa_short_name(app_name),
+            "id": url_for("app.home"),
+            "start_url": url_for("app.home"),
+            "scope": "/",
+            "display": "standalone",
+            "orientation": "portrait-primary",
+            "background_color": "#11161f",
+            "theme_color": "#2f6bff",
+            "description": f"{app_name} mobile attendance portal for staff clocking, QR access, and attendance status.",
+            "icons": [
+                {
+                    "src": url_for("app.pwa_icon_png", size=192),
+                    "sizes": "192x192",
+                    "type": "image/png",
+                    "purpose": "any maskable",
+                },
+                {
+                    "src": url_for("app.pwa_icon_png", size=512),
+                    "sizes": "512x512",
+                    "type": "image/png",
+                    "purpose": "any maskable",
+                },
+            ],
+            "shortcuts": [
+                {
+                    "name": "Staff Login",
+                    "short_name": "Login",
+                    "url": url_for("app.staff_login"),
+                    "icons": [{"src": url_for("app.pwa_icon_png", size=192), "sizes": "192x192"}],
+                },
+                {
+                    "name": "My Attendance",
+                    "short_name": "Attendance",
+                    "url": url_for("app.staff_home"),
+                    "icons": [{"src": url_for("app.pwa_icon_png", size=192), "sizes": "192x192"}],
+                },
+                {
+                    "name": "Admin Login",
+                    "short_name": "Admin",
+                    "url": url_for("app.admin_login"),
+                    "icons": [{"src": url_for("app.pwa_icon_png", size=192), "sizes": "192x192"}],
+                },
+            ],
+        }
+        return Response(
+            json.dumps(manifest),
+            mimetype="application/manifest+json",
+            headers={"Cache-Control": "no-cache"},
+        )
+
+    @bp.route("/service-worker.js")
+    def pwa_service_worker():
+        precache_urls = [
+            url_for("app.home"),
+            url_for("app.staff_login"),
+            url_for("app.admin_login"),
+            url_for("app.pwa_offline"),
+            url_for("static", filename="styles.css"),
+            url_for("static", filename="admin_styles.css"),
+            url_for("static", filename="pwa.js"),
+            url_for("app.pwa_icon_png", size=192),
+            url_for("app.pwa_icon_png", size=512),
+        ]
+        cache_name = f"attendance-pwa-{current_app.config['APP_SETTINGS'].fingerprint_backend}"
+        script = f"""
+const CACHE_NAME = {json.dumps(cache_name)};
+const PRECACHE_URLS = {json.dumps(precache_urls)};
+
+self.addEventListener("install", (event) => {{
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting())
+  );
+}});
+
+self.addEventListener("activate", (event) => {{
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+    ).then(() => self.clients.claim())
+  );
+}});
+
+self.addEventListener("fetch", (event) => {{
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== "GET" || url.origin !== self.location.origin) {{
+    return;
+  }}
+
+  if (request.mode === "navigate") {{
+    event.respondWith(
+      fetch(request)
+        .then((response) => {{
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        }})
+        .catch(async () => {{
+          const cached = await caches.match(request);
+          return cached || caches.match({json.dumps(url_for("app.pwa_offline"))});
+        }})
+    );
+    return;
+  }}
+
+  if (url.pathname.startsWith("/static/") || url.pathname.startsWith("/pwa/") || url.pathname === "/service-worker.js") {{
+    event.respondWith(
+      caches.match(request).then((cached) => cached || fetch(request).then((response) => {{
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        return response;
+      }}))
+    );
+  }}
+}});
+"""
+        return Response(
+            script,
+            mimetype="application/javascript",
+            headers={"Cache-Control": "no-cache"},
+        )
+
+    @bp.route("/pwa/offline")
+    def pwa_offline():
+        return render_template(
+            "pwa/offline.html",
+            title="Offline",
+            body_class="staff-login-minimal-body",
+        )
+
+    @bp.route("/pwa/icon-<int:size>.png")
+    def pwa_icon_png(size: int):
+        if size not in {192, 512}:
+            size = 192
+        return Response(
+            _generate_pwa_icon_png(size=size),
+            mimetype="image/png",
+            headers={"Cache-Control": "public, max-age=86400"},
         )
 
     @bp.route("/media/staff/<path:filename>")
@@ -1896,6 +2047,67 @@ def _distance_in_meters(
     haversine = sin_lat ** 2 + math.cos(lat1) * math.cos(lat2) * sin_lon ** 2
     central_angle = 2 * math.atan2(math.sqrt(haversine), math.sqrt(1 - haversine))
     return earth_radius_meters * central_angle
+
+
+def _pwa_short_name(app_name: str) -> str:
+    cleaned = " ".join(app_name.split())
+    if len(cleaned) <= 12:
+        return cleaned
+    first_word = cleaned.split(" ", 1)[0]
+    return first_word[:12]
+
+
+def _generate_pwa_icon_png(*, size: int) -> bytes:
+    background = (17, 22, 31, 255)
+    accent = (47, 107, 255, 255)
+    highlight = (78, 219, 12, 255)
+    white = (245, 248, 252, 255)
+    shadow = (22, 33, 58, 255)
+
+    center = size / 2
+    outer_radius = size * 0.34
+    inner_radius = size * 0.21
+    dot_radius = size * 0.055
+    dot_center_x = center + size * 0.13
+    dot_center_y = center + size * 0.13
+    ring_thickness = max(10.0, size * 0.042)
+
+    rows = bytearray()
+    for y in range(size):
+        rows.append(0)
+        for x in range(size):
+            pixel = background
+            distance = math.dist((x, y), (center, center))
+            if distance <= outer_radius:
+                pixel = accent
+            if distance <= outer_radius - ring_thickness:
+                pixel = shadow
+            if distance <= inner_radius:
+                pixel = white
+            if math.dist((x, y), (dot_center_x, dot_center_y)) <= dot_radius:
+                pixel = highlight
+
+            rows.extend(pixel)
+
+    compressed = zlib.compress(bytes(rows), level=9)
+
+    def png_chunk(chunk_type: bytes, payload: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(payload))
+            + chunk_type
+            + payload
+            + struct.pack(">I", zlib.crc32(chunk_type + payload) & 0xFFFFFFFF)
+        )
+
+    ihdr = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)
+    return b"".join(
+        [
+            b"\x89PNG\r\n\x1a\n",
+            png_chunk(b"IHDR", ihdr),
+            png_chunk(b"IDAT", compressed),
+            png_chunk(b"IEND", b""),
+        ]
+    )
 
 
 def _resolve_department_filter(requested_department: str, department_scope: str) -> str:

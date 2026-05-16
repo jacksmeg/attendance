@@ -2188,6 +2188,34 @@ tbody tr:hover {
     outline: none;
 }
 
+.pwa-install-fab {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 70;
+    min-height: 52px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #2f6bff 0%, #2457d8 100%);
+    color: #ffffff;
+    font-size: 0.96rem;
+    font-weight: 800;
+    box-shadow: 0 18px 36px rgba(36, 87, 216, 0.24);
+    cursor: pointer;
+}
+
+.pwa-install-fab:hover,
+.pwa-install-fab:focus-visible {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    outline: none;
+}
+
+.pwa-offline-card {
+    width: min(100%, 520px);
+}
+
 .staff-login-help {
     margin: 22px 0 18px;
     text-align: center;
@@ -2240,5 +2268,13 @@ tbody tr:hover {
     .staff-login-camera-head,
     .staff-login-camera-actions {
         flex-direction: column;
+    }
+
+    .pwa-install-fab {
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
+        width: auto;
+        justify-content: center;
     }
 }
