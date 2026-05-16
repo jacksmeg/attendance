@@ -762,6 +762,32 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn(b"Staff login selfie captured", audit_response.data)
         self.assertIn(b"Open image", audit_response.data)
 
+    def test_staff_logout_returns_to_staff_login_page(self) -> None:
+        login_response = self.client.post(
+            "/staff/login",
+            data={"staff_code": "EMP-100", "pin": "4321", "selfie_data": TEST_SELFIE_DATA_URL},
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+
+        logout_response = self.client.get("/logout", follow_redirects=True)
+        self.assertEqual(logout_response.status_code, 200)
+        self.assertIn(b"Staff Number or Email Address", logout_response.data)
+        self.assertIn(b"Session closed.", logout_response.data)
+
+    def test_admin_logout_returns_to_admin_login_page(self) -> None:
+        login_response = self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+
+        logout_response = self.client.get("/logout", follow_redirects=True)
+        self.assertEqual(logout_response.status_code, 200)
+        self.assertIn(b"Administrator Access", logout_response.data)
+        self.assertIn(b"Session closed.", logout_response.data)
+
     def test_kiosk_quick_access_supports_pin_and_qr(self) -> None:
         pin_response = self.client.post(
             "/kiosk/quick-access",

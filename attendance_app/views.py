@@ -531,8 +531,16 @@ self.addEventListener("fetch", (event) => {{
 
     @bp.route("/logout")
     def logout():
+        was_staff = bool(session.get("staff_authenticated"))
+        was_admin = bool(session.get("admin_authenticated"))
         clear_user_session()
         flash("Session closed.", "success")
+        if was_staff:
+            return redirect(url_for("app.staff_login"))
+        if was_admin:
+            return redirect(url_for("app.admin_login"))
+        if current_app.config["APP_SETTINGS"].fingerprint_backend == "disabled":
+            return redirect(url_for("app.staff_login"))
         return redirect(url_for("app.kiosk"))
 
     @bp.route("/admin/logout")
