@@ -125,6 +125,60 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn("Staff Code", payload)
         self.assertIn("EMP-100", payload)
 
+    def test_platform_super_admin_can_provision_institution_from_web_ui(self) -> None:
+        login_response = self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Organizations", login_response.data)
+
+        create_response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "create",
+                "display_name": "Mercy Hospital",
+                "slug": "mercy-hospital",
+                "hostnames": "attendance.mercy.example",
+                "admin_password": "Mercy@1234",
+                "confirm_admin_password": "Mercy@1234",
+                "is_default": "",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(create_response.status_code, 200)
+        self.assertIn(b"Mercy Hospital was provisioned successfully", create_response.data)
+        self.assertIn(b"attendance.mercy.example", create_response.data)
+
+        institution_login = self.client.post(
+            "/admin/login",
+            base_url="https://attendance.mercy.example",
+            data={"username": "boss", "password": "Mercy@1234"},
+            follow_redirects=True,
+        )
+        self.assertEqual(institution_login.status_code, 200)
+        self.assertIn(b"Attendance Overview", institution_login.data)
+
+        branded_staff_login = self.client.get(
+            "/staff/login",
+            base_url="https://attendance.mercy.example",
+        )
+        self.assertEqual(branded_staff_login.status_code, 200)
+        self.assertIn(b"Mercy Hospital", branded_staff_login.data)
+
+    def test_institution_admin_cannot_access_platform_organizations(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        response = self.client.get("/platform/organizations", follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Platform super admin", response.data)
+        self.assertIn(b"Sign in as a platform super admin", response.data)
+
     def test_enroll_page_renders_for_admin(self) -> None:
         self.client.post(
             "/admin/login",

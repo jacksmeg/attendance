@@ -5,7 +5,7 @@
 {% block toolbar_actions %}
 <a class="admin-toolbar-button tone-primary" href="#admin-password-card">
     {{ icon('settings') }}
-    <span>Change Admin Password</span>
+    <span>Change Institution Admin Password</span>
 </a>
 {% endblock %}
 
@@ -193,7 +193,7 @@
 
         <article class="admin-side-card" id="admin-password-card">
             <div class="admin-card-head">
-                {{ section_title('Admin Security', 'Change the platform administrator password used for admin login') }}
+                {{ section_title('Admin Security', 'Change the institution administrator password used for this organization only') }}
             </div>
             <div class="admin-summary-list">
                 <div class="admin-summary-row"><span>Admin username</span><strong>{{ admin_security.admin_username }}</strong></div>

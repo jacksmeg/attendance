@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "auth_shell.html" %}
 {% from "_icons.html" import icon %}
 
 {% block content %}
@@ -10,23 +10,23 @@
                     {% if app_logo_url %}
                     <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
                     {% else %}
-                    {{ icon('fingerprint') }}
+                    {{ icon('dashboard') }}
                     {% endif %}
                 </span>
                 <span class="auth-brand-copy">
                     <span class="auth-brand-title">{{ app_name }}</span>
-                    <span class="auth-brand-subtitle">Administrator sign in</span>
+                    <span class="auth-brand-subtitle">Platform super admin</span>
                 </span>
             </div>
-            <p class="section-kicker">Administrator Access</p>
-            <h1>Sign in to manage staff, fingerprints, and reports.</h1>
-            <p class="hero-subtitle">Use the administrator username and password for {{ app_name }} to reach the full control workspace.</p>
+            <p class="section-kicker">Multi-Organization Control</p>
+            <h1>Sign in to manage institutions, domains, and onboarding.</h1>
+            <p class="hero-subtitle">Use the platform credentials to provision new customers and manage their assigned hostnames from one control room.</p>
 
             <form method="post" class="stack-form auth-form">
                 <input type="hidden" name="next" value="{{ next_url }}">
                 <label class="field">
                     <span>Username</span>
-                    <input type="text" name="username" placeholder="admin" required>
+                    <input type="text" name="username" placeholder="platform admin" required>
                 </label>
                 <label class="field">
                     <span>Password</span>
@@ -34,33 +34,29 @@
                 </label>
                 <button class="primary-button" type="submit">
                     <span class="button-icon">{{ icon('dashboard') }}</span>
-                    <span>Open Admin Dashboard</span>
+                    <span>Open Platform Portal</span>
                 </button>
             </form>
         </article>
 
         <article class="panel-card auth-side-panel">
-            <p class="section-kicker">Quick Notes</p>
-            <h3>{{ app_name }} access overview</h3>
+            <p class="section-kicker">What You Can Do</p>
+            <h3>Provision each institution safely</h3>
             <div class="detail-stack">
                 <div class="detail-row">
-                    <span>Online entry</span>
-                    <strong>{% if is_cloud_fingerprint_mode %}Staff login first{% else %}Kiosk available{% endif %}</strong>
+                    <span>Create institutions</span>
+                    <strong>From the web UI</strong>
                 </div>
                 <div class="detail-row">
-                    <span>Staff tools</span>
-                    <strong>Admin only</strong>
+                    <span>Assign domains</span>
+                    <strong>Per institution</strong>
                 </div>
                 <div class="detail-row">
-                    <span>Attendance logs</span>
-                    <strong>Admin only</strong>
+                    <span>Data isolation</span>
+                    <strong>Separate database + files</strong>
                 </div>
             </div>
-            <p class="panel-note">Once you sign in, the full dashboard, staff directory, enrollment tools, reports, and settings become available from the left sidebar.</p>
-            <a class="ghost-button" href="{{ url_for('app.platform_login') }}">
-                <span class="button-icon">{{ icon('dashboard') }}</span>
-                <span>Platform Super Admin</span>
-            </a>
+            <p class="panel-note">This portal is separate from each customer’s own admin login. Customer admins manage only their institution, while the platform portal manages the product itself.</p>
         </article>
     </div>
 </section>

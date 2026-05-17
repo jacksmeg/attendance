@@ -38,6 +38,17 @@ def admin_required(view):
     return wrapped_view
 
 
+def platform_admin_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if not is_platform_admin():
+            flash("Sign in as a platform super admin to continue.", "warning")
+            return redirect(url_for("app.platform_login", next=request.path))
+        return view(*args, **kwargs)
+
+    return wrapped_view
+
+
 def credentials_match(expected_username: str, expected_password: str, username: str, password: str) -> bool:
     return hmac.compare_digest(expected_username, username) and hmac.compare_digest(
         expected_password,
@@ -78,6 +89,17 @@ def start_platform_admin_session(username: str) -> None:
     session["is_platform_admin"] = True
     session["admin_username"] = username
     session["display_name"] = username
+    session["access_role"] = SUPER_ADMIN
+    session["managed_department"] = ""
+
+
+def start_institution_admin_session(username: str, organization_name: str = "") -> None:
+    clear_user_session()
+    session["admin_authenticated"] = True
+    session["staff_authenticated"] = False
+    session["is_platform_admin"] = False
+    session["admin_username"] = username
+    session["display_name"] = organization_name or "Admin User"
     session["access_role"] = SUPER_ADMIN
     session["managed_department"] = ""
 

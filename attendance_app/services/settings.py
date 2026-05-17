@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 import hmac
+import sqlite3
 
 from attendance_app.auth import hash_secret, secret_matches
 from attendance_app.db import get_db
@@ -136,6 +138,20 @@ def save_admin_password(new_password: str) -> dict[str, Any]:
         "password_is_custom": True,
         "password_updated_at": str(row["updated_at"]) if row and row["updated_at"] else "",
     }
+
+
+def save_admin_password_for_database(database_path: Path, new_password: str) -> None:
+    db = sqlite3.connect(Path(database_path).resolve())
+    try:
+        _upsert_setting(
+            db,
+            ADMIN_PASSWORD_HASH_KEY,
+            hash_secret(new_password),
+            timestamp=datetime.now().isoformat(timespec="seconds"),
+        )
+        db.commit()
+    finally:
+        db.close()
 
 
 def _to_int(value: object, default: int) -> int:

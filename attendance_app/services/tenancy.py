@@ -202,6 +202,14 @@ def list_organizations(settings: AppConfig) -> list[OrganizationContext]:
         db.close()
 
 
+def count_organizations(settings: AppConfig) -> int:
+    return len(list_organizations(settings))
+
+
+def count_organization_hostnames(settings: AppConfig) -> int:
+    return sum(len(org.hostnames) for org in list_organizations(settings))
+
+
 def get_organization_by_slug(settings: AppConfig, slug: str) -> OrganizationContext | None:
     normalized_slug = _normalize_slug(slug)
     if not normalized_slug:
@@ -230,6 +238,91 @@ def get_organization_by_slug(settings: AppConfig, slug: str) -> OrganizationCont
         return _row_to_context(row) if row else None
     finally:
         db.close()
+
+
+def update_organization(
+    settings: AppConfig,
+    *,
+    slug: str,
+    display_name: str,
+    hostnames: Iterable[str] = (),
+    is_default: bool | None = None,
+) -> OrganizationContext:
+    organization = get_organization_by_slug(settings, slug)
+    if not organization:
+        raise ValueError(f"Organization '{slug}' was not found.")
+
+    normalized_hosts = [
+        host for host in {_normalize_hostname(value) for value in hostnames} if host
+    ]
+    timestamp = datetime.now().isoformat(timespec="seconds")
+
+    db = sqlite3.connect(settings.platform_registry_path)
+    db.row_factory = sqlite3.Row
+    try:
+        db.execute("PRAGMA foreign_keys = ON")
+        if is_default is True:
+            db.execute("UPDATE organizations SET is_default = 0")
+
+        if is_default is None:
+            current_default = organization.is_default
+        else:
+            current_default = bool(is_default)
+
+        db.execute(
+            """
+            UPDATE organizations
+            SET display_name = ?, is_default = ?, updated_at = ?
+            WHERE slug = ?
+            """,
+            (
+                str(display_name).strip() or organization.display_name,
+                1 if current_default else 0,
+                timestamp,
+                organization.slug,
+            ),
+        )
+
+        conflict_rows = db.execute(
+            """
+            SELECT d.hostname, o.slug
+            FROM organization_domains d
+            JOIN organizations o ON o.id = d.organization_id
+            WHERE d.hostname IN ({placeholders}) AND o.slug <> ?
+            """.format(placeholders=",".join("?" for _ in normalized_hosts) or "''"),
+            [*normalized_hosts, organization.slug],
+        ).fetchall()
+        if conflict_rows:
+            conflict = conflict_rows[0]
+            raise ValueError(
+                f"Hostname '{conflict['hostname']}' is already assigned to organization '{conflict['slug']}'."
+            )
+
+        row = db.execute(
+            "SELECT id FROM organizations WHERE slug = ?",
+            (organization.slug,),
+        ).fetchone()
+        if not row:
+            raise RuntimeError("Organization record was not found during update.")
+        organization_id = int(row["id"])
+
+        db.execute("DELETE FROM organization_domains WHERE organization_id = ?", (organization_id,))
+        for hostname in normalized_hosts:
+            db.execute(
+                """
+                INSERT INTO organization_domains (organization_id, hostname, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (organization_id, hostname, timestamp),
+            )
+        db.commit()
+    finally:
+        db.close()
+
+    updated = get_organization_by_slug(settings, organization.slug)
+    if not updated:
+        raise RuntimeError("Organization could not be reloaded after update.")
+    return updated
 
 
 def get_organization_by_host(settings: AppConfig, hostname: str) -> OrganizationContext | None:

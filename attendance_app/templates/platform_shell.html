@@ -1,0 +1,116 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | {{ app_name }}</title>
+    {% include "_theme_head.html" %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin_styles.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
+</head>
+<body class="admin-ui platform-ui {{ body_class|default('') }}">
+    {% set nav_primary = nav_primary|default('organizations') %}
+    {% set page_title = page_title|default(title) %}
+    {% set breadcrumbs = breadcrumbs|default([]) %}
+    {% set display_name = display_name if display_name else (session.get('display_name') or session.get('admin_username') or 'Platform Admin') %}
+    {% set current_role = 'Platform Super Admin' %}
+    {% set initials = (display_name[:1] if display_name else 'P')|upper %}
+
+    <div class="admin-app-shell">
+        <aside class="admin-sidebar">
+            <a class="admin-brand" href="{{ url_for('app.platform_organizations') }}">
+                <span class="admin-brand-mark">
+                    {% if app_logo_url %}
+                    <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                    {% else %}
+                    <span class="admin-brand-mark-grid">
+                        <span></span><span></span><span></span><span></span>
+                    </span>
+                    {% endif %}
+                </span>
+                <div class="admin-brand-copy">
+                    <strong>{{ app_name }}</strong>
+                    <span>Platform control</span>
+                </div>
+            </a>
+
+            <nav class="admin-side-nav" aria-label="Platform navigation">
+                <div class="admin-side-group">
+                    <span class="admin-side-label">Platform</span>
+                    <a class="admin-side-link {% if nav_primary == 'organizations' %}is-active{% endif %}" href="{{ url_for('app.platform_organizations') }}">
+                        <span class="admin-side-link-icon">{{ icon('dashboard') }}</span>
+                        <span>Organizations</span>
+                    </a>
+                </div>
+            </nav>
+
+            <a class="admin-side-link admin-side-link-logout" href="{{ url_for('app.platform_logout') }}">
+                <span class="admin-side-link-icon">{{ icon('logout') }}</span>
+                <span>Logout</span>
+            </a>
+
+            <div class="admin-sidebar-user">
+                <div class="admin-user-avatar">{{ initials }}</div>
+                <div class="admin-sidebar-user-copy">
+                    <strong>{{ display_name }}</strong>
+                    <span>{{ current_role }}</span>
+                </div>
+                <span class="admin-user-caret">{{ icon('chevron-down') }}</span>
+            </div>
+        </aside>
+
+        <section class="admin-workspace">
+            <header class="admin-topbar">
+                <div class="admin-topbar-left">
+                    <button class="admin-icon-button" type="button" aria-label="Toggle navigation">
+                        {{ icon('menu') }}
+                    </button>
+                    <div class="admin-page-heading">
+                        <h1>{{ page_title }}</h1>
+                        {% if breadcrumbs %}
+                        <nav class="admin-breadcrumbs" aria-label="Breadcrumb">
+                            {% for crumb in breadcrumbs %}
+                                <span class="admin-breadcrumb-item">{{ crumb }}</span>
+                                {% if not loop.last %}<span class="admin-breadcrumb-sep">{{ icon('chevron-right') }}</span>{% endif %}
+                            {% endfor %}
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="admin-topbar-tools">
+                    <div class="admin-topbar-center">
+                        {% block toolbar_center %}{% endblock %}
+                    </div>
+                    <div class="admin-topbar-actions">
+                        {% block toolbar_actions %}{% endblock %}
+                        <div class="admin-profile-chip">
+                            <div class="admin-profile-avatar">{{ initials }}</div>
+                            <div class="admin-profile-copy">
+                                <strong>{{ display_name }}</strong>
+                                <span>{{ current_role }}</span>
+                            </div>
+                            <span class="admin-profile-caret">{{ icon('chevron-down') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <section class="admin-flash-stack">
+                    {% for category, message in messages %}
+                    <div class="admin-flash admin-flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </section>
+                {% endif %}
+            {% endwith %}
+
+            <main class="admin-page-content">
+                {% block content %}{% endblock %}
+            </main>
+        </section>
+    </div>
+</body>
+</html>

@@ -30,6 +30,7 @@ from flask import (
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
+from .db import init_db
 from .auth import (
     ACCESS_ROLE_CHOICES,
     DEPARTMENT_MANAGER,
@@ -40,11 +41,15 @@ from .auth import (
     STAFF,
     SUPER_ADMIN,
     clear_user_session,
+    credentials_match,
     current_access_role,
     current_department_scope,
     current_display_name,
+    is_platform_admin,
+    platform_admin_required,
     roles_required,
     staff_required,
+    start_institution_admin_session,
     start_platform_admin_session,
     start_staff_session,
 )
@@ -75,6 +80,7 @@ from .services.settings import (
     get_admin_security,
     get_app_settings,
     save_admin_password,
+    save_admin_password_for_database,
     save_app_settings,
 )
 from .services.staff import (
@@ -96,6 +102,13 @@ from .services.staff import (
     upsert_fingerprint,
 )
 from .services.tenancy import get_current_organization
+from .services.tenancy import (
+    count_organization_hostnames,
+    count_organizations,
+    list_organizations,
+    provision_organization,
+    update_organization,
+)
 
 STAFF_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_STAFF_PHOTO_BYTES = 4 * 1024 * 1024
@@ -172,7 +185,7 @@ def register_routes(app: Flask) -> None:
     @bp.app_context_processor
     def inject_globals() -> dict[str, Any]:
         settings = current_app.config["APP_SETTINGS"]
-        live_settings = get_app_settings(default_app_name=settings.app_name)
+        live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
         organization = get_current_organization()
         return {
             "app_name": live_settings["organization_name"],
@@ -209,17 +222,38 @@ def register_routes(app: Flask) -> None:
         if session.get("staff_authenticated"):
             return redirect(url_for("app.staff_home"))
         if session.get("admin_authenticated"):
+            if is_platform_admin():
+                return redirect(url_for("app.platform_organizations"))
             return redirect(url_for("app.admin_dashboard"))
         if current_app.config["APP_SETTINGS"].fingerprint_backend == "disabled":
             return redirect(url_for("app.staff_login"))
         return redirect(url_for("app.kiosk"))
+
+    @bp.route("/platform/login", methods=["GET", "POST"])
+    def platform_login():
+        settings = current_app.config["APP_SETTINGS"]
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+            next_url = request.form.get("next") or url_for("app.platform_organizations")
+            if credentials_match(settings.admin_username, settings.admin_password, username, password):
+                start_platform_admin_session(username)
+                flash("Platform super admin session started.", "success")
+                return redirect(next_url)
+            flash("Invalid platform credentials.", "error")
+
+        return render_template(
+            "platform/login.html",
+            title="Platform Login",
+            next_url=request.args.get("next", ""),
+        )
 
     @bp.route("/health")
     def health():
         provider = build_provider(current_app.config["APP_SETTINGS"])
         organization = get_current_organization()
         live_settings = get_app_settings(
-            default_app_name=current_app.config["APP_SETTINGS"].app_name
+            default_app_name=_tenant_default_app_name()
         )
         return jsonify(
             {
@@ -233,7 +267,7 @@ def register_routes(app: Flask) -> None:
     @bp.route("/pwa/manifest.webmanifest")
     def pwa_manifest():
         live_settings = get_app_settings(
-            default_app_name=current_app.config["APP_SETTINGS"].app_name
+            default_app_name=_tenant_default_app_name()
         )
         app_name = live_settings["organization_name"]
         manifest = {
@@ -523,6 +557,7 @@ self.addEventListener("fetch", (event) => {{
     @bp.route("/admin/login", methods=["GET", "POST"])
     def admin_login():
         settings = current_app.config["APP_SETTINGS"]
+        live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
         if request.method == "POST":
             username = request.form.get("username", "").strip()
             password = request.form.get("password", "")
@@ -531,7 +566,7 @@ self.addEventListener("fetch", (event) => {{
                 username == settings.admin_username
                 and admin_password_matches(password, settings.admin_password)
             ):
-                start_platform_admin_session(username)
+                start_institution_admin_session(username, live_settings["organization_name"])
                 flash("Administrator session started.", "success")
                 return redirect(next_url)
             flash("Invalid administrator credentials.", "error")
@@ -599,8 +634,11 @@ self.addEventListener("fetch", (event) => {{
     def logout():
         was_staff = bool(session.get("staff_authenticated"))
         was_admin = bool(session.get("admin_authenticated"))
+        was_platform_admin = bool(session.get("is_platform_admin"))
         clear_user_session()
         flash("Session closed.", "success")
+        if was_platform_admin:
+            return redirect(url_for("app.platform_login"))
         if was_staff:
             return redirect(url_for("app.staff_login"))
         if was_admin:
@@ -608,6 +646,101 @@ self.addEventListener("fetch", (event) => {{
         if current_app.config["APP_SETTINGS"].fingerprint_backend == "disabled":
             return redirect(url_for("app.staff_login"))
         return redirect(url_for("app.kiosk"))
+
+    @bp.route("/platform/logout")
+    def platform_logout():
+        return redirect(url_for("app.logout"))
+
+    @bp.route("/platform/organizations", methods=["GET", "POST"])
+    @platform_admin_required
+    def platform_organizations():
+        settings = current_app.config["APP_SETTINGS"]
+        create_form = {
+            "slug": "",
+            "display_name": "",
+            "hostnames": "",
+            "is_default": False,
+            "admin_password": "",
+            "confirm_admin_password": "",
+        }
+        update_forms: dict[str, dict[str, Any]] = {}
+
+        if request.method == "POST":
+            action = request.form.get("action", "create").strip().lower()
+            if action == "create":
+                create_form = _read_platform_organization_form(request.form)
+                validation_error = _validate_platform_organization_form(create_form, creating=True)
+                if validation_error:
+                    flash(validation_error, "error")
+                else:
+                    try:
+                        created_organization = provision_organization(
+                            settings,
+                            slug=create_form["slug"],
+                            display_name=create_form["display_name"],
+                            hostnames=create_form["hostnames_list"],
+                            is_default=create_form["is_default"],
+                        )
+                        init_db(created_organization.database_path)
+                        save_admin_password_for_database(
+                            created_organization.database_path,
+                            create_form["admin_password"],
+                        )
+                    except ValueError as exc:
+                        flash(str(exc), "error")
+                    else:
+                        flash(
+                            f"{create_form['display_name']} was provisioned successfully.",
+                            "success",
+                        )
+                        return redirect(url_for("app.platform_organizations"))
+            elif action == "update":
+                slug = request.form.get("organization_slug", "").strip()
+                update_form = _read_platform_organization_form(request.form)
+                update_form["slug"] = slug
+                update_forms[slug] = update_form
+                validation_error = _validate_platform_organization_form(update_form, creating=False)
+                if validation_error:
+                    flash(validation_error, "error")
+                else:
+                    try:
+                        updated_organization = update_organization(
+                            settings,
+                            slug=slug,
+                            display_name=update_form["display_name"],
+                            hostnames=update_form["hostnames_list"],
+                            is_default=update_form["is_default"],
+                        )
+                        if update_form["admin_password"]:
+                            save_admin_password_for_database(
+                                updated_organization.database_path,
+                                update_form["admin_password"],
+                            )
+                    except ValueError as exc:
+                        flash(str(exc), "error")
+                    else:
+                        flash(
+                            f"{update_form['display_name']} was updated successfully.",
+                            "success",
+                        )
+                        return redirect(url_for("app.platform_organizations"))
+
+        organizations = list_organizations(settings)
+        rows = _platform_organization_rows(organizations, update_forms=update_forms)
+        stats = {
+            "organizations": count_organizations(settings),
+            "hostnames": count_organization_hostnames(settings),
+            "default_slug": next((org.slug for org in organizations if org.is_default), settings.default_organization_slug),
+            "default_name": next((org.display_name for org in organizations if org.is_default), settings.app_name),
+        }
+        return render_template(
+            "platform/organizations.html",
+            title="Platform Organizations",
+            create_form=create_form,
+            organizations=rows,
+            platform_stats=stats,
+            **_platform_context("Organizations", "organizations", ["Platform", "Organizations"]),
+        )
 
     @bp.route("/admin/logout")
     def admin_logout():
@@ -1041,7 +1174,7 @@ self.addEventListener("fetch", (event) => {{
         mark_ghana_card_verified(
             int(staff["id"]),
             verified_at=verified_at,
-            verified_by=current_display_name(),
+            verified_by=str(session.get("admin_username") or current_display_name()),
         )
         refreshed_staff = get_staff(
             int(staff["id"]),
@@ -1278,7 +1411,7 @@ self.addEventListener("fetch", (event) => {{
     @roles_required(*REPORTING_ROLES)
     def admin_reports():
         app_settings = get_app_settings(
-            default_app_name=current_app.config["APP_SETTINGS"].app_name
+            default_app_name=_tenant_default_app_name()
         )
         date_from = request.args.get("date_from", "").strip()
         date_to = request.args.get("date_to", "").strip()
@@ -1337,7 +1470,7 @@ self.addEventListener("fetch", (event) => {{
     @roles_required(*REPORTING_ROLES)
     def admin_reports_export():
         app_settings = get_app_settings(
-            default_app_name=current_app.config["APP_SETTINGS"].app_name
+            default_app_name=_tenant_default_app_name()
         )
         date_from = request.args.get("date_from", "").strip()
         date_to = request.args.get("date_to", "").strip()
@@ -1389,7 +1522,7 @@ self.addEventListener("fetch", (event) => {{
     @roles_required(*SETTINGS_ROLES)
     def admin_settings():
         app_defaults = get_app_settings(
-            default_app_name=current_app.config["APP_SETTINGS"].app_name
+            default_app_name=_tenant_default_app_name()
         )
         form_values = dict(app_defaults)
         admin_security = get_admin_security(
@@ -1443,7 +1576,7 @@ self.addEventListener("fetch", (event) => {{
                             form_values["system_logo_filename"] = previous_logo_filename or ""
                         form_values = save_app_settings(
                             form_values,
-                            default_app_name=current_app.config["APP_SETTINGS"].app_name,
+                            default_app_name=_tenant_default_app_name(),
                         )
                     except ValueError as exc:
                         if saved_logo_filename:
@@ -1494,7 +1627,7 @@ self.addEventListener("fetch", (event) => {{
         quick_url = request.url_root.rstrip("/") + url_for("app.staff_quick_access", qr_token=staff["qr_token"])
         today_status = get_staff_today_status(staff["id"])
         location_policy = _location_policy_view_model(
-            get_app_settings(default_app_name=current_app.config["APP_SETTINGS"].app_name)
+            get_app_settings(default_app_name=_tenant_default_app_name())
         )
         return render_template(
             "staff/home.html",
@@ -1567,7 +1700,7 @@ self.addEventListener("fetch", (event) => {{
 
         today_status = get_staff_today_status(staff["id"])
         location_policy = _location_policy_view_model(
-            get_app_settings(default_app_name=current_app.config["APP_SETTINGS"].app_name)
+            get_app_settings(default_app_name=_tenant_default_app_name())
         )
         if request.method == "POST":
             action = request.form.get("action", "").strip()
@@ -1687,7 +1820,7 @@ def _staff_form_defaults(staff: dict[str, Any] | None = None) -> dict[str, Any]:
         }
 
     app_defaults = get_app_settings(
-        default_app_name=current_app.config["APP_SETTINGS"].app_name
+        default_app_name=_tenant_default_app_name()
     )
     return {
         "staff_code": "",
@@ -1898,6 +2031,11 @@ def _tenant_instance_dir() -> Path:
     return get_current_organization().instance_dir
 
 
+def _tenant_default_app_name() -> str:
+    organization = get_current_organization()
+    return organization.display_name or current_app.config["APP_SETTINGS"].app_name
+
+
 def _delete_staff_photo(filename: str | None) -> None:
     if not filename:
         return
@@ -2100,7 +2238,7 @@ def _attendance_location_error(
     longitude: float | None,
     gps_accuracy: float | None,
 ) -> str | None:
-    app_defaults = get_app_settings(default_app_name=current_app.config["APP_SETTINGS"].app_name)
+    app_defaults = get_app_settings(default_app_name=_tenant_default_app_name())
     policy = _location_policy_view_model(app_defaults)
     if not policy["enabled"]:
         return None
@@ -2239,6 +2377,102 @@ def _admin_context(
         "breadcrumbs": breadcrumbs,
         "body_class": body_class,
     }
+
+
+def _platform_context(
+    page_title: str,
+    nav_primary: str,
+    breadcrumbs: list[str],
+    body_class: str = "",
+) -> dict[str, Any]:
+    return {
+        "page_title": page_title,
+        "nav_primary": nav_primary,
+        "breadcrumbs": breadcrumbs,
+        "body_class": body_class,
+    }
+
+
+def _platform_organization_rows(
+    organizations: list[Any],
+    *,
+    update_forms: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    update_forms = update_forms or {}
+    for organization in organizations:
+        hostnames = list(organization.hostnames)
+        form = update_forms.get(organization.slug) or {
+            "slug": organization.slug,
+            "display_name": organization.display_name,
+            "hostnames": "\n".join(hostnames),
+            "hostnames_list": hostnames,
+            "is_default": organization.is_default,
+            "admin_password": "",
+            "confirm_admin_password": "",
+        }
+        primary_url = ""
+        if hostnames:
+            primary_url = f"https://{hostnames[0]}"
+        rows.append(
+            {
+                "slug": organization.slug,
+                "display_name": organization.display_name,
+                "is_default": organization.is_default,
+                "database_path": str(organization.database_path),
+                "instance_dir": str(organization.instance_dir),
+                "hostnames": hostnames,
+                "primary_url": primary_url,
+                "login_url": f"{primary_url}/admin/login" if primary_url else "",
+                "form": form,
+            }
+        )
+    return rows
+
+
+def _read_platform_organization_form(form) -> dict[str, Any]:
+    hostnames_raw = str(form.get("hostnames", "") or "")
+    hostnames_list = [
+        line.strip()
+        for line in hostnames_raw.replace(",", "\n").splitlines()
+        if line.strip()
+    ]
+    return {
+        "slug": str(form.get("slug", "") or "").strip(),
+        "display_name": str(form.get("display_name", "") or "").strip(),
+        "hostnames": hostnames_raw,
+        "hostnames_list": hostnames_list,
+        "is_default": form.get("is_default") in {"on", "true", "1", "yes"},
+        "admin_password": str(form.get("admin_password", "") or ""),
+        "confirm_admin_password": str(form.get("confirm_admin_password", "") or ""),
+    }
+
+
+def _validate_platform_organization_form(
+    form_values: dict[str, Any],
+    *,
+    creating: bool,
+) -> str | None:
+    slug = str(form_values.get("slug", "")).strip()
+    if creating and not slug:
+        return "Enter an organization slug."
+    if creating and not all(char.isalnum() or char == "-" for char in slug.lower()):
+        return "Use only letters, numbers, and dashes for the organization slug."
+    if not str(form_values.get("display_name", "")).strip():
+        return "Enter the institution name."
+    hostnames = form_values.get("hostnames_list", [])
+    if not hostnames:
+        return "Enter at least one domain or subdomain for the institution."
+    admin_password = str(form_values.get("admin_password", ""))
+    confirm_admin_password = str(form_values.get("confirm_admin_password", ""))
+    if creating and not admin_password:
+        return "Enter an initial institution admin password."
+    if admin_password or confirm_admin_password:
+        if len(admin_password) < 8:
+            return "Institution admin password must be at least 8 characters."
+        if admin_password != confirm_admin_password:
+            return "Institution admin password confirmation does not match."
+    return None
 
 
 def _reference_people() -> list[dict[str, Any]]:

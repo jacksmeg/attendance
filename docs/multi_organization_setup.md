@@ -27,6 +27,21 @@ Run this from the project root:
 flask create-organization --slug school-a --name "School A" --hostname attendance.school-a.com
 ```
 
+## Create a new institution from the browser
+
+You can now also provision institutions from the Platform Super Admin portal:
+
+- `https://your-domain/platform/login`
+
+After signing in with the platform credentials, open `Organizations` and:
+
+1. enter the institution name
+2. choose a slug
+3. enter the assigned domain or subdomain
+4. set the institution's own admin password
+
+The system will create the isolated database and file workspace automatically.
+
 You can add more than one hostname:
 
 ```powershell
