@@ -41,7 +41,10 @@ ADMIN_PASSWORD_HASH_KEY = "platform_admin_password_hash"
 
 def get_app_settings(default_app_name: str = "") -> dict[str, Any]:
     db = get_db()
-    rows = db.execute("SELECT key, value FROM app_settings").fetchall()
+    try:
+        rows = db.execute("SELECT key, value FROM app_settings").fetchall()
+    except sqlite3.OperationalError:
+        rows = []
     values = {row["key"]: row["value"] for row in rows}
     merged = {**DEFAULT_SETTINGS, **values}
     organization_name = str(merged.get("organization_name", "")).strip() or default_app_name

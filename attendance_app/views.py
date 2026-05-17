@@ -103,8 +103,19 @@ from .services.staff import (
 )
 from .services.tenancy import get_current_organization
 from .services.tenancy import (
+    BILLING_CYCLE_MANUAL,
+    BILLING_CYCLE_MONTHLY,
+    BILLING_CYCLE_QUARTERLY,
+    BILLING_CYCLE_YEARLY,
+    LICENSE_STATUS_ACTIVE,
+    LICENSE_STATUS_EXPIRED,
+    LICENSE_STATUS_SUSPENDED,
+    LICENSE_STATUS_TRIAL,
     count_organization_hostnames,
     count_organizations,
+    count_organizations_by_license,
+    get_current_organization_access_state,
+    get_organization_access_state,
     list_organizations,
     provision_organization,
     update_organization,
@@ -197,6 +208,34 @@ def register_routes(app: Flask) -> None:
             "organization_slug": organization.slug,
         }
 
+    @bp.before_app_request
+    def enforce_organization_license() -> Response | None:
+        if request.blueprint != bp.name:
+            return None
+        endpoint = request.endpoint or ""
+        if endpoint.startswith("app.platform_"):
+            return None
+        if endpoint in {
+            "app.health",
+            "app.pwa_manifest",
+            "app.pwa_service_worker",
+            "app.pwa_icon_png",
+            "app.pwa_offline",
+            "app.organization_access_blocked",
+            "app.system_logo",
+            "app.staff_photo",
+            "app.audit_selfie",
+            "app.admin_enrollment_preview",
+        }:
+            return None
+        if is_platform_admin():
+            return None
+
+        access_state = get_current_organization_access_state()
+        if access_state["access_allowed"]:
+            return None
+        return redirect(url_for("app.organization_access_blocked"))
+
     @bp.app_template_filter("human_dt")
     def human_dt(value: str | datetime | None) -> str:
         if not value:
@@ -260,8 +299,21 @@ def register_routes(app: Flask) -> None:
                 "status": "ok",
                 "service": live_settings["organization_name"],
                 "organization_slug": organization.slug,
+                "license": access_state_summary(get_current_organization_access_state()),
                 "fingerprint": provider.healthcheck(),
             }
+        )
+
+    @bp.route("/organization-access")
+    def organization_access_blocked():
+        organization = get_current_organization()
+        access_state = get_current_organization_access_state()
+        return render_template(
+            "organization_access_blocked.html",
+            title="License Required",
+            organization=organization,
+            access_state=access_state,
+            body_class="staff-login-minimal-body",
         )
 
     @bp.route("/pwa/manifest.webmanifest")
@@ -662,6 +714,17 @@ self.addEventListener("fetch", (event) => {{
             "is_default": False,
             "admin_password": "",
             "confirm_admin_password": "",
+            "plan_name": "Standard",
+            "license_status": LICENSE_STATUS_TRIAL,
+            "expires_on": "",
+            "billing_contact_name": "",
+            "billing_email": "",
+            "billing_phone": "",
+            "billing_cycle": BILLING_CYCLE_MONTHLY,
+            "subscription_amount": "0.00",
+            "renewal_due_on": "",
+            "last_payment_on": "",
+            "license_notes": "",
         }
         update_forms: dict[str, dict[str, Any]] = {}
 
@@ -680,6 +743,17 @@ self.addEventListener("fetch", (event) => {{
                             display_name=create_form["display_name"],
                             hostnames=create_form["hostnames_list"],
                             is_default=create_form["is_default"],
+                            plan_name=create_form["plan_name"],
+                            license_status=create_form["license_status"],
+                            expires_on=create_form["expires_on"],
+                            billing_contact_name=create_form["billing_contact_name"],
+                            billing_email=create_form["billing_email"],
+                            billing_phone=create_form["billing_phone"],
+                            billing_cycle=create_form["billing_cycle"],
+                            subscription_amount=create_form["subscription_amount"],
+                            renewal_due_on=create_form["renewal_due_on"],
+                            last_payment_on=create_form["last_payment_on"],
+                            license_notes=create_form["license_notes"],
                         )
                         init_db(created_organization.database_path)
                         save_admin_password_for_database(
@@ -710,6 +784,17 @@ self.addEventListener("fetch", (event) => {{
                             display_name=update_form["display_name"],
                             hostnames=update_form["hostnames_list"],
                             is_default=update_form["is_default"],
+                            plan_name=update_form["plan_name"],
+                            license_status=update_form["license_status"],
+                            expires_on=update_form["expires_on"],
+                            billing_contact_name=update_form["billing_contact_name"],
+                            billing_email=update_form["billing_email"],
+                            billing_phone=update_form["billing_phone"],
+                            billing_cycle=update_form["billing_cycle"],
+                            subscription_amount=update_form["subscription_amount"],
+                            renewal_due_on=update_form["renewal_due_on"],
+                            last_payment_on=update_form["last_payment_on"],
+                            license_notes=update_form["license_notes"],
                         )
                         if update_form["admin_password"]:
                             save_admin_password_for_database(
@@ -732,6 +817,13 @@ self.addEventListener("fetch", (event) => {{
             "hostnames": count_organization_hostnames(settings),
             "default_slug": next((org.slug for org in organizations if org.is_default), settings.default_organization_slug),
             "default_name": next((org.display_name for org in organizations if org.is_default), settings.app_name),
+            "active": count_organizations_by_license(settings, LICENSE_STATUS_ACTIVE),
+            "trial": count_organizations_by_license(settings, LICENSE_STATUS_TRIAL),
+            "blocked": count_organizations_by_license(
+                settings,
+                LICENSE_STATUS_EXPIRED,
+                LICENSE_STATUS_SUSPENDED,
+            ),
         }
         return render_template(
             "platform/organizations.html",
@@ -739,6 +831,8 @@ self.addEventListener("fetch", (event) => {{
             create_form=create_form,
             organizations=rows,
             platform_stats=stats,
+            license_status_options=_platform_license_status_options(),
+            billing_cycle_options=_platform_billing_cycle_options(),
             **_platform_context("Organizations", "organizations", ["Platform", "Organizations"]),
         )
 
@@ -2410,10 +2504,22 @@ def _platform_organization_rows(
             "is_default": organization.is_default,
             "admin_password": "",
             "confirm_admin_password": "",
+            "plan_name": organization.plan_name,
+            "license_status": organization.license_status,
+            "expires_on": organization.expires_on,
+            "billing_contact_name": organization.billing_contact_name,
+            "billing_email": organization.billing_email,
+            "billing_phone": organization.billing_phone,
+            "billing_cycle": organization.billing_cycle,
+            "subscription_amount": f"{organization.subscription_amount:.2f}",
+            "renewal_due_on": organization.renewal_due_on,
+            "last_payment_on": organization.last_payment_on,
+            "license_notes": organization.license_notes,
         }
         primary_url = ""
         if hostnames:
             primary_url = f"https://{hostnames[0]}"
+        access_state = get_organization_access_state(organization)
         rows.append(
             {
                 "slug": organization.slug,
@@ -2425,6 +2531,18 @@ def _platform_organization_rows(
                 "primary_url": primary_url,
                 "login_url": f"{primary_url}/admin/login" if primary_url else "",
                 "form": form,
+                "plan_name": organization.plan_name,
+                "license_status": organization.license_status,
+                "expires_on": organization.expires_on,
+                "billing_contact_name": organization.billing_contact_name,
+                "billing_email": organization.billing_email,
+                "billing_phone": organization.billing_phone,
+                "billing_cycle": organization.billing_cycle,
+                "subscription_amount": organization.subscription_amount,
+                "renewal_due_on": organization.renewal_due_on,
+                "last_payment_on": organization.last_payment_on,
+                "license_notes": organization.license_notes,
+                "access_state": access_state,
             }
         )
     return rows
@@ -2445,6 +2563,17 @@ def _read_platform_organization_form(form) -> dict[str, Any]:
         "is_default": form.get("is_default") in {"on", "true", "1", "yes"},
         "admin_password": str(form.get("admin_password", "") or ""),
         "confirm_admin_password": str(form.get("confirm_admin_password", "") or ""),
+        "plan_name": str(form.get("plan_name", "") or "").strip() or "Standard",
+        "license_status": str(form.get("license_status", LICENSE_STATUS_TRIAL) or "").strip().lower() or LICENSE_STATUS_TRIAL,
+        "expires_on": str(form.get("expires_on", "") or "").strip(),
+        "billing_contact_name": str(form.get("billing_contact_name", "") or "").strip(),
+        "billing_email": str(form.get("billing_email", "") or "").strip(),
+        "billing_phone": str(form.get("billing_phone", "") or "").strip(),
+        "billing_cycle": str(form.get("billing_cycle", BILLING_CYCLE_MONTHLY) or "").strip().lower() or BILLING_CYCLE_MONTHLY,
+        "subscription_amount": str(form.get("subscription_amount", "0.00") or "").strip() or "0.00",
+        "renewal_due_on": str(form.get("renewal_due_on", "") or "").strip(),
+        "last_payment_on": str(form.get("last_payment_on", "") or "").strip(),
+        "license_notes": str(form.get("license_notes", "") or "").strip(),
     }
 
 
@@ -2463,6 +2592,37 @@ def _validate_platform_organization_form(
     hostnames = form_values.get("hostnames_list", [])
     if not hostnames:
         return "Enter at least one domain or subdomain for the institution."
+    if not str(form_values.get("plan_name", "")).strip():
+        return "Enter the subscription plan name."
+    if form_values.get("license_status") not in {
+        LICENSE_STATUS_ACTIVE,
+        LICENSE_STATUS_TRIAL,
+        LICENSE_STATUS_SUSPENDED,
+        LICENSE_STATUS_EXPIRED,
+    }:
+        return "Choose a valid license status."
+    if form_values.get("billing_cycle") not in {
+        BILLING_CYCLE_MONTHLY,
+        BILLING_CYCLE_QUARTERLY,
+        BILLING_CYCLE_YEARLY,
+        BILLING_CYCLE_MANUAL,
+    }:
+        return "Choose a valid billing cycle."
+    expires_on = str(form_values.get("expires_on", "")).strip()
+    renewal_due_on = str(form_values.get("renewal_due_on", "")).strip()
+    last_payment_on = str(form_values.get("last_payment_on", "")).strip()
+    for value, label in (
+        (expires_on, "License expiry date"),
+        (renewal_due_on, "Renewal due date"),
+        (last_payment_on, "Last payment date"),
+    ):
+        if value and not _looks_like_iso_date(value):
+            return f"{label} must use YYYY-MM-DD format."
+    try:
+        if str(form_values.get("subscription_amount", "")).strip():
+            float(str(form_values.get("subscription_amount", "0")).strip())
+    except ValueError:
+        return "Subscription amount must be a valid number."
     admin_password = str(form_values.get("admin_password", ""))
     confirm_admin_password = str(form_values.get("confirm_admin_password", ""))
     if creating and not admin_password:
@@ -2473,6 +2633,52 @@ def _validate_platform_organization_form(
         if admin_password != confirm_admin_password:
             return "Institution admin password confirmation does not match."
     return None
+
+
+def _platform_license_status_options() -> list[dict[str, str]]:
+    return [
+        {"value": LICENSE_STATUS_ACTIVE, "label": "Active"},
+        {"value": LICENSE_STATUS_TRIAL, "label": "Trial"},
+        {"value": LICENSE_STATUS_SUSPENDED, "label": "Suspended"},
+        {"value": LICENSE_STATUS_EXPIRED, "label": "Expired"},
+    ]
+
+
+def _platform_billing_cycle_options() -> list[dict[str, str]]:
+    return [
+        {"value": BILLING_CYCLE_MONTHLY, "label": "Monthly"},
+        {"value": BILLING_CYCLE_QUARTERLY, "label": "Quarterly"},
+        {"value": BILLING_CYCLE_YEARLY, "label": "Yearly"},
+        {"value": BILLING_CYCLE_MANUAL, "label": "Manual"},
+    ]
+
+
+def _looks_like_iso_date(value: str) -> bool:
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def access_state_summary(access_state: dict[str, Any]) -> dict[str, Any]:
+    days_remaining = access_state.get("days_remaining")
+    days_label = ""
+    if days_remaining is not None:
+        if days_remaining < 0:
+            days_label = "Expired"
+        elif days_remaining == 0:
+            days_label = "Ends today"
+        else:
+            days_label = f"{days_remaining} day{'s' if days_remaining != 1 else ''} left"
+    return {
+        "status": access_state.get("status", LICENSE_STATUS_ACTIVE),
+        "access_allowed": bool(access_state.get("access_allowed")),
+        "expires_on": access_state.get("expires_on", ""),
+        "days_remaining": days_remaining,
+        "days_label": days_label,
+        "reason": access_state.get("reason", ""),
+    }
 
 
 def _reference_people() -> list[dict[str, Any]]:

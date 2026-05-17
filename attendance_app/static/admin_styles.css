@@ -2274,13 +2274,62 @@ body.admin-ui {
     color: var(--admin-blue);
 }
 
+.platform-org-license-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.platform-org-license-card {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line);
+}
+
+.platform-org-license-card span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+}
+
+.platform-org-license-card strong {
+    color: var(--admin-text);
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.platform-org-license-card small {
+    color: var(--admin-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.platform-license-note {
+    display: grid;
+    gap: 6px;
+}
+
+.platform-license-note strong {
+    color: var(--admin-text);
+}
+
+.platform-license-note span {
+    color: var(--admin-muted);
+}
+
 .platform-org-form textarea {
     min-height: 110px;
     resize: vertical;
 }
 
 @media (max-width: 1100px) {
-    .platform-org-meta-grid {
+    .platform-org-meta-grid,
+    .platform-org-license-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -2403,7 +2452,8 @@ html[data-theme="dark"] .admin-toolbar-button.tone-primary {
 }
 
 html[data-theme="dark"] .platform-org-card,
-html[data-theme="dark"] .platform-org-meta {
+html[data-theme="dark"] .platform-org-meta,
+html[data-theme="dark"] .platform-org-license-card {
     background: linear-gradient(180deg, #0c1729 0%, #0f1d33 100%);
     border-color: var(--admin-line);
     color: var(--admin-text);

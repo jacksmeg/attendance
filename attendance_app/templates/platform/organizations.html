@@ -10,18 +10,21 @@
 {% endblock %}
 
 {% block content %}
-<section class="admin-stats-grid cols-4">
+<section class="admin-stats-grid cols-6">
     {{ stat_card('dashboard', 'blue', 'Institutions', platform_stats.organizations, 'Provisioned customers') }}
+    {{ stat_card('check-circle', 'green', 'Active', platform_stats.active, 'Customers with live access') }}
+    {{ stat_card('clock', 'purple', 'Trial', platform_stats.trial, 'Customers in trial mode') }}
+    {{ stat_card('close', 'red', 'Blocked', platform_stats.blocked, 'Expired or suspended tenants') }}
     {{ stat_card('attendance', 'green', 'Mapped Domains', platform_stats.hostnames, 'Assigned hostnames') }}
     {{ stat_card('settings', 'purple', 'Default Workspace', platform_stats.default_slug, platform_stats.default_name) }}
-    {{ stat_card('users', 'orange', 'Access Model', 'Isolated', 'Per organization data store') }}
+    {{ stat_card('users', 'orange', 'Access Model', 'Isolated', 'Per organization workspace') }}
 </section>
 
 <section class="admin-content-grid wide-side">
     <div class="admin-main-stack">
         <article class="admin-table-card" id="platform-create-card">
             <div class="admin-card-head">
-                {{ section_title('Provision New Institution', 'Create a new customer workspace, set the hostname, and choose the initial institution admin password') }}
+                {{ section_title('Provision New Institution', 'Create a customer workspace, assign its domains, set the plan, and define the first institution admin password') }}
             </div>
             <form method="post" class="admin-form-grid platform-org-form">
                 <input type="hidden" name="action" value="create">
@@ -37,6 +40,58 @@
                     <span>Domains or Subdomains</span>
                     <textarea name="hostnames" rows="3" placeholder="attendance.hopewell.com&#10;hopewell-attendance.example.org" required>{{ create_form.hostnames }}</textarea>
                     <small class="admin-side-note">Enter one hostname per line. The first hostname becomes the main login link for that institution.</small>
+                </label>
+                <label class="admin-field">
+                    <span>Plan Name</span>
+                    <input type="text" name="plan_name" value="{{ create_form.plan_name }}" placeholder="Standard" required>
+                </label>
+                <label class="admin-field">
+                    <span>License Status</span>
+                    <select name="license_status" required>
+                        {% for option in license_status_options %}
+                        <option value="{{ option.value }}" {% if create_form.license_status == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="admin-field">
+                    <span>Expiry Date</span>
+                    <input type="date" name="expires_on" value="{{ create_form.expires_on }}">
+                </label>
+                <label class="admin-field">
+                    <span>Billing Cycle</span>
+                    <select name="billing_cycle" required>
+                        {% for option in billing_cycle_options %}
+                        <option value="{{ option.value }}" {% if create_form.billing_cycle == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="admin-field">
+                    <span>Subscription Amount</span>
+                    <input type="number" step="0.01" min="0" name="subscription_amount" value="{{ create_form.subscription_amount }}" placeholder="0.00">
+                </label>
+                <label class="admin-field">
+                    <span>Renewal Due On</span>
+                    <input type="date" name="renewal_due_on" value="{{ create_form.renewal_due_on }}">
+                </label>
+                <label class="admin-field">
+                    <span>Last Payment Date</span>
+                    <input type="date" name="last_payment_on" value="{{ create_form.last_payment_on }}">
+                </label>
+                <label class="admin-field">
+                    <span>Billing Contact Name</span>
+                    <input type="text" name="billing_contact_name" value="{{ create_form.billing_contact_name }}" placeholder="Jane Manager">
+                </label>
+                <label class="admin-field">
+                    <span>Billing Email</span>
+                    <input type="email" name="billing_email" value="{{ create_form.billing_email }}" placeholder="billing@example.org">
+                </label>
+                <label class="admin-field">
+                    <span>Billing Phone</span>
+                    <input type="text" name="billing_phone" value="{{ create_form.billing_phone }}" placeholder="+233 20 000 0000">
+                </label>
+                <label class="admin-field" style="grid-column: 1 / -1;">
+                    <span>License Notes</span>
+                    <textarea name="license_notes" rows="3" placeholder="Special onboarding terms, migration notes, contract remarks...">{{ create_form.license_notes }}</textarea>
                 </label>
                 <label class="admin-field">
                     <span>Initial Institution Admin Password</span>
@@ -79,6 +134,9 @@
                             <span class="admin-table-chip tone-blue">Default</span>
                             {% endif %}
                             <span class="admin-table-chip tone-green">{{ organization.hostnames|length }} domain{{ '' if organization.hostnames|length == 1 else 's' }}</span>
+                            <span class="admin-table-chip {% if organization.access_state.status == 'active' %}tone-green{% elif organization.access_state.status == 'trial' %}tone-purple{% elif organization.access_state.status == 'suspended' %}tone-orange{% else %}tone-red{% endif %}">
+                                {{ organization.access_state.status|replace('-', ' ')|title }}
+                            </span>
                         </div>
                     </div>
 
@@ -101,6 +159,36 @@
                         </div>
                     </div>
 
+                    <div class="platform-org-license-grid">
+                        <div class="platform-org-license-card">
+                            <span>Plan</span>
+                            <strong>{{ organization.plan_name }}</strong>
+                            <small>Billing {{ organization.billing_cycle|replace('-', ' ')|title }}</small>
+                        </div>
+                        <div class="platform-org-license-card">
+                            <span>Subscription</span>
+                            <strong>${{ '%.2f'|format(organization.subscription_amount) }}</strong>
+                            <small>{% if organization.renewal_due_on %}Renewal due {{ organization.renewal_due_on }}{% else %}Renewal not scheduled{% endif %}</small>
+                        </div>
+                        <div class="platform-org-license-card">
+                            <span>Expiry</span>
+                            <strong>{{ organization.expires_on or 'Open-ended' }}</strong>
+                            <small>{{ organization.access_state.days_label or organization.access_state.reason }}</small>
+                        </div>
+                        <div class="platform-org-license-card">
+                            <span>Billing Contact</span>
+                            <strong>{{ organization.billing_contact_name or 'Not set' }}</strong>
+                            <small>{{ organization.billing_email or organization.billing_phone or 'No billing contact yet' }}</small>
+                        </div>
+                    </div>
+
+                    {% if organization.license_notes %}
+                    <div class="admin-inline-notice platform-license-note">
+                        <strong>License Notes</strong>
+                        <span>{{ organization.license_notes }}</span>
+                    </div>
+                    {% endif %}
+
                     <form method="post" class="admin-form-grid platform-org-form">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="organization_slug" value="{{ organization.slug }}">
@@ -111,6 +199,58 @@
                         <label class="admin-field" style="grid-column: 1 / -1;">
                             <span>Domains or Subdomains</span>
                             <textarea name="hostnames" rows="3" required>{{ organization.form.hostnames }}</textarea>
+                        </label>
+                        <label class="admin-field">
+                            <span>Plan Name</span>
+                            <input type="text" name="plan_name" value="{{ organization.form.plan_name }}" required>
+                        </label>
+                        <label class="admin-field">
+                            <span>License Status</span>
+                            <select name="license_status" required>
+                                {% for option in license_status_options %}
+                                <option value="{{ option.value }}" {% if organization.form.license_status == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="admin-field">
+                            <span>Expiry Date</span>
+                            <input type="date" name="expires_on" value="{{ organization.form.expires_on }}">
+                        </label>
+                        <label class="admin-field">
+                            <span>Billing Cycle</span>
+                            <select name="billing_cycle" required>
+                                {% for option in billing_cycle_options %}
+                                <option value="{{ option.value }}" {% if organization.form.billing_cycle == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="admin-field">
+                            <span>Subscription Amount</span>
+                            <input type="number" step="0.01" min="0" name="subscription_amount" value="{{ organization.form.subscription_amount }}">
+                        </label>
+                        <label class="admin-field">
+                            <span>Renewal Due On</span>
+                            <input type="date" name="renewal_due_on" value="{{ organization.form.renewal_due_on }}">
+                        </label>
+                        <label class="admin-field">
+                            <span>Last Payment Date</span>
+                            <input type="date" name="last_payment_on" value="{{ organization.form.last_payment_on }}">
+                        </label>
+                        <label class="admin-field">
+                            <span>Billing Contact Name</span>
+                            <input type="text" name="billing_contact_name" value="{{ organization.form.billing_contact_name }}">
+                        </label>
+                        <label class="admin-field">
+                            <span>Billing Email</span>
+                            <input type="email" name="billing_email" value="{{ organization.form.billing_email }}">
+                        </label>
+                        <label class="admin-field">
+                            <span>Billing Phone</span>
+                            <input type="text" name="billing_phone" value="{{ organization.form.billing_phone }}">
+                        </label>
+                        <label class="admin-field" style="grid-column: 1 / -1;">
+                            <span>License Notes</span>
+                            <textarea name="license_notes" rows="3">{{ organization.form.license_notes }}</textarea>
                         </label>
                         <label class="admin-field">
                             <span>Reset Institution Admin Password</span>
@@ -161,6 +301,7 @@
                 <div class="admin-summary-row"><span>Files</span><strong>Per-organization folders</strong></div>
                 <div class="admin-summary-row"><span>Routing</span><strong>Hostname based</strong></div>
                 <div class="admin-summary-row"><span>Provisioning</span><strong>Instant from web UI</strong></div>
+                <div class="admin-summary-row"><span>License gate</span><strong>Active / Trial only</strong></div>
             </div>
         </article>
 
@@ -174,12 +315,36 @@
                     <span>Enter the customer name, slug, and their assigned domain or subdomain.</span>
                 </div>
                 <div class="admin-note-item">
-                    <strong>2. Set admin password</strong>
-                    <span>Choose the initial institution admin password during provisioning.</span>
+                    <strong>2. Define license terms</strong>
+                    <span>Set the plan, status, renewal cycle, expiry date, and billing contact before go-live.</span>
                 </div>
                 <div class="admin-note-item">
-                    <strong>3. Open the customer portal</strong>
+                    <strong>3. Set admin password</strong>
+                    <span>Choose the initial institution admin password during provisioning or reset it later.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>4. Open the customer portal</strong>
                     <span>Use the generated institution login link to access their isolated workspace.</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('License Rules') }}
+            </div>
+            <div class="admin-note-list">
+                <div class="admin-note-item">
+                    <strong>Active</strong>
+                    <span>Full access for staff and administrators.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Trial</strong>
+                    <span>Access remains open until the trial ends.</span>
+                </div>
+                <div class="admin-note-item">
+                    <strong>Suspended / Expired</strong>
+                    <span>Customer users are redirected to a license-required page until access is restored.</span>
                 </div>
             </div>
         </article>

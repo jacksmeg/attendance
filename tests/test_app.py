@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from io import BytesIO
 import json
 from pathlib import Path
@@ -14,7 +14,7 @@ from attendance_app.db import init_db
 from attendance_app.services.attendance import get_staff_today_status, list_attendance_events, record_attendance
 from attendance_app.services.settings import save_app_settings
 from attendance_app.services.staff import count_active_staff, create_staff, get_staff, get_staff_by_code, upsert_fingerprint
-from attendance_app.services.tenancy import get_current_organization, provision_organization
+from attendance_app.services.tenancy import get_current_organization, get_organization_by_slug, provision_organization
 
 TEST_SELFIE_DATA_URL = (
     "data:image/png;base64,"
@@ -166,6 +166,97 @@ class AttendanceAppTests(unittest.TestCase):
         )
         self.assertEqual(branded_staff_login.status_code, 200)
         self.assertIn(b"Mercy Hospital", branded_staff_login.data)
+
+    def test_platform_super_admin_can_store_subscription_and_billing_fields(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        expiry_date = (date.today() + timedelta(days=30)).isoformat()
+        renewal_date = (date.today() + timedelta(days=20)).isoformat()
+        payment_date = date.today().isoformat()
+
+        response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "create",
+                "display_name": "Cedar Clinic",
+                "slug": "cedar-clinic",
+                "hostnames": "attendance.cedar.example",
+                "plan_name": "Enterprise Care",
+                "license_status": "trial",
+                "expires_on": expiry_date,
+                "billing_contact_name": "Ama Owusu",
+                "billing_email": "billing@cedar.example",
+                "billing_phone": "+233200000001",
+                "billing_cycle": "yearly",
+                "subscription_amount": "2499.99",
+                "renewal_due_on": renewal_date,
+                "last_payment_on": payment_date,
+                "license_notes": "Annual hospital deployment with onboarding support.",
+                "admin_password": "Cedar@1234",
+                "confirm_admin_password": "Cedar@1234",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Enterprise Care", response.data)
+        self.assertIn(b"billing@cedar.example", response.data)
+        self.assertIn(b"Annual hospital deployment with onboarding support.", response.data)
+
+        with self.app.app_context():
+            organization = get_organization_by_slug(self.app.config["APP_SETTINGS"], "cedar-clinic")
+
+        self.assertIsNotNone(organization)
+        assert organization is not None
+        self.assertEqual(organization.plan_name, "Enterprise Care")
+        self.assertEqual(organization.license_status, "trial")
+        self.assertEqual(organization.expires_on, expiry_date)
+        self.assertEqual(organization.billing_contact_name, "Ama Owusu")
+        self.assertEqual(organization.billing_email, "billing@cedar.example")
+        self.assertEqual(organization.billing_cycle, "yearly")
+        self.assertAlmostEqual(organization.subscription_amount, 2499.99)
+        self.assertEqual(organization.renewal_due_on, renewal_date)
+        self.assertEqual(organization.last_payment_on, payment_date)
+        self.assertEqual(organization.license_notes, "Annual hospital deployment with onboarding support.")
+
+    def test_expired_organization_is_redirected_to_license_page(self) -> None:
+        expired_host = "expired.attendance.local"
+        expired_on = (date.today() - timedelta(days=3)).isoformat()
+
+        with self.app.app_context():
+            provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="expired-clinic",
+                display_name="Expired Clinic",
+                hostnames=[expired_host],
+                plan_name="Starter",
+                license_status="active",
+                expires_on=expired_on,
+                billing_contact_name="License Desk",
+                billing_email="renewals@expired.example",
+                billing_cycle="monthly",
+                subscription_amount="199.00",
+                license_notes="Renewal required before staff can continue using the portal.",
+            )
+
+        blocked_response = self.client.get(
+            "/staff/login",
+            base_url=f"https://{expired_host}",
+            follow_redirects=True,
+        )
+        self.assertEqual(blocked_response.status_code, 200)
+        self.assertIn(b"Expired Clinic", blocked_response.data)
+        self.assertIn(b"Expired License", blocked_response.data)
+        self.assertIn(b"renewals@expired.example", blocked_response.data)
+
+        health_response = self.client.get("/health", base_url=f"https://{expired_host}")
+        self.assertEqual(health_response.status_code, 200)
+        payload = health_response.get_json()
+        self.assertEqual(payload["license"]["status"], "expired")
+        self.assertFalse(payload["license"]["access_allowed"])
 
     def test_institution_admin_cannot_access_platform_organizations(self) -> None:
         self.client.post(

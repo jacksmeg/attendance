@@ -2046,6 +2046,73 @@ tbody tr:hover {
     border: 1px solid rgba(163, 185, 140, 0.28);
 }
 
+.organization-access-card {
+    display: grid;
+    gap: 22px;
+}
+
+.organization-access-banner {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: center;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(150, 176, 124, 0.28);
+    background: rgba(246, 251, 241, 0.9);
+}
+
+.organization-access-banner-icon {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #ff7c72 0%, #ff4f4f 100%);
+    box-shadow: 0 14px 28px rgba(255, 79, 79, 0.18);
+}
+
+.organization-access-banner strong,
+.organization-access-note strong {
+    display: block;
+    color: #20301a;
+}
+
+.organization-access-banner span,
+.organization-access-note p {
+    color: rgba(42, 61, 31, 0.76);
+}
+
+.organization-access-banner.tone-purple .organization-access-banner-icon {
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+    box-shadow: 0 14px 28px rgba(139, 92, 246, 0.18);
+}
+
+.organization-access-banner.tone-orange .organization-access-banner-icon {
+    background: linear-gradient(135deg, #ffbf5b 0%, #ff9f1a 100%);
+    box-shadow: 0 14px 28px rgba(255, 159, 26, 0.18);
+}
+
+.organization-access-banner.tone-green .organization-access-banner-icon {
+    background: linear-gradient(135deg, #34d399 0%, #22c55e 100%);
+    box-shadow: 0 14px 28px rgba(34, 197, 94, 0.18);
+}
+
+.organization-access-details .detail-row {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(150, 176, 124, 0.24);
+}
+
+.organization-access-note {
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(150, 176, 124, 0.24);
+    background: rgba(255, 255, 255, 0.94);
+}
+
 .staff-login-camera-head {
     display: flex;
     align-items: flex-start;
@@ -2492,6 +2559,23 @@ html[data-theme="dark"] .staff-login-field input::placeholder {
 html[data-theme="dark"] .staff-login-camera-card {
     background: rgba(34, 39, 28, 0.9);
     border-color: rgba(92, 103, 78, 0.34);
+}
+
+html[data-theme="dark"] .organization-access-banner,
+html[data-theme="dark"] .organization-access-details .detail-row,
+html[data-theme="dark"] .organization-access-note {
+    background: rgba(34, 39, 28, 0.92);
+    border-color: rgba(92, 103, 78, 0.34);
+}
+
+html[data-theme="dark"] .organization-access-banner strong,
+html[data-theme="dark"] .organization-access-note strong {
+    color: #f2f8ea;
+}
+
+html[data-theme="dark"] .organization-access-banner span,
+html[data-theme="dark"] .organization-access-note p {
+    color: rgba(226, 232, 212, 0.76);
 }
 
 html[data-theme="dark"] .staff-login-camera-button.is-primary {
