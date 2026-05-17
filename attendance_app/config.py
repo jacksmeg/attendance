@@ -14,6 +14,8 @@ class AppConfig:
     admin_password: str
     database_path: Path
     instance_dir: Path
+    platform_registry_path: Path
+    default_organization_slug: str
     mock_store_path: Path
     fingerprint_backend: str
     fingerprint_port: str
@@ -52,6 +54,16 @@ def load_config(
             os.getenv("ATTENDANCE_DB_PATH", str(instance_dir / "attendance.db"))
         ),
         instance_dir=instance_dir,
+        platform_registry_path=Path(
+            os.getenv(
+                "ATTENDANCE_PLATFORM_REGISTRY_PATH",
+                str(instance_dir / "platform_registry.db"),
+            )
+        ),
+        default_organization_slug=os.getenv(
+            "ATTENDANCE_DEFAULT_ORGANIZATION_SLUG",
+            "default",
+        ),
         mock_store_path=Path(
             os.getenv(
                 "ATTENDANCE_MOCK_STORE_PATH",
@@ -128,6 +140,9 @@ def load_config(
 
     settings.database_path = Path(settings.database_path).expanduser().resolve()
     settings.instance_dir = Path(settings.instance_dir).expanduser().resolve()
+    settings.platform_registry_path = (
+        Path(settings.platform_registry_path).expanduser().resolve()
+    )
     settings.mock_store_path = Path(settings.mock_store_path).expanduser().resolve()
     settings.fingerprint_morpho_sdk_dir = (
         Path(settings.fingerprint_morpho_sdk_dir).expanduser().resolve()

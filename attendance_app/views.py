@@ -95,6 +95,7 @@ from .services.staff import (
     update_staff,
     upsert_fingerprint,
 )
+from .services.tenancy import get_current_organization
 
 STAFF_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_STAFF_PHOTO_BYTES = 4 * 1024 * 1024
@@ -172,6 +173,7 @@ def register_routes(app: Flask) -> None:
     def inject_globals() -> dict[str, Any]:
         settings = current_app.config["APP_SETTINGS"]
         live_settings = get_app_settings(default_app_name=settings.app_name)
+        organization = get_current_organization()
         return {
             "app_name": live_settings["organization_name"],
             "app_logo_url": _system_logo_url_for_filename(live_settings.get("system_logo_filename")),
@@ -179,6 +181,7 @@ def register_routes(app: Flask) -> None:
             "is_cloud_fingerprint_mode": settings.fingerprint_backend == "disabled",
             "current_access_role": current_access_role(),
             "display_name": current_display_name(),
+            "organization_slug": organization.slug,
         }
 
     @bp.app_template_filter("human_dt")
@@ -214,6 +217,7 @@ def register_routes(app: Flask) -> None:
     @bp.route("/health")
     def health():
         provider = build_provider(current_app.config["APP_SETTINGS"])
+        organization = get_current_organization()
         live_settings = get_app_settings(
             default_app_name=current_app.config["APP_SETTINGS"].app_name
         )
@@ -221,6 +225,7 @@ def register_routes(app: Flask) -> None:
             {
                 "status": "ok",
                 "service": live_settings["organization_name"],
+                "organization_slug": organization.slug,
                 "fingerprint": provider.healthcheck(),
             }
         )
@@ -811,7 +816,7 @@ self.addEventListener("fetch", (event) => {{
         enrollment_session = None
         if session_id:
             enrollment_session = read_enrollment_session(
-                current_app.config["APP_SETTINGS"].instance_dir,
+                _tenant_instance_dir(),
                 session_id,
             )
 
@@ -832,7 +837,7 @@ self.addEventListener("fetch", (event) => {{
 
         if hasattr(provider, "enroll_with_progress"):
             session_id = start_enrollment_session(
-                instance_dir=current_app.config["APP_SETTINGS"].instance_dir,
+                instance_dir=_tenant_instance_dir(),
                 provider=provider,
                 app=current_app._get_current_object(),
                 staff_id=staff_id,
@@ -870,7 +875,7 @@ self.addEventListener("fetch", (event) => {{
     @roles_required(*STAFF_MANAGEMENT_ROLES)
     def admin_enrollment_status(session_id: str):
         payload = read_enrollment_session(
-            current_app.config["APP_SETTINGS"].instance_dir,
+            _tenant_instance_dir(),
             session_id,
         )
         if not payload:
@@ -881,7 +886,7 @@ self.addEventListener("fetch", (event) => {{
     @roles_required(*STAFF_MANAGEMENT_ROLES)
     def admin_enrollment_preview(session_id: str):
         preview_path = get_enrollment_preview_path(
-            current_app.config["APP_SETTINGS"].instance_dir,
+            _tenant_instance_dir(),
             session_id,
         )
         if not preview_path.exists():
@@ -1872,21 +1877,25 @@ def _store_login_selfie_capture(data_url: str) -> dict[str, Any]:
 
 
 def _staff_photo_directory() -> Path:
-    directory = current_app.config["APP_SETTINGS"].instance_dir / "staff_photos"
+    directory = _tenant_instance_dir() / "staff_photos"
     directory.mkdir(parents=True, exist_ok=True)
     return directory
 
 
 def _system_logo_directory() -> Path:
-    directory = current_app.config["APP_SETTINGS"].instance_dir / "system_branding"
+    directory = _tenant_instance_dir() / "system_branding"
     directory.mkdir(parents=True, exist_ok=True)
     return directory
 
 
 def _audit_selfie_directory() -> Path:
-    directory = current_app.config["APP_SETTINGS"].instance_dir / "staff_selfie_audits"
+    directory = _tenant_instance_dir() / "staff_selfie_audits"
     directory.mkdir(parents=True, exist_ok=True)
     return directory
+
+
+def _tenant_instance_dir() -> Path:
+    return get_current_organization().instance_dir
 
 
 def _delete_staff_photo(filename: str | None) -> None:

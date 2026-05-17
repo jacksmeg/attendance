@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from flask import has_app_context
+
 from .disabled import DisabledFingerprintProvider
 from .http_bridge import HttpBridgeFingerprintProvider
 from .mock import MockFingerprintProvider
 from .morphosmart import MorphoSmartFingerprintProvider
 from .pyfingerprint_adapter import PyFingerprintProvider
+from attendance_app.services.tenancy import get_current_organization
 
 
 def build_provider(settings):
@@ -12,7 +15,10 @@ def build_provider(settings):
     if backend in {"disabled", "none", "remote"}:
         return DisabledFingerprintProvider()
     if backend == "mock":
-        return MockFingerprintProvider(settings.mock_store_path)
+        store_path = settings.mock_store_path
+        if has_app_context():
+            store_path = get_current_organization().mock_store_path
+        return MockFingerprintProvider(store_path)
     if backend == "pyfingerprint":
         return PyFingerprintProvider(
             port=settings.fingerprint_port,

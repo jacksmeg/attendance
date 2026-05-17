@@ -4,12 +4,14 @@ from pathlib import Path
 import sqlite3
 
 from flask import current_app, g
+from .services.tenancy import get_current_organization
 
 
 def get_db() -> sqlite3.Connection:
     if "db" not in g:
-        settings = current_app.config["APP_SETTINGS"]
-        g.db = sqlite3.connect(settings.database_path)
+        organization = get_current_organization()
+        organization.instance_dir.mkdir(parents=True, exist_ok=True)
+        g.db = sqlite3.connect(organization.database_path)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
@@ -21,9 +23,25 @@ def close_db(_: Exception | None = None) -> None:
         db.close()
 
 
-def init_db() -> None:
-    db = get_db()
+def init_db(database_path: Path | None = None) -> None:
     schema_path = Path(__file__).with_name("schema.sql")
+    if database_path is None:
+        db = get_db()
+        _apply_schema(db, schema_path)
+        return
+
+    database_path = Path(database_path).resolve()
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(database_path)
+    db.row_factory = sqlite3.Row
+    try:
+        db.execute("PRAGMA foreign_keys = ON")
+        _apply_schema(db, schema_path)
+    finally:
+        db.close()
+
+
+def _apply_schema(db: sqlite3.Connection, schema_path: Path) -> None:
     db.executescript(schema_path.read_text(encoding="utf-8"))
     _ensure_column(db, "fingerprint_templates", "template_format", "TEXT")
     _ensure_column(db, "fingerprint_templates", "template_data", "BLOB")

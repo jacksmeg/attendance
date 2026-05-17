@@ -3,12 +3,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+import click
 from flask import Flask
 
 from .config import load_config
 from .db import close_db, init_db
 from .services.maintenance import reset_system_data
 from .services.seed import seed_demo_data
+from .services.tenancy import (
+    ensure_default_organization,
+    get_organization_by_slug,
+    init_platform_registry,
+    list_organizations,
+    provision_organization,
+    set_current_organization,
+)
 from .views import register_routes
 
 
@@ -29,6 +38,8 @@ def create_app(overrides: Mapping[str, Any] | None = None) -> Flask:
     app.teardown_appcontext(close_db)
 
     with app.app_context():
+        init_platform_registry(settings.platform_registry_path)
+        ensure_default_organization(settings)
         init_db()
 
     register_routes(app)
@@ -38,7 +49,13 @@ def create_app(overrides: Mapping[str, Any] | None = None) -> Flask:
 
 def register_cli(app: Flask) -> None:
     @app.cli.command("seed-demo")
-    def seed_demo_command() -> None:
+    @click.option("--slug", default="", help="Seed demo data into a specific organization slug.")
+    def seed_demo_command(slug: str) -> None:
+        if slug.strip():
+            organization = get_organization_by_slug(app.config["APP_SETTINGS"], slug)
+            if not organization:
+                raise click.ClickException(f"Organization '{slug}' was not found.")
+            set_current_organization(organization)
         created = seed_demo_data()
         if created:
             print("Demo staff, fingerprints, and sample attendance records created.")
@@ -46,13 +63,64 @@ def register_cli(app: Flask) -> None:
             print("Demo data skipped because staff records already exist.")
 
     @app.cli.command("reset-live-data")
-    def reset_live_data_command() -> None:
+    @click.option("--slug", default="", help="Reset live data for a specific organization slug.")
+    def reset_live_data_command(slug: str) -> None:
         settings = app.config["APP_SETTINGS"]
+        if slug.strip():
+            organization = get_organization_by_slug(settings, slug)
+            if not organization:
+                raise click.ClickException(f"Organization '{slug}' was not found.")
+            set_current_organization(organization)
+            instance_dir = organization.instance_dir
+            database_path = organization.database_path
+        else:
+            organization = ensure_default_organization(settings)
+            instance_dir = organization.instance_dir
+            database_path = organization.database_path
         backup_path = reset_system_data(
-            instance_dir=settings.instance_dir,
-            database_path=settings.database_path,
+            instance_dir=instance_dir,
+            database_path=database_path,
         )
         if backup_path:
             print(f"Live data reset complete. Backup saved to: {backup_path}")
         else:
             print("Live data reset complete. No existing database backup was needed.")
+
+    @app.cli.command("create-organization")
+    @click.option("--slug", required=True, help="Unique organization slug, for example acme-hospital.")
+    @click.option("--name", required=True, help="Display name for the organization.")
+    @click.option(
+        "--hostname",
+        "hostnames",
+        multiple=True,
+        help="Optional custom hostname or subdomain. Repeat to add multiple hostnames.",
+    )
+    def create_organization_command(slug: str, name: str, hostnames: tuple[str, ...]) -> None:
+        settings = app.config["APP_SETTINGS"]
+        organization = provision_organization(
+            settings,
+            slug=slug,
+            display_name=name,
+            hostnames=hostnames,
+        )
+        init_db(organization.database_path)
+        print(f"Organization created: {organization.display_name} ({organization.slug})")
+        print(f"Database: {organization.database_path}")
+        print(f"Files: {organization.instance_dir}")
+        if organization.hostnames:
+            print("Hostnames: " + ", ".join(organization.hostnames))
+
+    @app.cli.command("list-organizations")
+    def list_organizations_command() -> None:
+        settings = app.config["APP_SETTINGS"]
+        organizations = list_organizations(settings)
+        if not organizations:
+            print("No organizations have been created yet.")
+            return
+        for organization in organizations:
+            hostnames = ", ".join(organization.hostnames) if organization.hostnames else "-"
+            default_label = " (default)" if organization.is_default else ""
+            print(
+                f"{organization.slug}{default_label} | {organization.display_name} | "
+                f"{organization.database_path} | {hostnames}"
+            )

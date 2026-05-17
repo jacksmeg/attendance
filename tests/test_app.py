@@ -10,8 +10,11 @@ import uuid
 from unittest.mock import Mock, patch
 
 from attendance_app import create_app
+from attendance_app.db import init_db
 from attendance_app.services.attendance import get_staff_today_status, list_attendance_events, record_attendance
-from attendance_app.services.staff import create_staff, get_staff, upsert_fingerprint
+from attendance_app.services.settings import save_app_settings
+from attendance_app.services.staff import count_active_staff, create_staff, get_staff, get_staff_by_code, upsert_fingerprint
+from attendance_app.services.tenancy import get_current_organization, provision_organization
 
 TEST_SELFIE_DATA_URL = (
     "data:image/png;base64,"
@@ -881,6 +884,59 @@ class AttendanceAppTests(unittest.TestCase):
         dashboard_response = self.client.get("/admin/dashboard")
         self.assertEqual(dashboard_response.status_code, 200)
         self.assertIn(b"theme.js", dashboard_response.data)
+
+    def test_organization_hostnames_keep_staff_and_branding_separate(self) -> None:
+        settings = self.app.config["APP_SETTINGS"]
+        beta_host = "beta.attendance.local"
+
+        with self.app.app_context():
+            beta_org = provision_organization(
+                settings,
+                slug="beta-hospital",
+                display_name="Beta Hospital",
+                hostnames=[beta_host],
+            )
+            init_db(beta_org.database_path)
+
+        with self.app.test_request_context("/", base_url=f"https://{beta_host}"):
+            self.assertEqual(get_current_organization().slug, "beta-hospital")
+            save_app_settings({"organization_name": "Beta Hospital"}, default_app_name=settings.app_name)
+            beta_staff_id = create_staff(
+                {
+                    "staff_code": "BETA-200",
+                    "first_name": "Beta",
+                    "last_name": "Doctor",
+                    "email": "beta@example.com",
+                    "phone": "+233111111111",
+                    "department": "Emergency",
+                    "role": "Doctor",
+                    "access_role": "Staff",
+                    "portal_password": "Beta@123",
+                    "portal_pin": "2200",
+                    "shift_start": "08:00",
+                    "shift_end": "16:00",
+                    "grace_minutes": 10,
+                    "is_active": True,
+                }
+            )
+            self.assertEqual(count_active_staff(), 1)
+            self.assertIsNotNone(get_staff(beta_staff_id))
+            self.assertIsNotNone(get_staff_by_code("BETA-200"))
+            self.assertIsNone(get_staff_by_code(self.staff["staff_code"]))
+
+        with self.app.app_context():
+            self.assertEqual(get_current_organization().slug, settings.default_organization_slug)
+            self.assertEqual(count_active_staff(), 1)
+            self.assertIsNotNone(get_staff_by_code(self.staff["staff_code"]))
+            self.assertIsNone(get_staff_by_code("BETA-200"))
+
+        beta_login_response = self.client.get("/staff/login", base_url=f"https://{beta_host}")
+        self.assertEqual(beta_login_response.status_code, 200)
+        self.assertIn(b"Beta Hospital", beta_login_response.data)
+
+        default_login_response = self.client.get("/staff/login")
+        self.assertEqual(default_login_response.status_code, 200)
+        self.assertNotIn(b"Beta Hospital", default_login_response.data)
 
     def test_overnight_shift_auto_resolves_check_out_next_morning(self) -> None:
         with self.app.app_context():
