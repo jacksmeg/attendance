@@ -2603,3 +2603,205 @@ html[data-theme="dark"] .staff-login-eye:focus-visible {
     background: rgba(255, 255, 255, 0.04);
     color: #ffffff;
 }
+
+/* Shared shell cleanup: more breathing room, calmer hierarchy, better alignment */
+.desktop-shell {
+    max-width: 1440px;
+    margin: 18px auto;
+    grid-template-columns: 248px minmax(0, 1fr);
+}
+
+.sidebar {
+    gap: 18px;
+    padding: 28px 18px 20px;
+}
+
+.sidebar-brand {
+    margin-bottom: 22px;
+}
+
+.sidebar-nav {
+    gap: 10px;
+}
+
+.sidebar-link {
+    min-height: 50px;
+    padding: 0 16px;
+    border-radius: 18px;
+    font-size: 0.95rem;
+}
+
+.workspace {
+    min-width: 0;
+    padding: 0 24px 30px;
+}
+
+.workspace-topbar {
+    padding: 24px 0 0;
+    background: transparent;
+    border-bottom: 0;
+    backdrop-filter: none;
+}
+
+.workspace-topbar-inner {
+    width: min(100%, 1200px);
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 22px;
+    border-radius: 24px;
+    border: 1px solid rgba(227, 236, 248, 0.92);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.96));
+    box-shadow: 0 16px 32px rgba(30, 73, 138, 0.08);
+}
+
+.workspace-shell {
+    width: min(100%, 1200px);
+    margin: 0 auto;
+    display: grid;
+    gap: 18px;
+}
+
+.flash-stack,
+.page-wrap {
+    width: 100%;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.page-wrap {
+    gap: 24px;
+}
+
+.tab-nav {
+    gap: 12px;
+}
+
+.tab-link {
+    padding: 12px 16px;
+    border-radius: 16px;
+}
+
+.tab-link.is-active {
+    background: rgba(24, 210, 196, 0.08);
+}
+
+.tab-link.is-active::after {
+    left: 16px;
+    right: 16px;
+    bottom: -19px;
+}
+
+.topbar-meta {
+    gap: 14px;
+}
+
+.page-hero {
+    gap: 20px;
+}
+
+.kiosk-layout,
+.panel-grid {
+    grid-template-columns: minmax(0, 1.22fr) minmax(300px, 0.88fr);
+    gap: 20px;
+}
+
+.panel-grid-wide {
+    grid-template-columns: minmax(0, 1.28fr) minmax(280px, 0.82fr);
+}
+
+.scan-stage-card,
+.panel-card,
+.timestamp-card,
+.metric-card,
+.shortcut-card {
+    border-radius: 26px;
+}
+
+.scan-stage-card {
+    padding: 30px;
+    grid-template-columns: minmax(0, 1fr) 260px;
+}
+
+.panel-card {
+    padding: 24px;
+}
+
+.metric-strip {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+}
+
+.metric-card {
+    padding: 20px 18px;
+}
+
+.table-wrap {
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+.staff-login-screen {
+    padding: 52px 18px;
+}
+
+.staff-login-card {
+    width: min(100%, 520px);
+    padding: 42px 38px 32px;
+    border-radius: 28px;
+}
+
+html[data-theme="dark"] .workspace-topbar-inner {
+    background: linear-gradient(180deg, rgba(12, 23, 41, 0.98), rgba(15, 29, 51, 0.98));
+    border-color: var(--line);
+    box-shadow: var(--panel-shadow);
+}
+
+html[data-theme="dark"] .table-wrap {
+    background: linear-gradient(180deg, #0c1729, #0f1d33);
+    border-color: var(--line);
+}
+
+@media (max-width: 1280px) {
+    .workspace-topbar-inner,
+    .workspace-shell {
+        width: 100%;
+    }
+}
+
+@media (max-width: 1080px) {
+    .workspace {
+        padding: 0 18px 24px;
+    }
+
+    .workspace-topbar {
+        padding-top: 20px;
+    }
+
+    .workspace-topbar-inner {
+        padding: 16px 18px;
+    }
+}
+
+@media (max-width: 860px) {
+    .workspace {
+        padding: 0 14px 22px;
+    }
+
+    .workspace-topbar {
+        padding-top: 18px;
+    }
+
+    .workspace-topbar-inner {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+    }
+
+    .tab-nav,
+    .topbar-meta {
+        width: 100%;
+    }
+}

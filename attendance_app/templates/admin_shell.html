@@ -156,58 +156,62 @@
 
         <section class="admin-workspace">
             <header class="admin-topbar">
-                <div class="admin-topbar-left">
-                    <button class="admin-icon-button" type="button" aria-label="Toggle navigation">
-                        {{ icon('menu') }}
-                    </button>
-                    <div class="admin-page-heading">
-                        <h1>{{ page_title }}</h1>
-                        {% if breadcrumbs %}
-                        <nav class="admin-breadcrumbs" aria-label="Breadcrumb">
-                            {% for crumb in breadcrumbs %}
-                                <span class="admin-breadcrumb-item">{{ crumb }}</span>
-                                {% if not loop.last %}<span class="admin-breadcrumb-sep">{{ icon('chevron-right') }}</span>{% endif %}
-                            {% endfor %}
-                        </nav>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="admin-topbar-tools">
-                    <div class="admin-topbar-center">
-                        {% block toolbar_center %}{% endblock %}
-                    </div>
-                    <div class="admin-topbar-actions">
-                        {% block toolbar_actions %}{% endblock %}
-                        <button class="admin-icon-button admin-notification-button" type="button" aria-label="Notifications">
-                            {{ icon('bell') }}
-                            <span class="admin-notification-badge">5</span>
+                <div class="admin-topbar-inner">
+                    <div class="admin-topbar-left">
+                        <button class="admin-icon-button" type="button" aria-label="Toggle navigation">
+                            {{ icon('menu') }}
                         </button>
-                        <div class="admin-profile-chip">
-                            <div class="admin-profile-avatar">{{ initials }}</div>
-                            <div class="admin-profile-copy">
-                                <strong>{{ display_name }}</strong>
-                                <span>{{ current_role }}</span>
+                        <div class="admin-page-heading">
+                            <h1>{{ page_title }}</h1>
+                            {% if breadcrumbs %}
+                            <nav class="admin-breadcrumbs" aria-label="Breadcrumb">
+                                {% for crumb in breadcrumbs %}
+                                    <span class="admin-breadcrumb-item">{{ crumb }}</span>
+                                    {% if not loop.last %}<span class="admin-breadcrumb-sep">{{ icon('chevron-right') }}</span>{% endif %}
+                                {% endfor %}
+                            </nav>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="admin-topbar-tools">
+                        <div class="admin-topbar-center">
+                            {% block toolbar_center %}{% endblock %}
+                        </div>
+                        <div class="admin-topbar-actions">
+                            {% block toolbar_actions %}{% endblock %}
+                            <button class="admin-icon-button admin-notification-button" type="button" aria-label="Notifications">
+                                {{ icon('bell') }}
+                                <span class="admin-notification-badge">5</span>
+                            </button>
+                            <div class="admin-profile-chip">
+                                <div class="admin-profile-avatar">{{ initials }}</div>
+                                <div class="admin-profile-copy">
+                                    <strong>{{ display_name }}</strong>
+                                    <span>{{ current_role }}</span>
+                                </div>
+                                <span class="admin-profile-caret">{{ icon('chevron-down') }}</span>
                             </div>
-                            <span class="admin-profile-caret">{{ icon('chevron-down') }}</span>
                         </div>
                     </div>
                 </div>
             </header>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                <section class="admin-flash-stack">
-                    {% for category, message in messages %}
-                    <div class="admin-flash admin-flash-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </section>
-                {% endif %}
-            {% endwith %}
+            <div class="admin-page-shell">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <section class="admin-flash-stack">
+                        {% for category, message in messages %}
+                        <div class="admin-flash admin-flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </section>
+                    {% endif %}
+                {% endwith %}
 
-            <main class="admin-page-content">
-                {% block content %}{% endblock %}
-            </main>
+                <main class="admin-page-content">
+                    {% block content %}{% endblock %}
+                </main>
+            </div>
         </section>
     </div>
     <button class="pwa-install-fab" type="button" data-pwa-install hidden>Install App</button>

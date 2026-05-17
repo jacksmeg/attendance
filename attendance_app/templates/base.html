@@ -118,62 +118,66 @@
 
         <section class="workspace">
             <header class="workspace-topbar">
-                <nav class="tab-nav" aria-label="Workspace tabs">
-                    {% if staff_authed %}
-                        <a class="tab-link {% if staff_portal_active %}is-active{% endif %}" href="{{ url_for('app.staff_home') }}">My Attendance</a>
-                    {% endif %}
-                    {% if admin_authed %}
-                        <a class="tab-link {% if dashboard_active %}is-active{% endif %}" href="{{ url_for('app.admin_dashboard') }}">Dashboard</a>
-                        <a class="tab-link {% if staff_active %}is-active{% endif %}" href="{{ url_for('app.admin_staff') }}">Staff</a>
-                        <a class="tab-link {% if logs_active %}is-active{% endif %}" href="{{ url_for('app.admin_attendance') }}">Logs</a>
-                        <a class="tab-link {% if reports_active %}is-active{% endif %}" href="{{ url_for('app.admin_reports') }}">Reports</a>
-                        {% if current_role in ['Super Admin', 'HR/Admin'] %}
-                            <a class="tab-link {% if settings_active %}is-active{% endif %}" href="{{ url_for('app.admin_settings') }}">Settings</a>
+                <div class="workspace-topbar-inner">
+                    <nav class="tab-nav" aria-label="Workspace tabs">
+                        {% if staff_authed %}
+                            <a class="tab-link {% if staff_portal_active %}is-active{% endif %}" href="{{ url_for('app.staff_home') }}">My Attendance</a>
                         {% endif %}
-                    {% elif not staff_authed %}
-                        <a class="tab-link is-active" href="{{ url_for('app.staff_login') }}">Staff Login</a>
-                    {% endif %}
-                </nav>
+                        {% if admin_authed %}
+                            <a class="tab-link {% if dashboard_active %}is-active{% endif %}" href="{{ url_for('app.admin_dashboard') }}">Dashboard</a>
+                            <a class="tab-link {% if staff_active %}is-active{% endif %}" href="{{ url_for('app.admin_staff') }}">Staff</a>
+                            <a class="tab-link {% if logs_active %}is-active{% endif %}" href="{{ url_for('app.admin_attendance') }}">Logs</a>
+                            <a class="tab-link {% if reports_active %}is-active{% endif %}" href="{{ url_for('app.admin_reports') }}">Reports</a>
+                            {% if current_role in ['Super Admin', 'HR/Admin'] %}
+                                <a class="tab-link {% if settings_active %}is-active{% endif %}" href="{{ url_for('app.admin_settings') }}">Settings</a>
+                            {% endif %}
+                        {% elif not staff_authed %}
+                            <a class="tab-link is-active" href="{{ url_for('app.staff_login') }}">Staff Login</a>
+                        {% endif %}
+                    </nav>
 
-                <div class="topbar-meta">
-                    {% if admin_authed or staff_authed %}
-                        <a class="topbar-utility" href="{{ url_for('app.logout') }}">
-                            {{ icon('logout') }}
-                            <span>Logout</span>
-                        </a>
-                    {% else %}
-                        <a class="topbar-utility" href="{{ url_for('app.staff_login') }}">
-                            {{ icon('mobile') }}
-                            <span>Staff Login</span>
-                        </a>
-                        <a class="topbar-utility" href="{{ url_for('app.admin_login') }}">
-                            {{ icon('staff') }}
-                            <span>Admin Login</span>
-                        </a>
-                    {% endif %}
-                    <div class="profile-chip">
-                        <span class="profile-avatar">{{ initials }}</span>
-                        <span class="profile-copy">
-                            <strong>{{ display_name }}</strong>
-                            <span>{{ current_role }}</span>
-                        </span>
+                    <div class="topbar-meta">
+                        {% if admin_authed or staff_authed %}
+                            <a class="topbar-utility" href="{{ url_for('app.logout') }}">
+                                {{ icon('logout') }}
+                                <span>Logout</span>
+                            </a>
+                        {% else %}
+                            <a class="topbar-utility" href="{{ url_for('app.staff_login') }}">
+                                {{ icon('mobile') }}
+                                <span>Staff Login</span>
+                            </a>
+                            <a class="topbar-utility" href="{{ url_for('app.admin_login') }}">
+                                {{ icon('staff') }}
+                                <span>Admin Login</span>
+                            </a>
+                        {% endif %}
+                        <div class="profile-chip">
+                            <span class="profile-avatar">{{ initials }}</span>
+                            <span class="profile-copy">
+                                <strong>{{ display_name }}</strong>
+                                <span>{{ current_role }}</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </header>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <section class="flash-stack">
-                        {% for category, message in messages %}
-                            <div class="flash flash-{{ category }}">{{ message }}</div>
-                        {% endfor %}
-                    </section>
-                {% endif %}
-            {% endwith %}
+            <div class="workspace-shell">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <section class="flash-stack">
+                            {% for category, message in messages %}
+                                <div class="flash flash-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </section>
+                    {% endif %}
+                {% endwith %}
 
-            <main class="page-wrap">
-                {% block content %}{% endblock %}
-            </main>
+                <main class="page-wrap">
+                    {% block content %}{% endblock %}
+                </main>
+            </div>
         </section>
     </div>
     <button class="pwa-install-fab" type="button" data-pwa-install hidden>Install App</button>
