@@ -2,176 +2,269 @@
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="auth-workbench auth-workbench--staff">
-    <aside class="auth-showcase">
-        <div class="auth-showcase-top">
-            <div class="auth-showcase-brand">
-                <span class="auth-showcase-mark">
-                    {% if app_logo_url %}
-                    <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
-                    {% else %}
-                    {{ icon('fingerprint') }}
-                    {% endif %}
-                </span>
-                <div>
-                    <strong>{{ app_name }}</strong>
-                    <span>Staff self-service portal</span>
+<section class="auth-clinic-page">
+    <div class="auth-clinic-window">
+        <a class="auth-clinic-close" href="{{ url_for('app.home') }}" aria-label="Close login window">×</a>
+
+        <div class="auth-clinic-layout">
+            <aside class="auth-clinic-brand">
+                <div class="auth-clinic-brand-mark">
+                    <span class="auth-clinic-brand-logo">
+                        {% if app_logo_url %}
+                        <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                        {% else %}
+                        {{ icon('shield-check') }}
+                        {% endif %}
+                    </span>
+                    <div class="auth-clinic-brand-copy">
+                        <strong>{{ app_name }}</strong>
+                        <span>Workforce Attendance</span>
+                    </div>
                 </div>
-            </div>
-            <span class="auth-showcase-chip">PWA Ready</span>
-        </div>
 
-        <div class="auth-showcase-copy">
-            <p class="auth-showcase-kicker">Staff Mobile Access</p>
-            <h1>Sign in from one professional workspace for attendance, breaks, and daily status.</h1>
-            <p>Use your staff number or email, choose password or PIN, then complete the selfie audit before entering your attendance home screen.</p>
-        </div>
-
-        <div class="auth-showcase-grid">
-            <article class="auth-showcase-metric">
-                <span class="auth-showcase-metric-icon">{{ icon('staff') }}</span>
-                <div>
-                    <strong>Flexible Sign In</strong>
-                    <span>Use staff code or email with password or assigned PIN.</span>
+                <div class="auth-clinic-hero">
+                    <h1>Smart Attendance.<br>Stronger <span>Care.</span></h1>
+                    <p>Secure, accurate, and effortless attendance management for healthcare professionals.</p>
                 </div>
-            </article>
-            <article class="auth-showcase-metric">
-                <span class="auth-showcase-metric-icon">{{ icon('mobile') }}</span>
-                <div>
-                    <strong>Mobile Friendly</strong>
-                    <span>Installable experience for phones, tablets, and shared devices.</span>
+
+                <div class="auth-clinic-feature-list">
+                    <article class="auth-clinic-feature">
+                        <span class="auth-clinic-feature-icon">{{ icon('shield-check') }}</span>
+                        <div>
+                            <strong>Secure &amp; Compliant</strong>
+                            <span>Enterprise-grade security with role-based access and audit-ready logs.</span>
+                        </div>
+                    </article>
+                    <article class="auth-clinic-feature">
+                        <span class="auth-clinic-feature-icon">{{ icon('fingerprint') }}</span>
+                        <div>
+                            <strong>Accurate &amp; Reliable</strong>
+                            <span>Biometric verification and real-time tracking you can trust.</span>
+                        </div>
+                    </article>
+                    <article class="auth-clinic-feature">
+                        <span class="auth-clinic-feature-icon">{{ icon('reports') }}</span>
+                        <div>
+                            <strong>Insights That Matter</strong>
+                            <span>Powerful reports and analytics to optimize workforce productivity.</span>
+                        </div>
+                    </article>
                 </div>
-            </article>
-            <article class="auth-showcase-metric">
-                <span class="auth-showcase-metric-icon">{{ icon('location') }}</span>
-                <div>
-                    <strong>Policy Aware</strong>
-                    <span>GPS and work-location rules apply automatically when enabled.</span>
-                </div>
-            </article>
-        </div>
 
-        <ul class="auth-showcase-list" aria-label="Staff sign-in notes">
-            <li>Open the camera only when you are ready to take your selfie.</li>
-            <li>Your selfie is kept as a login audit record only.</li>
-            <li>After sign in, use your mobile dashboard for check-in, breaks, and check-out.</li>
-        </ul>
-    </aside>
-
-    <article class="auth-surface auth-surface--staff">
-        <div class="auth-surface-head">
-            <span class="auth-surface-badge">{{ icon('mobile') }} Staff portal</span>
-            <div class="auth-surface-copy">
-                <h1>Staff sign in</h1>
-                <p>Enter your staff account details below, then capture one selfie to continue into your attendance workspace.</p>
-            </div>
-        </div>
-
-        <div class="auth-mode-switch" role="tablist" aria-label="Login method">
-            <button class="auth-mode-tab is-active staff-login-tab" type="button" data-mode="password" aria-pressed="true">Staff Login</button>
-            <button class="auth-mode-tab staff-login-tab" type="button" data-mode="pin" aria-pressed="false">PIN Login</button>
-        </div>
-
-        <form method="post" class="auth-form-stack" id="staff-login-form">
-            <input type="hidden" name="next" value="{{ next_url }}">
-            <input type="hidden" name="selfie_data" id="staff-login-selfie-data">
-
-            <div class="auth-section-card">
-                <div class="auth-section-head">
+                <div class="auth-clinic-trust-card">
+                    <span class="auth-clinic-trust-icon">{{ icon('check-circle') }}</span>
                     <div>
-                        <strong>Account details</strong>
-                        <p>Use the staff profile access that was assigned by your organization.</p>
+                        <strong>Trusted by Healthcare Teams</strong>
+                        <span>Delivering reliability and peace of mind across modern hospitals.</span>
                     </div>
                 </div>
 
-                <label class="auth-field-block">
-                    <span class="auth-field-label">Staff Number or Email Address</span>
-                    <div class="auth-input-shell">
-                        <input type="text" name="staff_identifier" placeholder="Enter your staff number or email" autocomplete="username" required>
+                <div class="auth-clinic-building-card" aria-hidden="true">
+                    <div class="auth-clinic-building-tag">{{ app_name }}</div>
+                    <div class="auth-clinic-building-shell">
+                        <span class="auth-clinic-building-main"></span>
+                        <span class="auth-clinic-building-wing"></span>
+                        <span class="auth-clinic-building-glass"></span>
+                        <span class="auth-clinic-building-glass auth-clinic-building-glass-two"></span>
                     </div>
-                    <small class="auth-helper">Use your staff code like <code>EMP-001</code> or the email saved on your staff profile.</small>
-                </label>
+                </div>
 
-                <div class="staff-login-secret-panel is-active" data-panel="password">
-                    <label class="auth-field-block">
-                        <span class="auth-field-label">Password</span>
-                        <div class="auth-input-shell auth-input-shell--action">
-                            <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password">
-                            <button class="auth-input-action staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
+                <p class="auth-clinic-copyright">&copy; 2026 {{ app_name }}. All rights reserved.</p>
+            </aside>
+
+            <article class="auth-clinic-center-card">
+                <div class="auth-clinic-center-brand">
+                    <span class="auth-clinic-center-logo">
+                        {% if app_logo_url %}
+                        <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                        {% else %}
+                        {{ icon('shield-check') }}
+                        {% endif %}
+                    </span>
+                    <h2>Welcome Back</h2>
+                    <p>Sign in to continue to your account</p>
+                </div>
+
+                <div class="auth-clinic-tab-strip" role="tablist" aria-label="Login method">
+                    <button class="auth-clinic-tab is-active staff-login-tab" type="button" data-mode="password" aria-pressed="true">Staff Login</button>
+                    <button class="auth-clinic-tab staff-login-tab" type="button" data-mode="pin" aria-pressed="false">PIN Login</button>
+                </div>
+
+                <form method="post" class="auth-clinic-form" id="staff-login-form">
+                    <input type="hidden" name="next" value="{{ next_url }}">
+                    <input type="hidden" name="selfie_data" id="staff-login-selfie-data">
+
+                    <label class="auth-clinic-field">
+                        <span class="auth-clinic-field-icon">{{ icon('staff') }}</span>
+                        <input type="text" name="staff_identifier" placeholder="Staff Number / Email" autocomplete="username" required aria-label="Staff Number or Email Address">
+                    </label>
+
+                    <div class="staff-login-secret-panel is-active" data-panel="password">
+                        <label class="auth-clinic-field">
+                            <span class="auth-clinic-field-icon">{{ icon('pin') }}</span>
+                            <input type="password" name="password" placeholder="Password" autocomplete="current-password">
+                            <button class="auth-clinic-field-action staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
                                 {{ icon('eye') }}
                             </button>
-                        </div>
-                    </label>
-                </div>
+                        </label>
+                    </div>
 
-                <div class="staff-login-secret-panel" data-panel="pin" hidden>
-                    <label class="auth-field-block">
-                        <span class="auth-field-label">PIN</span>
-                        <div class="auth-input-shell auth-input-shell--action">
-                            <input type="password" name="pin" placeholder="Enter your PIN" inputmode="numeric" autocomplete="one-time-code">
-                            <button class="auth-input-action staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">
+                    <div class="staff-login-secret-panel" data-panel="pin" hidden>
+                        <label class="auth-clinic-field">
+                            <span class="auth-clinic-field-icon">{{ icon('pin') }}</span>
+                            <input type="password" name="pin" placeholder="PIN" inputmode="numeric" autocomplete="one-time-code">
+                            <button class="auth-clinic-field-action staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">
                                 {{ icon('eye') }}
                             </button>
+                        </label>
+                    </div>
+
+                    <div class="auth-clinic-inline-row">
+                        <label class="auth-clinic-checkbox">
+                            <input type="checkbox" checked>
+                            <span>Remember me</span>
+                        </label>
+                        <a class="auth-clinic-link" href="{{ url_for('app.admin_login') }}">Forgot password?</a>
+                    </div>
+
+                    <button class="auth-clinic-primary" type="submit" id="staff-login-submit">
+                        <span class="button-icon">{{ icon('pin') }}</span>
+                        <span>Sign In</span>
+                    </button>
+
+                    <div class="auth-clinic-divider"><span>OR</span></div>
+
+                    <section class="auth-clinic-audit-card" aria-label="Selfie audit">
+                        <header class="auth-clinic-audit-head">
+                            <strong>Selfie Audit <span>(Required)</span></strong>
+                            <p>For verification and attendance compliance</p>
+                        </header>
+
+                        <div class="auth-clinic-audit-actions">
+                            <button class="auth-clinic-audit-tile" type="button" id="staff-login-start-camera">
+                                <span class="auth-clinic-audit-icon">{{ icon('mobile') }}</span>
+                                <strong>Open Camera</strong>
+                                <span>Use your device camera</span>
+                            </button>
+                            <button class="auth-clinic-audit-tile" type="button" id="staff-login-capture-selfie" disabled>
+                                <span class="auth-clinic-audit-icon">{{ icon('staff') }}</span>
+                                <strong>Capture Selfie</strong>
+                                <span>Take a clear selfie</span>
+                            </button>
                         </div>
-                        <small class="auth-helper">Use the PIN assigned to your staff profile.</small>
-                    </label>
-                </div>
-            </div>
 
-            <section class="auth-section-card auth-audit-card" aria-label="Selfie audit">
-                <div class="auth-section-head auth-audit-head">
-                    <div>
-                        <strong>Selfie audit capture</strong>
-                        <p>Keep the camera closed until you are ready, then open it and capture one selfie before signing in.</p>
+                        <div class="auth-clinic-capture-stage" id="staff-login-camera-stage">
+                            <div class="auth-clinic-capture-empty" id="staff-login-camera-placeholder">
+                                <span class="auth-clinic-capture-empty-icon">{{ icon('mobile') }}</span>
+                                <strong>Camera is off</strong>
+                                <p>Open the camera when you are ready to capture your selfie.</p>
+                            </div>
+                            <video id="staff-login-video" class="staff-login-video" autoplay playsinline muted hidden></video>
+                            <img id="staff-login-preview" class="staff-login-preview" alt="Captured selfie preview" hidden>
+                            <div class="auth-clinic-capture-live" id="staff-login-camera-overlay" hidden>Live camera ready</div>
+                        </div>
+
+                        <canvas id="staff-login-canvas" hidden></canvas>
+
+                        <div class="auth-clinic-capture-foot">
+                            <button class="auth-clinic-retake" type="button" id="staff-login-retake-selfie" hidden>Retake Selfie</button>
+                            <p class="staff-login-camera-note" id="staff-login-camera-note">
+                                Your selfie is stored as a login audit record and is not compared with your profile photo automatically.
+                            </p>
+                        </div>
+                    </section>
+                </form>
+
+                <p class="auth-clinic-bottom-note">{{ app_name }} uses a secure encrypted session for staff attendance access.</p>
+            </article>
+
+            <aside class="auth-clinic-side-stack">
+                <article class="auth-clinic-mini-admin">
+                    <div class="auth-clinic-mini-topline"></div>
+                    <div class="auth-clinic-mini-brand">
+                        <span class="auth-clinic-mini-logo">{{ icon('shield-check') }}</span>
+                        <h3>Admin Login</h3>
+                        <p>Sign in to access the admin portal</p>
                     </div>
-                    <span class="auth-audit-badge">Audit only</span>
-                </div>
 
-                <div class="staff-login-camera-stage is-idle" id="staff-login-camera-stage">
-                    <div class="staff-login-camera-placeholder" id="staff-login-camera-placeholder">
-                        <span class="staff-login-camera-placeholder-icon">{{ icon('mobile') }}</span>
-                        <strong>Camera is off</strong>
-                        <p>Tap <em>Open Camera</em> when you are ready to take your selfie.</p>
+                    <form method="post" action="{{ url_for('app.admin_login') }}" class="auth-clinic-mini-form">
+                        <input type="hidden" name="next" value="">
+                        <label class="auth-clinic-mini-field">
+                            <span class="auth-clinic-field-icon">{{ icon('staff') }}</span>
+                            <input type="text" name="username" placeholder="Admin Email" autocomplete="username">
+                        </label>
+                        <label class="auth-clinic-mini-field">
+                            <span class="auth-clinic-field-icon">{{ icon('pin') }}</span>
+                            <input type="password" name="password" placeholder="Password" autocomplete="current-password">
+                            <span class="auth-clinic-field-icon is-right">{{ icon('eye') }}</span>
+                        </label>
+                        <div class="auth-clinic-inline-row auth-clinic-inline-row--mini">
+                            <label class="auth-clinic-checkbox auth-clinic-checkbox--mini">
+                                <input type="checkbox" checked>
+                                <span>Remember me</span>
+                            </label>
+                            <a class="auth-clinic-link" href="{{ url_for('app.admin_login') }}">Forgot password?</a>
+                        </div>
+                        <button class="auth-clinic-primary auth-clinic-primary--mini" type="submit">
+                            <span class="button-icon">{{ icon('pin') }}</span>
+                            <span>Sign In</span>
+                        </button>
+                    </form>
+
+                    <div class="auth-clinic-mini-trust">
+                        <span>{{ icon('shield-check') }}</span>
+                        <strong>Authorized access only</strong>
                     </div>
-                    <video id="staff-login-video" class="staff-login-video" autoplay playsinline muted hidden></video>
-                    <img id="staff-login-preview" class="staff-login-preview" alt="Captured selfie preview" hidden>
-                    <div class="staff-login-camera-overlay" id="staff-login-camera-overlay" hidden>
-                        <span>Live camera ready</span>
+                </article>
+
+                <article class="auth-clinic-phone">
+                    <div class="auth-clinic-phone-screen">
+                        <div class="auth-clinic-phone-notch"></div>
+                        <div class="auth-clinic-phone-logo">{{ icon('shield-check') }}</div>
+                        <h4>Welcome Back</h4>
+                        <p>Sign in to continue</p>
+
+                        <div class="auth-clinic-phone-tabs">
+                            <span class="is-active">Staff Login</span>
+                            <span>PIN Login</span>
+                        </div>
+
+                        <div class="auth-clinic-phone-field"></div>
+                        <div class="auth-clinic-phone-field"></div>
+
+                        <div class="auth-clinic-phone-meta">
+                            <span class="auth-clinic-phone-check"></span>
+                            <span>Remember me</span>
+                            <span class="auth-clinic-phone-link">Forgot password?</span>
+                        </div>
+
+                        <div class="auth-clinic-phone-button">Sign In</div>
+                        <div class="auth-clinic-phone-divider"><span>OR</span></div>
+
+                        <div class="auth-clinic-phone-audit">
+                            <strong>Selfie Audit (Required)</strong>
+                            <div class="auth-clinic-phone-audit-grid">
+                                <div>
+                                    <span>{{ icon('mobile') }}</span>
+                                    <small>Open Camera</small>
+                                </div>
+                                <div>
+                                    <span>{{ icon('staff') }}</span>
+                                    <small>Capture Selfie</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <canvas id="staff-login-canvas" hidden></canvas>
-
-                <div class="staff-login-camera-actions">
-                    <button class="staff-login-camera-button" type="button" id="staff-login-start-camera">Open Camera</button>
-                    <button class="staff-login-camera-button is-primary" type="button" id="staff-login-capture-selfie" disabled>Capture Selfie</button>
-                    <button class="staff-login-camera-button" type="button" id="staff-login-retake-selfie" hidden>Retake Selfie</button>
-                </div>
-
-                <p class="staff-login-camera-note" id="staff-login-camera-note">
-                    Your selfie is stored as a login audit record and is not compared with your profile photo automatically.
-                </p>
-            </section>
-
-            <button class="auth-primary-button staff-login-submit" type="submit" id="staff-login-submit">
-                <span>Sign In</span>
-            </button>
-        </form>
-
-        <div class="auth-surface-foot">
-            <p class="auth-foot-note">Need access? Contact HR or an administrator to activate your staff portal.</p>
-            <div class="auth-foot-brand">
-                <strong>{{ app_name }}</strong>
-                <span>Staff self-service attendance portal</span>
-            </div>
+                </article>
+            </aside>
         </div>
-    </article>
+    </div>
 </section>
 
 <script>
     const tabs = Array.from(document.querySelectorAll(".staff-login-tab"));
     const panels = Array.from(document.querySelectorAll(".staff-login-secret-panel"));
-    const submitLabel = document.querySelector("#staff-login-submit span");
+    const submitLabel = document.querySelector("#staff-login-submit span:last-child");
     const form = document.querySelector("#staff-login-form");
     const passwordInput = document.querySelector('input[name="password"]');
     const pinInput = document.querySelector('input[name="pin"]');
@@ -270,8 +363,8 @@
                 cameraOverlay.hidden = false;
             }
             if (cameraStage) {
-                cameraStage.classList.remove("is-idle", "is-captured");
                 cameraStage.classList.add("is-live");
+                cameraStage.classList.remove("is-captured");
             }
             retakeSelfieButton.hidden = true;
             captureSelfieButton.disabled = false;
@@ -307,7 +400,7 @@
         preview.hidden = false;
         video.hidden = true;
         retakeSelfieButton.hidden = false;
-        startCameraButton.textContent = "Open Camera Again";
+        startCameraButton.querySelector("strong")?.replaceChildren(document.createTextNode("Open Camera"));
         captureSelfieButton.disabled = true;
         if (cameraOverlay) {
             cameraOverlay.hidden = true;
