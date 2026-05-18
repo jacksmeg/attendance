@@ -1732,6 +1732,7 @@ self.addEventListener("fetch", (event) => {{
             quick_url=quick_url,
             mobile_qr_svg=build_qr_svg(quick_url),
             location_policy=location_policy,
+            body_class="staff-mobile-app-body",
         )
 
     @bp.route("/staff/clock", methods=["POST"])
@@ -1838,6 +1839,7 @@ self.addEventListener("fetch", (event) => {{
             today_status=today_status,
             today=date.today(),
             location_policy=location_policy,
+            body_class="staff-mobile-app-body",
         )
 
     app.register_blueprint(bp)
