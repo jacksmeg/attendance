@@ -59,6 +59,18 @@
     </aside>
 
     <article class="auth-surface auth-surface--staff">
+        <div class="auth-mobile-brand" aria-hidden="true">
+            <span class="auth-mobile-brand-logo">
+                {% if app_logo_url %}
+                <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                {% else %}
+                {{ icon('fingerprint') }}
+                {% endif %}
+            </span>
+            <strong>{{ app_name|upper }}</strong>
+            <p>Sign in with your Staff Number, Email or use PIN.</p>
+        </div>
+
         <div class="auth-surface-head">
             <span class="auth-surface-badge">{{ icon('mobile') }} Staff portal</span>
             <div class="auth-surface-copy">
@@ -118,6 +130,12 @@
                 </div>
             </div>
 
+            <button class="auth-primary-button staff-login-submit" type="submit" id="staff-login-submit">
+                <span>Sign In</span>
+            </button>
+
+            <p class="auth-mobile-foot-link">Don't have an account?</p>
+
             <section class="auth-section-card auth-audit-card" aria-label="Selfie audit">
                 <div class="auth-section-head auth-audit-head">
                     <div>
@@ -152,10 +170,6 @@
                     Your selfie is stored as a login audit record and is not compared with your profile photo automatically.
                 </p>
             </section>
-
-            <button class="auth-primary-button staff-login-submit" type="submit" id="staff-login-submit">
-                <span>Sign In</span>
-            </button>
         </form>
 
         <div class="auth-surface-foot">
