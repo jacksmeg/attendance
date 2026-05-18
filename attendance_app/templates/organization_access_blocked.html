@@ -2,17 +2,17 @@
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="staff-login-screen">
-    <article class="panel-card staff-login-card organization-access-card">
-        <div class="staff-login-brand">
-            <span class="staff-login-logo">
-                {% if app_logo_url %}
-                <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+<section class="auth-single-shell">
+    <article class="auth-dialog-card">
+        <div class="auth-surface-head">
+            <span class="auth-surface-badge">
+                {% if access_state.status == 'trial' %}
+                {{ icon('clock') }} Trial status
                 {% else %}
-                {{ icon('settings') }}
+                {{ icon('close') }} Access restricted
                 {% endif %}
             </span>
-            <div class="staff-login-intro">
+            <div class="auth-surface-copy">
                 <h1>{{ organization.display_name }}</h1>
                 <p>This institution workspace is currently unavailable because the subscription access for this tenant needs attention.</p>
             </div>
@@ -26,20 +26,20 @@
             </div>
         </div>
 
-        <div class="detail-stack organization-access-details">
-            <div class="detail-row">
+        <div class="auth-detail-list">
+            <div class="auth-detail-row">
                 <span>Plan</span>
                 <strong>{{ organization.plan_name or 'Standard' }}</strong>
             </div>
-            <div class="detail-row">
+            <div class="auth-detail-row">
                 <span>Expiry Date</span>
                 <strong>{{ access_state.expires_on or 'Not set' }}</strong>
             </div>
-            <div class="detail-row">
+            <div class="auth-detail-row">
                 <span>Billing Cycle</span>
                 <strong>{{ organization.billing_cycle|replace('-', ' ')|title }}</strong>
             </div>
-            <div class="detail-row">
+            <div class="auth-detail-row">
                 <span>Contact</span>
                 <strong>{{ organization.billing_contact_name or organization.billing_email or organization.billing_phone or 'Please contact the software provider' }}</strong>
             </div>
@@ -52,13 +52,13 @@
         </div>
         {% endif %}
 
-        <div class="stack-form">
-            <a class="primary-button" href="{{ url_for('app.home') }}">
+        <div class="auth-link-row auth-link-row--stack">
+            <a class="auth-primary-button" href="{{ url_for('app.home') }}">
                 <span class="button-icon">{{ icon('arrow-right') }}</span>
                 <span>Refresh Access</span>
             </a>
             {% if organization.billing_email %}
-            <a class="ghost-button" href="mailto:{{ organization.billing_email }}">
+            <a class="auth-secondary-button" href="mailto:{{ organization.billing_email }}">
                 <span class="button-icon">{{ icon('settings') }}</span>
                 <span>Email Billing Contact</span>
             </a>

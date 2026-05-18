@@ -1,67 +1,113 @@
-{% extends "base.html" %}
+{% extends "auth_shell.html" %}
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="center-stage">
-    <div class="auth-layout">
-        <article class="panel-card auth-panel">
-            <div class="auth-brand-lockup">
-                <span class="auth-brand-mark">
+<section class="auth-workbench auth-workbench--admin">
+    <aside class="auth-showcase">
+        <div class="auth-showcase-top">
+            <div class="auth-showcase-brand">
+                <span class="auth-showcase-mark">
                     {% if app_logo_url %}
                     <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
                     {% else %}
-                    {{ icon('fingerprint') }}
+                    {{ icon('dashboard') }}
                     {% endif %}
                 </span>
-                <span class="auth-brand-copy">
-                    <span class="auth-brand-title">{{ app_name }}</span>
-                    <span class="auth-brand-subtitle">Administrator sign in</span>
-                </span>
+                <div>
+                    <strong>{{ app_name }}</strong>
+                    <span>Administrator workspace</span>
+                </div>
             </div>
-            <p class="section-kicker">Administrator Access</p>
-            <h1>Sign in to manage staff, fingerprints, and reports.</h1>
-            <p class="hero-subtitle">Use the administrator username and password for {{ app_name }} to reach the full control workspace.</p>
+            <span class="auth-showcase-chip">Secure access</span>
+        </div>
 
-            <form method="post" class="stack-form auth-form">
-                <input type="hidden" name="next" value="{{ next_url }}">
-                <label class="field">
-                    <span>Username</span>
-                    <input type="text" name="username" placeholder="admin" required>
-                </label>
-                <label class="field">
-                    <span>Password</span>
-                    <input type="password" name="password" placeholder="Enter password" required>
-                </label>
-                <button class="primary-button" type="submit">
-                    <span class="button-icon">{{ icon('dashboard') }}</span>
-                    <span>Open Admin Dashboard</span>
-                </button>
-            </form>
-        </article>
+        <div class="auth-showcase-copy">
+            <p class="auth-showcase-kicker">Administrator Access</p>
+            <h1>Control attendance, staff, reports, and branding from one organized dashboard.</h1>
+            <p>Use the administrator credentials for this institution to enter the full management workspace with cleaner tools, approvals, and reporting.</p>
+        </div>
 
-        <article class="panel-card auth-side-panel">
-            <p class="section-kicker">Quick Notes</p>
-            <h3>{{ app_name }} access overview</h3>
-            <div class="detail-stack">
-                <div class="detail-row">
-                    <span>Online entry</span>
+        <div class="auth-showcase-grid">
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('staff') }}</span>
+                <div>
+                    <strong>Staff Directory</strong>
+                    <span>Add people, roles, photos, and shift defaults.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('attendance') }}</span>
+                <div>
+                    <strong>Attendance Control</strong>
+                    <span>Review clock events, corrections, leave, and overtime.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('settings') }}</span>
+                <div>
+                    <strong>Institution Settings</strong>
+                    <span>Brand the system, set GPS rules, and manage shifts.</span>
+                </div>
+            </article>
+        </div>
+
+        <div class="auth-showcase-note">
+            <strong>Platform owner?</strong>
+            <p>Use the separate platform portal when you want to provision institutions, domains, and subscription access.</p>
+        </div>
+    </aside>
+
+    <article class="auth-surface">
+        <div class="auth-surface-head">
+            <span class="auth-surface-badge">{{ icon('shield-check') }} Verified Admin</span>
+            <div class="auth-surface-copy">
+                <h1>Admin sign in</h1>
+                <p>Enter your administrator username and password to open the full control workspace for {{ app_name }}.</p>
+            </div>
+        </div>
+
+        <form method="post" class="auth-form-stack">
+            <input type="hidden" name="next" value="{{ next_url }}">
+
+            <label class="auth-field-block">
+                <span class="auth-field-label">Username</span>
+                <div class="auth-input-shell">
+                    <input type="text" name="username" placeholder="Enter administrator username" autocomplete="username" required>
+                </div>
+            </label>
+
+            <label class="auth-field-block">
+                <span class="auth-field-label">Password</span>
+                <div class="auth-input-shell">
+                    <input type="password" name="password" placeholder="Enter administrator password" autocomplete="current-password" required>
+                </div>
+            </label>
+
+            <button class="auth-primary-button" type="submit">
+                <span class="button-icon">{{ icon('dashboard') }}</span>
+                <span>Open Admin Dashboard</span>
+            </button>
+        </form>
+
+        <div class="auth-surface-foot">
+            <div class="auth-detail-list">
+                <div class="auth-detail-row">
+                    <span>Online entry path</span>
                     <strong>{% if is_cloud_fingerprint_mode %}Staff login first{% else %}Kiosk available{% endif %}</strong>
                 </div>
-                <div class="detail-row">
-                    <span>Staff tools</span>
-                    <strong>Admin only</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Attendance logs</span>
-                    <strong>Admin only</strong>
+                <div class="auth-detail-row">
+                    <span>Admin tools</span>
+                    <strong>Dashboard, staff, reports, settings</strong>
                 </div>
             </div>
-            <p class="panel-note">Once you sign in, the full dashboard, staff directory, enrollment tools, reports, and settings become available from the left sidebar.</p>
-            <a class="ghost-button" href="{{ url_for('app.platform_login') }}">
-                <span class="button-icon">{{ icon('dashboard') }}</span>
-                <span>Platform Super Admin</span>
-            </a>
-        </article>
-    </div>
+
+            <div class="auth-link-row">
+                <a class="auth-secondary-button" href="{{ url_for('app.platform_login') }}">
+                    <span class="button-icon">{{ icon('dashboard') }}</span>
+                    <span>Platform Super Admin</span>
+                </a>
+            </div>
+        </div>
+    </article>
 </section>
 {% endblock %}

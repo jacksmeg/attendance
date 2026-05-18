@@ -2,41 +2,40 @@
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="staff-login-screen">
-    <article class="staff-login-card pwa-offline-card">
-        <div class="staff-login-brand">
-            <span class="staff-login-logo">
-                {{ icon('mobile') }}
-            </span>
-            <div class="staff-login-intro">
+<section class="auth-single-shell">
+    <article class="auth-dialog-card">
+        <div class="auth-surface-head">
+            <span class="auth-surface-badge">{{ icon('mobile') }} Offline mode</span>
+            <div class="auth-surface-copy">
                 <h1>Offline Mode</h1>
                 <p>You are temporarily offline. Reconnect to continue clocking attendance, opening staff pages, or signing in again.</p>
             </div>
         </div>
 
-        <div class="staff-login-camera-card">
-            <div class="staff-login-camera-head">
-                <div>
-                    <strong>{{ app_name }}</strong>
-                    <p>Your installed attendance app is still available, but live actions need internet access.</p>
-                </div>
-                <span class="staff-login-camera-badge">PWA Ready</span>
+        <div class="auth-detail-list">
+            <div class="auth-detail-row">
+                <span>Reconnect</span>
+                <strong>Turn on mobile data or Wi-Fi</strong>
             </div>
-            <div class="detail-stack">
-                <div class="detail-row">
-                    <span>Reconnect</span>
-                    <strong>Turn on mobile data or Wi-Fi</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Then open</span>
-                    <strong>Staff Login or My Attendance</strong>
-                </div>
+            <div class="auth-detail-row">
+                <span>Then open</span>
+                <strong>Staff Login or My Attendance</strong>
+            </div>
+            <div class="auth-detail-row">
+                <span>App state</span>
+                <strong>{{ app_name }} remains installed on this device</strong>
             </div>
         </div>
 
-        <div class="staff-login-camera-actions">
-            <a class="staff-login-camera-button is-primary" href="{{ url_for('app.staff_login') }}">Open Staff Login</a>
-            <a class="staff-login-camera-button" href="{{ url_for('app.home') }}">Try Again</a>
+        <div class="auth-link-row auth-link-row--stack">
+            <a class="auth-primary-button" href="{{ url_for('app.staff_login') }}">
+                <span class="button-icon">{{ icon('arrow-right') }}</span>
+                <span>Open Staff Login</span>
+            </a>
+            <a class="auth-secondary-button" href="{{ url_for('app.home') }}">
+                <span class="button-icon">{{ icon('mobile') }}</span>
+                <span>Try Again</span>
+            </a>
         </div>
     </article>
 </section>

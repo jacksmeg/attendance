@@ -2,62 +2,105 @@
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="center-stage">
-    <div class="auth-layout">
-        <article class="panel-card auth-panel">
-            <div class="auth-brand-lockup">
-                <span class="auth-brand-mark">
+<section class="auth-workbench auth-workbench--platform">
+    <aside class="auth-showcase">
+        <div class="auth-showcase-top">
+            <div class="auth-showcase-brand">
+                <span class="auth-showcase-mark">
                     {% if app_logo_url %}
                     <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
                     {% else %}
                     {{ icon('dashboard') }}
                     {% endif %}
                 </span>
-                <span class="auth-brand-copy">
-                    <span class="auth-brand-title">{{ app_name }}</span>
-                    <span class="auth-brand-subtitle">Platform super admin</span>
-                </span>
-            </div>
-            <p class="section-kicker">Multi-Organization Control</p>
-            <h1>Sign in to manage institutions, domains, and onboarding.</h1>
-            <p class="hero-subtitle">Use the platform credentials to provision new customers and manage their assigned hostnames from one control room.</p>
-
-            <form method="post" class="stack-form auth-form">
-                <input type="hidden" name="next" value="{{ next_url }}">
-                <label class="field">
-                    <span>Username</span>
-                    <input type="text" name="username" placeholder="platform admin" required>
-                </label>
-                <label class="field">
-                    <span>Password</span>
-                    <input type="password" name="password" placeholder="Enter password" required>
-                </label>
-                <button class="primary-button" type="submit">
-                    <span class="button-icon">{{ icon('dashboard') }}</span>
-                    <span>Open Platform Portal</span>
-                </button>
-            </form>
-        </article>
-
-        <article class="panel-card auth-side-panel">
-            <p class="section-kicker">What You Can Do</p>
-            <h3>Provision each institution safely</h3>
-            <div class="detail-stack">
-                <div class="detail-row">
-                    <span>Create institutions</span>
-                    <strong>From the web UI</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Assign domains</span>
-                    <strong>Per institution</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Data isolation</span>
-                    <strong>Separate database + files</strong>
+                <div>
+                    <strong>{{ app_name }}</strong>
+                    <span>Platform control room</span>
                 </div>
             </div>
-            <p class="panel-note">This portal is separate from each customer’s own admin login. Customer admins manage only their institution, while the platform portal manages the product itself.</p>
-        </article>
-    </div>
+            <span class="auth-showcase-chip">Multi-tenant</span>
+        </div>
+
+        <div class="auth-showcase-copy">
+            <p class="auth-showcase-kicker">Platform super admin</p>
+            <h1>Manage institutions, licensing, domains, and onboarding from one control room.</h1>
+            <p>This portal is for the software owner only. Each customer institution continues to use its own separate admin workspace and isolated data.</p>
+        </div>
+
+        <div class="auth-showcase-grid">
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('settings') }}</span>
+                <div>
+                    <strong>Provision Institutions</strong>
+                    <span>Create new tenant workspaces and assign hostnames.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('shield-check') }}</span>
+                <div>
+                    <strong>License Control</strong>
+                    <span>Manage plan, renewal, suspension, and expiry status.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('staff') }}</span>
+                <div>
+                    <strong>Customer Isolation</strong>
+                    <span>Every institution keeps its own database, files, and branding.</span>
+                </div>
+            </article>
+        </div>
+
+        <div class="auth-showcase-note">
+            <strong>Important</strong>
+            <p>Customer administrators do not sign in here. They use their institution-specific admin login and only see their own organization data.</p>
+        </div>
+    </aside>
+
+    <article class="auth-surface">
+        <div class="auth-surface-head">
+            <span class="auth-surface-badge">{{ icon('shield-check') }} Owner access</span>
+            <div class="auth-surface-copy">
+                <h1>Platform sign in</h1>
+                <p>Use the platform credentials to open the super admin portal and manage the product across institutions.</p>
+            </div>
+        </div>
+
+        <form method="post" class="auth-form-stack">
+            <input type="hidden" name="next" value="{{ next_url }}">
+
+            <label class="auth-field-block">
+                <span class="auth-field-label">Username</span>
+                <div class="auth-input-shell">
+                    <input type="text" name="username" placeholder="Enter platform username" autocomplete="username" required>
+                </div>
+            </label>
+
+            <label class="auth-field-block">
+                <span class="auth-field-label">Password</span>
+                <div class="auth-input-shell">
+                    <input type="password" name="password" placeholder="Enter platform password" autocomplete="current-password" required>
+                </div>
+            </label>
+
+            <button class="auth-primary-button" type="submit">
+                <span class="button-icon">{{ icon('dashboard') }}</span>
+                <span>Open Platform Portal</span>
+            </button>
+        </form>
+
+        <div class="auth-surface-foot">
+            <div class="auth-detail-list">
+                <div class="auth-detail-row">
+                    <span>Institution provisioning</span>
+                    <strong>From the web portal</strong>
+                </div>
+                <div class="auth-detail-row">
+                    <span>Scope</span>
+                    <strong>Licensing, domains, onboarding, tenant management</strong>
+                </div>
+            </div>
+        </div>
+    </article>
 </section>
 {% endblock %}

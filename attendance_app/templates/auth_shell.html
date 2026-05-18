@@ -16,6 +16,11 @@
     <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
 </head>
 <body class="auth-shell-body {{ body_class|default('') }}">
+    <div class="auth-shell-backdrop" aria-hidden="true">
+        <span class="auth-shell-orb auth-shell-orb-one"></span>
+        <span class="auth-shell-orb auth-shell-orb-two"></span>
+        <span class="auth-shell-grid"></span>
+    </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <section class="auth-flash-shell">

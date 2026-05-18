@@ -2,48 +2,102 @@
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="staff-login-screen">
-    <article class="staff-login-card">
-        <div class="staff-login-brand">
-            <span class="staff-login-logo">
-                {% if app_logo_url %}
+<section class="auth-workbench auth-workbench--staff">
+    <aside class="auth-showcase">
+        <div class="auth-showcase-top">
+            <div class="auth-showcase-brand">
+                <span class="auth-showcase-mark">
+                    {% if app_logo_url %}
                     <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
-                {% else %}
+                    {% else %}
                     {{ icon('fingerprint') }}
-                {% endif %}
-            </span>
-            <div class="staff-login-intro">
-                <h1>{{ app_name|upper }}</h1>
-                <p>Sign in with your staff number or email, then use your password or PIN.</p>
+                    {% endif %}
+                </span>
+                <div>
+                    <strong>{{ app_name }}</strong>
+                    <span>Staff self-service portal</span>
+                </div>
+            </div>
+            <span class="auth-showcase-chip">PWA Ready</span>
+        </div>
+
+        <div class="auth-showcase-copy">
+            <p class="auth-showcase-kicker">Staff Mobile Access</p>
+            <h1>Sign in from one professional workspace for attendance, breaks, and daily status.</h1>
+            <p>Use your staff number or email, choose password or PIN, then complete the selfie audit before entering your attendance home screen.</p>
+        </div>
+
+        <div class="auth-showcase-grid">
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('staff') }}</span>
+                <div>
+                    <strong>Flexible Sign In</strong>
+                    <span>Use staff code or email with password or assigned PIN.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('mobile') }}</span>
+                <div>
+                    <strong>Mobile Friendly</strong>
+                    <span>Installable experience for phones, tablets, and shared devices.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('location') }}</span>
+                <div>
+                    <strong>Policy Aware</strong>
+                    <span>GPS and work-location rules apply automatically when enabled.</span>
+                </div>
+            </article>
+        </div>
+
+        <ul class="auth-showcase-list" aria-label="Staff sign-in notes">
+            <li>Open the camera only when you are ready to take your selfie.</li>
+            <li>Your selfie is kept as a login audit record only.</li>
+            <li>After sign in, use your mobile dashboard for check-in, breaks, and check-out.</li>
+        </ul>
+    </aside>
+
+    <article class="auth-surface auth-surface--staff">
+        <div class="auth-surface-head">
+            <span class="auth-surface-badge">{{ icon('mobile') }} Staff portal</span>
+            <div class="auth-surface-copy">
+                <h1>Staff sign in</h1>
+                <p>Enter your staff account details below, then capture one selfie to continue into your attendance workspace.</p>
             </div>
         </div>
 
-        <div class="staff-login-switcher" role="tablist" aria-label="Login method">
-            <button class="staff-login-tab is-active" type="button" data-mode="password" aria-pressed="true">Staff Login</button>
-            <button class="staff-login-tab" type="button" data-mode="pin" aria-pressed="false">PIN Login</button>
+        <div class="auth-mode-switch" role="tablist" aria-label="Login method">
+            <button class="auth-mode-tab is-active staff-login-tab" type="button" data-mode="password" aria-pressed="true">Staff Login</button>
+            <button class="auth-mode-tab staff-login-tab" type="button" data-mode="pin" aria-pressed="false">PIN Login</button>
         </div>
 
-        <form method="post" class="staff-login-form" id="staff-login-form">
+        <form method="post" class="auth-form-stack" id="staff-login-form">
             <input type="hidden" name="next" value="{{ next_url }}">
             <input type="hidden" name="selfie_data" id="staff-login-selfie-data">
-            <section class="staff-login-block">
-                <div class="staff-login-block-head">
-                    <strong>Account Details</strong>
-                    <span>Use the same details assigned on your staff profile.</span>
+
+            <div class="auth-section-card">
+                <div class="auth-section-head">
+                    <div>
+                        <strong>Account details</strong>
+                        <p>Use the staff profile access that was assigned by your organization.</p>
+                    </div>
                 </div>
 
-                <label class="staff-login-field">
-                    <span>Staff Number or Email Address</span>
-                    <input type="text" name="staff_identifier" placeholder="Enter your staff number or email" autocomplete="username" required>
-                    <small>Use your staff code like `EMP-001` or the email saved on your staff profile.</small>
+                <label class="auth-field-block">
+                    <span class="auth-field-label">Staff Number or Email Address</span>
+                    <div class="auth-input-shell">
+                        <input type="text" name="staff_identifier" placeholder="Enter your staff number or email" autocomplete="username" required>
+                    </div>
+                    <small class="auth-helper">Use your staff code like <code>EMP-001</code> or the email saved on your staff profile.</small>
                 </label>
 
                 <div class="staff-login-secret-panel is-active" data-panel="password">
-                    <label class="staff-login-field">
-                        <span>Password</span>
-                        <div class="staff-login-secret-row">
+                    <label class="auth-field-block">
+                        <span class="auth-field-label">Password</span>
+                        <div class="auth-input-shell auth-input-shell--action">
                             <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password">
-                            <button class="staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
+                            <button class="auth-input-action staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
                                 {{ icon('eye') }}
                             </button>
                         </div>
@@ -51,33 +105,33 @@
                 </div>
 
                 <div class="staff-login-secret-panel" data-panel="pin" hidden>
-                    <label class="staff-login-field">
-                        <span>PIN</span>
-                        <div class="staff-login-secret-row">
+                    <label class="auth-field-block">
+                        <span class="auth-field-label">PIN</span>
+                        <div class="auth-input-shell auth-input-shell--action">
                             <input type="password" name="pin" placeholder="Enter your PIN" inputmode="numeric" autocomplete="one-time-code">
-                            <button class="staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">
+                            <button class="auth-input-action staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">
                                 {{ icon('eye') }}
                             </button>
                         </div>
-                        <small>Use the PIN assigned to your staff profile.</small>
+                        <small class="auth-helper">Use the PIN assigned to your staff profile.</small>
                     </label>
                 </div>
-            </section>
+            </div>
 
-            <section class="staff-login-block staff-login-camera-card" aria-label="Selfie audit">
-                <div class="staff-login-camera-head">
+            <section class="auth-section-card auth-audit-card" aria-label="Selfie audit">
+                <div class="auth-section-head auth-audit-head">
                     <div>
-                        <strong>Selfie Audit Capture</strong>
-                        <p>Open the camera only when you are ready, then tap capture once before signing in.</p>
+                        <strong>Selfie audit capture</strong>
+                        <p>Keep the camera closed until you are ready, then open it and capture one selfie before signing in.</p>
                     </div>
-                    <span class="staff-login-camera-badge">Audit only</span>
+                    <span class="auth-audit-badge">Audit only</span>
                 </div>
 
                 <div class="staff-login-camera-stage is-idle" id="staff-login-camera-stage">
                     <div class="staff-login-camera-placeholder" id="staff-login-camera-placeholder">
                         <span class="staff-login-camera-placeholder-icon">{{ icon('mobile') }}</span>
                         <strong>Camera is off</strong>
-                        <p>Tap <em>Open Camera</em> when you want to take your selfie.</p>
+                        <p>Tap <em>Open Camera</em> when you are ready to take your selfie.</p>
                     </div>
                     <video id="staff-login-video" class="staff-login-video" autoplay playsinline muted hidden></video>
                     <img id="staff-login-preview" class="staff-login-preview" alt="Captured selfie preview" hidden>
@@ -99,17 +153,18 @@
                 </p>
             </section>
 
-            <button class="staff-login-submit" type="submit" id="staff-login-submit">
+            <button class="auth-primary-button staff-login-submit" type="submit" id="staff-login-submit">
                 <span>Sign In</span>
             </button>
         </form>
 
-        <p class="staff-login-help">Need access? Contact HR or an administrator to activate your staff portal.</p>
-
-        <footer class="staff-login-footer">
-            <strong>{{ app_name }}</strong>
-            <span>Staff self-service attendance portal</span>
-        </footer>
+        <div class="auth-surface-foot">
+            <p class="auth-foot-note">Need access? Contact HR or an administrator to activate your staff portal.</p>
+            <div class="auth-foot-brand">
+                <strong>{{ app_name }}</strong>
+                <span>Staff self-service attendance portal</span>
+            </div>
+        </div>
     </article>
 </section>
 
@@ -215,7 +270,7 @@
                 cameraOverlay.hidden = false;
             }
             if (cameraStage) {
-                cameraStage.classList.remove("is-idle");
+                cameraStage.classList.remove("is-idle", "is-captured");
                 cameraStage.classList.add("is-live");
             }
             retakeSelfieButton.hidden = true;
