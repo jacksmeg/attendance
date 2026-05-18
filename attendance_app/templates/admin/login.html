@@ -2,143 +2,112 @@
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="auth-clinic-page auth-clinic-page--admin">
-    <div class="auth-clinic-window">
-        <a class="auth-clinic-close" href="{{ url_for('app.staff_login') }}" aria-label="Close login window">×</a>
-
-        <div class="auth-clinic-layout auth-clinic-layout--admin">
-            <aside class="auth-clinic-brand">
-                <div class="auth-clinic-brand-mark">
-                    <span class="auth-clinic-brand-logo">
-                        {% if app_logo_url %}
-                        <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
-                        {% else %}
-                        {{ icon('shield-check') }}
-                        {% endif %}
-                    </span>
-                    <div class="auth-clinic-brand-copy">
-                        <strong>{{ app_name }}</strong>
-                        <span>Administrative Control</span>
-                    </div>
+<section class="auth-workbench auth-workbench--admin">
+    <aside class="auth-showcase">
+        <div class="auth-showcase-top">
+            <div class="auth-showcase-brand">
+                <span class="auth-showcase-mark">
+                    {% if app_logo_url %}
+                    <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                    {% else %}
+                    {{ icon('dashboard') }}
+                    {% endif %}
+                </span>
+                <div>
+                    <strong>{{ app_name }}</strong>
+                    <span>Administrator workspace</span>
                 </div>
+            </div>
+            <span class="auth-showcase-chip">Secure access</span>
+        </div>
 
-                <div class="auth-clinic-hero">
-                    <h1>Professional Attendance.<br>Trusted <span>Control.</span></h1>
-                    <p>Manage staff records, attendance logs, reports, branding, and institution settings from a single secure workspace.</p>
-                </div>
+        <div class="auth-showcase-copy">
+            <p class="auth-showcase-kicker">Administrator Access</p>
+            <h1>Control attendance, staff, reports, and branding from one organized dashboard.</h1>
+            <p>Use the administrator credentials for this institution to enter the full management workspace with cleaner tools, approvals, and reporting.</p>
+        </div>
 
-                <div class="auth-clinic-feature-list">
-                    <article class="auth-clinic-feature">
-                        <span class="auth-clinic-feature-icon">{{ icon('attendance') }}</span>
-                        <div>
-                            <strong>Live Attendance Control</strong>
-                            <span>Review entries, corrections, leave, overtime, and approval workflows.</span>
-                        </div>
-                    </article>
-                    <article class="auth-clinic-feature">
-                        <span class="auth-clinic-feature-icon">{{ icon('staff') }}</span>
-                        <div>
-                            <strong>Staff &amp; Role Management</strong>
-                            <span>Add staff, upload photos, assign shifts, and manage access rights.</span>
-                        </div>
-                    </article>
-                    <article class="auth-clinic-feature">
-                        <span class="auth-clinic-feature-icon">{{ icon('reports') }}</span>
-                        <div>
-                            <strong>Reports &amp; Insights</strong>
-                            <span>Monitor trends, compliance, and operational performance from one dashboard.</span>
-                        </div>
-                    </article>
-                </div>
-
-                <div class="auth-clinic-trust-card">
-                    <span class="auth-clinic-trust-icon">{{ icon('shield-check') }}</span>
-                    <div>
-                        <strong>Secure admin workspace</strong>
-                        <span>Authorized administrators can access settings, reports, and enrollment tools.</span>
-                    </div>
-                </div>
-            </aside>
-
-            <article class="auth-clinic-center-card auth-clinic-center-card--admin">
-                <div class="auth-clinic-center-brand">
-                    <span class="auth-clinic-center-logo">
-                        {% if app_logo_url %}
-                        <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
-                        {% else %}
-                        {{ icon('shield-check') }}
-                        {% endif %}
-                    </span>
-                    <span class="auth-clinic-kicker">Administrator Access</span>
-                    <h2>Admin Login</h2>
-                    <p>Sign in to access the admin portal</p>
-                </div>
-
-                <form method="post" class="auth-clinic-form auth-clinic-form--admin">
-                    <input type="hidden" name="next" value="{{ next_url }}">
-
-                    <label class="auth-clinic-field">
-                        <span class="auth-clinic-field-icon">{{ icon('staff') }}</span>
-                        <input type="text" name="username" placeholder="Admin Email / Username" autocomplete="username" required>
-                    </label>
-
-                    <label class="auth-clinic-field">
-                        <span class="auth-clinic-field-icon">{{ icon('pin') }}</span>
-                        <input type="password" name="password" placeholder="Password" autocomplete="current-password" required>
-                    </label>
-
-                    <div class="auth-clinic-inline-row">
-                        <label class="auth-clinic-checkbox">
-                            <input type="checkbox" checked>
-                            <span>Remember me</span>
-                        </label>
-                        <a class="auth-clinic-link" href="{{ url_for('app.platform_login') }}">Platform access</a>
-                    </div>
-
-                    <button class="auth-clinic-primary" type="submit">
-                        <span class="button-icon">{{ icon('pin') }}</span>
-                        <span>Open Admin Dashboard</span>
-                    </button>
-                </form>
-
-                <div class="auth-clinic-admin-footer">
-                    <span>{{ icon('shield-check') }}</span>
-                    <strong>{% if is_cloud_fingerprint_mode %}Staff login first{% else %}Kiosk available{% endif %}</strong>
+        <div class="auth-showcase-grid">
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('staff') }}</span>
+                <div>
+                    <strong>Staff Directory</strong>
+                    <span>Add people, roles, photos, and shift defaults.</span>
                 </div>
             </article>
-
-            <aside class="auth-clinic-side-stack auth-clinic-side-stack--admin">
-                <article class="auth-clinic-info-card">
-                    <h3>Quick access overview</h3>
-                    <div class="auth-clinic-info-list">
-                        <div>
-                            <span>Dashboard</span>
-                            <strong>Live summaries and trends</strong>
-                        </div>
-                        <div>
-                            <span>Staff tools</span>
-                            <strong>Directory, photos, QR, shifts</strong>
-                        </div>
-                        <div>
-                            <span>Attendance logs</span>
-                            <strong>Corrections, leave, overtime, reports</strong>
-                        </div>
-                    </div>
-                </article>
-
-                <article class="auth-clinic-phone auth-clinic-phone--compact">
-                    <div class="auth-clinic-phone-screen">
-                        <div class="auth-clinic-phone-notch"></div>
-                        <div class="auth-clinic-phone-logo">{{ icon('dashboard') }}</div>
-                        <h4>Admin Portal</h4>
-                        <p>Secure access only</p>
-                        <div class="auth-clinic-phone-field"></div>
-                        <div class="auth-clinic-phone-field"></div>
-                        <div class="auth-clinic-phone-button">Open Dashboard</div>
-                    </div>
-                </article>
-            </aside>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('attendance') }}</span>
+                <div>
+                    <strong>Attendance Control</strong>
+                    <span>Review clock events, corrections, leave, and overtime.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('settings') }}</span>
+                <div>
+                    <strong>Institution Settings</strong>
+                    <span>Brand the system, set GPS rules, and manage shifts.</span>
+                </div>
+            </article>
         </div>
-    </div>
+
+        <div class="auth-showcase-note">
+            <strong>Platform owner?</strong>
+            <p>Use the separate platform portal when you want to provision institutions, domains, and subscription access.</p>
+        </div>
+    </aside>
+
+    <article class="auth-surface">
+        <div class="auth-surface-head">
+            <span class="auth-surface-badge">{{ icon('shield-check') }} Verified Admin</span>
+            <div class="auth-surface-copy">
+                <h1>Admin sign in</h1>
+                <p>Enter your administrator username and password to open the full control workspace for {{ app_name }}.</p>
+            </div>
+        </div>
+
+        <form method="post" class="auth-form-stack">
+            <input type="hidden" name="next" value="{{ next_url }}">
+
+            <label class="auth-field-block">
+                <span class="auth-field-label">Username</span>
+                <div class="auth-input-shell">
+                    <input type="text" name="username" placeholder="Enter administrator username" autocomplete="username" required>
+                </div>
+            </label>
+
+            <label class="auth-field-block">
+                <span class="auth-field-label">Password</span>
+                <div class="auth-input-shell">
+                    <input type="password" name="password" placeholder="Enter administrator password" autocomplete="current-password" required>
+                </div>
+            </label>
+
+            <button class="auth-primary-button" type="submit">
+                <span class="button-icon">{{ icon('dashboard') }}</span>
+                <span>Open Admin Dashboard</span>
+            </button>
+        </form>
+
+        <div class="auth-surface-foot">
+            <div class="auth-detail-list">
+                <div class="auth-detail-row">
+                    <span>Online entry path</span>
+                    <strong>{% if is_cloud_fingerprint_mode %}Staff login first{% else %}Kiosk available{% endif %}</strong>
+                </div>
+                <div class="auth-detail-row">
+                    <span>Admin tools</span>
+                    <strong>Dashboard, staff, reports, settings</strong>
+                </div>
+            </div>
+
+            <div class="auth-link-row">
+                <a class="auth-secondary-button" href="{{ url_for('app.platform_login') }}">
+                    <span class="button-icon">{{ icon('dashboard') }}</span>
+                    <span>Platform Super Admin</span>
+                </a>
+            </div>
+        </div>
+    </article>
 </section>
 {% endblock %}

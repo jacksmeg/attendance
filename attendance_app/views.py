@@ -627,7 +627,6 @@ self.addEventListener("fetch", (event) => {{
             "admin/login.html",
             title="Admin Login",
             next_url=request.args.get("next", ""),
-            body_class="auth-clinic-body",
         )
 
     @bp.route("/staff/login", methods=["GET", "POST"])
@@ -655,7 +654,7 @@ self.addEventListener("fetch", (event) => {{
                         "staff/login.html",
                         title="Staff Login",
                         next_url=next_url,
-                        body_class="auth-clinic-body",
+                        body_class="staff-login-minimal-body",
                     )
                 create_staff_selfie_audit(
                     staff_id=int(staff["id"]),
@@ -680,7 +679,7 @@ self.addEventListener("fetch", (event) => {{
             "staff/login.html",
             title="Staff Login",
             next_url=request.args.get("next", ""),
-            body_class="auth-clinic-body",
+            body_class="staff-login-minimal-body",
         )
 
     @bp.route("/logout")
