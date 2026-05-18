@@ -2,215 +2,257 @@
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="page-hero page-hero-split">
-    <div>
-        <h1>{{ staff.first_name }}, here is your attendance for today.</h1>
-        <p class="hero-subtitle">Clock in, start or end a break, clock out, and confirm your status from any phone or browser.</p>
-    </div>
-    <div class="timestamp-card">
-        <span class="timestamp-icon">{{ icon('calendar') }}</span>
-        <div class="timestamp-copy">
-            <span>{{ today.strftime("%A, %d %B %Y") }}</span>
-            <strong>{{ today_status.current_state }}</strong>
-        </div>
-        <span class="timestamp-trailing">{{ icon('clock') }}</span>
-    </div>
-</section>
-
-<section class="metric-strip">
-    <article class="metric-card">
-        <span class="metric-icon metric-icon-teal">{{ icon('check-circle') }}</span>
-        <div class="metric-copy">
-            <strong>{{ today_status.check_in_at|human_time if today_status.check_in_at else '--' }}</strong>
-            <span>Check In</span>
-            <small>First check-in today</small>
-        </div>
-    </article>
-    <article class="metric-card">
-        <span class="metric-icon metric-icon-blue">{{ icon('clock') }}</span>
-        <div class="metric-copy">
-            <strong>{{ today_status.worked_minutes }}</strong>
-            <span>Worked Minutes</span>
-            <small>Net worked time today</small>
-        </div>
-    </article>
-    <article class="metric-card">
-        <span class="metric-icon metric-icon-orange">{{ icon('logs') }}</span>
-        <div class="metric-copy">
-            <strong>{{ today_status.total_break_minutes }}</strong>
-            <span>Break Minutes</span>
-            <small>Completed break time today</small>
-        </div>
-    </article>
-    <article class="metric-card">
-        <span class="metric-icon metric-icon-lime">{{ icon('shield-check') }}</span>
-        <div class="metric-copy">
-            <strong>{{ today_status.check_out_at|human_time if today_status.check_out_at else '--' }}</strong>
-            <span>Check Out</span>
-            <small>Latest checkout today</small>
-        </div>
-    </article>
-</section>
-
-<section class="panel-grid">
-    <article class="panel-card panel-card-large">
-        <div class="panel-card-head">
-            <div>
-                <p class="section-kicker">Today's Status</p>
-                <h3>{{ today_status.current_state }}</h3>
-            </div>
-            <div class="staff-head-status">
-                <span class="status-pill">{% if today_status.currently_inside %}Inside organization{% else %}Outside organization{% endif %}</span>
-                <div class="staff-photo staff-photo-sm">
+{% set recommended_action = today_status.next_actions[0] if today_status.next_actions else '' %}
+<section class="staff-mobile-shell">
+    <article class="staff-mobile-hero-card">
+        <div class="staff-mobile-hero-top">
+            <div class="staff-identity">
+                <div class="staff-photo staff-photo-xl">
                     {% if staff.photo_filename %}
                         <img src="{{ url_for('app.staff_photo', filename=staff.photo_filename) }}" alt="{{ staff.first_name }} {{ staff.last_name }}">
                     {% else %}
                         <span>{{ staff.first_name[:1] }}{{ staff.last_name[:1] }}</span>
                     {% endif %}
                 </div>
+                <div class="staff-mobile-hero-copy">
+                    <p class="section-kicker">Staff Portal</p>
+                    <h1>{{ staff.first_name }}, welcome back.</h1>
+                    <p>{{ today.strftime("%A, %d %B %Y") }} · {{ staff.department }} · {{ staff.staff_code }}</p>
+                </div>
             </div>
+            <span class="staff-mobile-status-chip {% if today_status.currently_inside %}is-good{% else %}is-neutral{% endif %}">
+                {% if today_status.currently_inside %}Inside organization{% else %}Outside organization{% endif %}
+            </span>
         </div>
 
-        <div class="detail-stack detail-stack-grid">
-            <div class="detail-row">
-                <span>Staff Code</span>
-                <strong>{{ staff.staff_code }}</strong>
+        <div class="staff-mobile-hero-main">
+            <div class="staff-mobile-state-card">
+                <span class="staff-mobile-state-icon">{{ icon('clock') }}</span>
+                <div class="staff-mobile-state-copy">
+                    <small>Current status</small>
+                    <strong>{{ today_status.current_state }}</strong>
+                    <span>{{ today_status.rows|length }} event{{ '' if today_status.rows|length == 1 else 's' }} recorded today</span>
+                </div>
             </div>
-            <div class="detail-row">
-                <span>Department</span>
-                <strong>{{ staff.department }}</strong>
-            </div>
-            <div class="detail-row">
-                <span>Job Title</span>
-                <strong>{{ staff.role }}</strong>
-            </div>
-            <div class="detail-row">
-                <span>Access Role</span>
-                <strong>{{ staff.access_role }}</strong>
+            <div class="staff-mobile-mini-grid">
+                <article class="staff-mobile-mini-card">
+                    <small>Check In</small>
+                    <strong>{{ today_status.check_in_at|human_time if today_status.check_in_at else '--' }}</strong>
+                    <span>First clock recorded</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Check Out</small>
+                    <strong>{{ today_status.check_out_at|human_time if today_status.check_out_at else '--' }}</strong>
+                    <span>Latest checkout</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Worked</small>
+                    <strong>{{ today_status.worked_minutes }}</strong>
+                    <span>Net worked minutes</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Break</small>
+                    <strong>{{ today_status.total_break_minutes }}</strong>
+                    <span>Total break minutes</span>
+                </article>
             </div>
         </div>
-
-        <div class="action-grid">
-            {% for action in ['check_in', 'break_start', 'break_end', 'check_out'] %}
-                <form method="post" action="{{ url_for('app.staff_clock') }}" class="gps-form action-form">
-                    <input type="hidden" name="action" value="{{ action }}">
-                    <input type="hidden" name="latitude">
-                    <input type="hidden" name="longitude">
-                    <input type="hidden" name="gps_accuracy">
-                    <button class="{% if action in today_status.next_actions %}primary-button{% else %}text-link{% endif %}" type="submit" {% if action not in today_status.next_actions %}disabled{% endif %}>
-                        <span>{{ action|title_event }}</span>
-                    </button>
-                </form>
-            {% endfor %}
-        </div>
-        <p class="panel-note">
-            {% if location_policy.enabled %}
-            GPS access is required. You must be within {{ location_policy.radius_meters }} meters of {{ location_policy.location_name }} before an online clock action will be accepted.
-            {% else %}
-            Your browser will try to attach GPS coordinates automatically when available. If location is blocked, the action still records as a web event.
-            {% endif %}
-        </p>
     </article>
 
-    <article class="panel-card qr-panel">
-        <div class="panel-card-head">
+    <section class="staff-mobile-grid">
+        <article class="staff-mobile-panel staff-mobile-panel-main">
+            <div class="staff-mobile-panel-head">
+                <div>
+                    <p class="section-kicker">Clock Actions</p>
+                    <h3>Record your next attendance step</h3>
+                </div>
+                <span class="status-pill">{% if recommended_action %}Next: {{ recommended_action|title_event }}{% else %}Day complete{% endif %}</span>
+            </div>
+
+            <div class="staff-mobile-action-grid">
+                {% for action in ['check_in', 'break_start', 'break_end', 'check_out'] %}
+                    {% set action_enabled = action in today_status.next_actions %}
+                    {% set action_is_primary = action == recommended_action %}
+                    <form method="post" action="{{ url_for('app.staff_clock') }}" class="gps-form staff-mobile-action-form">
+                        <input type="hidden" name="action" value="{{ action }}">
+                        <input type="hidden" name="latitude">
+                        <input type="hidden" name="longitude">
+                        <input type="hidden" name="gps_accuracy">
+                        <button class="staff-mobile-action-btn {% if action_enabled and action_is_primary %}is-primary{% elif action_enabled %}is-secondary{% else %}is-disabled{% endif %}" type="submit" {% if not action_enabled %}disabled{% endif %}>
+                            <span class="staff-mobile-action-icon">
+                                {% if action == 'check_in' %}
+                                    {{ icon('check-circle') }}
+                                {% elif action == 'check_out' %}
+                                    {{ icon('logout') }}
+                                {% else %}
+                                    {{ icon('clock') }}
+                                {% endif %}
+                            </span>
+                            <span class="staff-mobile-action-copy">
+                                <strong>{{ action|title_event }}</strong>
+                                <small>
+                                    {% if action_enabled and action_is_primary %}
+                                        Recommended now
+                                    {% elif action_enabled %}
+                                        Available now
+                                    {% else %}
+                                        Not available yet
+                                    {% endif %}
+                                </small>
+                            </span>
+                        </button>
+                    </form>
+                {% endfor %}
+            </div>
+
+            <div class="staff-mobile-note-card">
+                <strong>Location policy</strong>
+                <p>
+                    {% if location_policy.enabled %}
+                    GPS access is required. You must be within {{ location_policy.radius_meters }} meters of {{ location_policy.location_name }} before an online clock action is accepted.
+                    {% else %}
+                    Your browser will try to attach GPS coordinates automatically. If location is blocked, the action still records as a web event.
+                    {% endif %}
+                </p>
+            </div>
+        </article>
+
+        <aside class="staff-mobile-side-stack">
+            <article class="staff-mobile-panel">
+                <div class="staff-mobile-panel-head">
+                    <div>
+                        <p class="section-kicker">Profile</p>
+                        <h3>Work details</h3>
+                    </div>
+                </div>
+                <div class="detail-stack">
+                    <div class="detail-row">
+                        <span>Staff Code</span>
+                        <strong>{{ staff.staff_code }}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Department</span>
+                        <strong>{{ staff.department }}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Job Title</span>
+                        <strong>{{ staff.role }}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Access Role</span>
+                        <strong>{{ staff.access_role }}</strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="staff-mobile-panel">
+                <div class="staff-mobile-panel-head">
+                    <div>
+                        <p class="section-kicker">QR Access</p>
+                        <h3>Quick mobile badge</h3>
+                    </div>
+                    <span class="status-pill">{{ icon('qr') }} Active</span>
+                </div>
+                <div class="staff-mobile-qr-frame">
+                    {{ mobile_qr_svg|safe }}
+                </div>
+                <p class="panel-note">Scan this code to reopen your personal quick-access attendance page.</p>
+                <div class="detail-row">
+                    <span>Quick URL</span>
+                    <strong class="truncate-value">{{ quick_url }}</strong>
+                </div>
+            </article>
+        </aside>
+    </section>
+
+    <section class="staff-mobile-grid">
+        <article class="staff-mobile-panel">
+            <div class="staff-mobile-panel-head">
+                <div>
+                    <p class="section-kicker">Location Zone</p>
+                    <h3>Approved online attendance area</h3>
+                </div>
+                <span class="staff-mobile-status-chip {% if location_policy.enabled %}is-warn{% else %}is-good{% endif %}">
+                    {% if location_policy.enabled %}Protected{% else %}Open{% endif %}
+                </span>
+            </div>
+            <div class="staff-mobile-mini-grid staff-mobile-policy-grid">
+                <article class="staff-mobile-mini-card">
+                    <small>Rule</small>
+                    <strong>{% if location_policy.enabled %}Approved work zone only{% else %}No location restriction{% endif %}</strong>
+                    <span>Attendance access policy</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Location</small>
+                    <strong>{{ location_policy.location_name }}</strong>
+                    <span>Configured work site</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Radius</small>
+                    <strong>{{ location_policy.radius_meters }} meters</strong>
+                    <span>Allowed online range</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Coordinates</small>
+                    <strong>
+                        {% if location_policy.is_configured %}
+                        {{ '%.5f'|format(location_policy.latitude) }}, {{ '%.5f'|format(location_policy.longitude) }}
+                        {% else %}
+                        Not configured
+                        {% endif %}
+                    </strong>
+                    <span>GPS reference point</span>
+                </article>
+            </div>
+            <p class="panel-note">{{ location_policy.summary }}</p>
+        </article>
+    </section>
+
+    <section class="staff-mobile-panel">
+        <div class="staff-mobile-panel-head">
             <div>
-                <p class="section-kicker">QR Access</p>
-                <h3>Quick mobile badge</h3>
+                <p class="section-kicker">Today's Timeline</p>
+                <h3>Your attendance activity for {{ today.strftime("%d %b %Y") }}</h3>
             </div>
-            <span class="status-pill">{{ icon('qr') }} Active</span>
+            <span class="status-pill">{{ today_status.rows|length }} events</span>
         </div>
-        <div class="qr-card">
-            {{ mobile_qr_svg|safe }}
-        </div>
-        <p class="panel-note">Scan this code to open your personal quick-access attendance page.</p>
-        <div class="detail-row">
-            <span>Quick URL</span>
-            <strong class="truncate-value">{{ quick_url }}</strong>
-        </div>
-    </article>
-</section>
-
-<section class="panel-card">
-    <div class="panel-card-head">
-        <div>
-            <p class="section-kicker">Location Policy</p>
-            <h3>Online attendance area</h3>
-        </div>
-        <span class="status-pill">{% if location_policy.enabled %}Protected{% else %}Open{% endif %}</span>
-    </div>
-    <div class="detail-stack detail-stack-grid">
-        <div class="detail-row">
-            <span>Rule</span>
-            <strong>{% if location_policy.enabled %}Approved work zone only{% else %}No location restriction{% endif %}</strong>
-        </div>
-        <div class="detail-row">
-            <span>Location</span>
-            <strong>{{ location_policy.location_name }}</strong>
-        </div>
-        <div class="detail-row">
-            <span>Radius</span>
-            <strong>{{ location_policy.radius_meters }} meters</strong>
-        </div>
-        <div class="detail-row">
-            <span>Coordinates</span>
-            <strong>
-                {% if location_policy.is_configured %}
-                {{ '%.5f'|format(location_policy.latitude) }}, {{ '%.5f'|format(location_policy.longitude) }}
-                {% else %}
-                Not configured
-                {% endif %}
-            </strong>
-        </div>
-    </div>
-    <p class="panel-note">{{ location_policy.summary }}</p>
-</section>
-
-<section class="panel-card">
-    <div class="panel-card-head">
-        <div>
-            <p class="section-kicker">Today's Timeline</p>
-            <h3>Your attendance events for {{ today.strftime("%d %b %Y") }}</h3>
-        </div>
-        <span class="status-pill">{{ today_status.rows|length }} events</span>
-    </div>
-    {% if today_status.rows %}
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Event</th>
-                        <th>Status</th>
-                        <th>Method</th>
-                        <th>Location</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in today_status.rows %}
-                    <tr>
-                        <td><strong>{{ row.event_type|title_event }}</strong></td>
-                        <td>{{ row.status_label }}</td>
-                        <td>{{ row.method }}</td>
-                        <td>
-                            {% if row.latitude is not none and row.longitude is not none %}
-                                <strong>{{ '%.5f'|format(row.latitude) }}, {{ '%.5f'|format(row.longitude) }}</strong>
-                            {% else %}
-                                <span class="cell-sub">No GPS captured</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ row.event_time|human_dt }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="empty-state">
-            <h3>No attendance recorded yet today.</h3>
-            <p>Use the action buttons above or the kiosk to start your attendance day.</p>
-        </div>
-    {% endif %}
+        {% if today_status.rows %}
+            <div class="staff-mobile-timeline">
+                {% for row in today_status.rows %}
+                <article class="staff-mobile-timeline-item">
+                    <div class="staff-mobile-timeline-head">
+                        <div>
+                            <strong>{{ row.event_type|title_event }}</strong>
+                            <span>{{ row.event_time|human_dt }}</span>
+                        </div>
+                        <span class="staff-mobile-status-chip is-neutral">{{ row.status_label }}</span>
+                    </div>
+                    <div class="staff-mobile-timeline-meta">
+                        <div>
+                            <small>Method</small>
+                            <strong>{{ row.method }}</strong>
+                        </div>
+                        <div>
+                            <small>Location</small>
+                            <strong>
+                                {% if row.latitude is not none and row.longitude is not none %}
+                                    {{ '%.5f'|format(row.latitude) }}, {{ '%.5f'|format(row.longitude) }}
+                                {% else %}
+                                    No GPS captured
+                                {% endif %}
+                            </strong>
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No attendance recorded yet today.</h3>
+                <p>Use one of the action buttons above to start your attendance day.</p>
+            </div>
+        {% endif %}
+    </section>
 </section>
 
 <script>

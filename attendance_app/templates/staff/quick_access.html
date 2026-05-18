@@ -2,58 +2,111 @@
 {% from "_icons.html" import icon %}
 
 {% block content %}
-<section class="center-stage">
-    <div class="auth-layout quick-access-layout">
-        <article class="panel-card auth-panel">
-            <p class="section-kicker">QR Quick Access</p>
-            <h1>{{ staff.first_name }} {{ staff.last_name }}</h1>
-            <p class="hero-subtitle">{{ staff.staff_code }} · {{ staff.department }} · {{ today_status.current_state }}</p>
+{% set recommended_action = today_status.next_actions[0] if today_status.next_actions else '' %}
+<section class="staff-mobile-shell staff-mobile-shell-compact">
+    <article class="staff-mobile-hero-card staff-mobile-hero-card-compact">
+        <div class="staff-mobile-hero-top">
+            <div class="staff-identity">
+                <div class="staff-photo staff-photo-result">
+                    {% if staff.photo_filename %}
+                        <img src="{{ url_for('app.staff_photo', filename=staff.photo_filename) }}" alt="{{ staff.first_name }} {{ staff.last_name }}">
+                    {% else %}
+                        <span>{{ staff.first_name[:1] }}{{ staff.last_name[:1] }}</span>
+                    {% endif %}
+                </div>
+                <div class="staff-mobile-hero-copy">
+                    <p class="section-kicker">QR Quick Access</p>
+                    <h1>{{ staff.first_name }} {{ staff.last_name }}</h1>
+                    <p>{{ staff.staff_code }} · {{ staff.department }} · {{ today_status.current_state }}</p>
+                </div>
+            </div>
+            <span class="staff-mobile-status-chip {% if location_policy.enabled %}is-warn{% else %}is-good{% endif %}">
+                {% if location_policy.enabled %}GPS Protected{% else %}Open Access{% endif %}
+            </span>
+        </div>
+    </article>
 
-            <div class="action-grid">
+    <section class="staff-mobile-grid staff-mobile-grid-single">
+        <article class="staff-mobile-panel staff-mobile-panel-main">
+            <div class="staff-mobile-panel-head">
+                <div>
+                    <p class="section-kicker">Quick Clocking</p>
+                    <h3>Use this QR page to record attendance</h3>
+                </div>
+                <span class="status-pill">{% if recommended_action %}Next: {{ recommended_action|title_event }}{% else %}Day complete{% endif %}</span>
+            </div>
+
+            <div class="staff-mobile-mini-grid">
+                <article class="staff-mobile-mini-card">
+                    <small>Check In</small>
+                    <strong>{{ today_status.check_in_at|human_time if today_status.check_in_at else '--' }}</strong>
+                    <span>First clock recorded</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Check Out</small>
+                    <strong>{{ today_status.check_out_at|human_time if today_status.check_out_at else '--' }}</strong>
+                    <span>Latest checkout</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Worked</small>
+                    <strong>{{ today_status.worked_minutes }}</strong>
+                    <span>Net worked minutes</span>
+                </article>
+                <article class="staff-mobile-mini-card">
+                    <small>Location Rule</small>
+                    <strong>{% if location_policy.enabled %}Restricted{% else %}Open{% endif %}</strong>
+                    <span>GPS attendance policy</span>
+                </article>
+            </div>
+
+            <div class="staff-mobile-action-grid">
                 {% for action in ['check_in', 'break_start', 'break_end', 'check_out'] %}
-                    <form method="post" class="gps-form action-form">
+                    {% set action_enabled = action in today_status.next_actions %}
+                    {% set action_is_primary = action == recommended_action %}
+                    <form method="post" class="gps-form staff-mobile-action-form">
                         <input type="hidden" name="action" value="{{ action }}">
                         <input type="hidden" name="latitude">
                         <input type="hidden" name="longitude">
                         <input type="hidden" name="gps_accuracy">
-                        <button class="{% if action in today_status.next_actions %}primary-button{% else %}text-link{% endif %}" type="submit" {% if action not in today_status.next_actions %}disabled{% endif %}>
-                            <span>{{ action|title_event }}</span>
+                        <button class="staff-mobile-action-btn {% if action_enabled and action_is_primary %}is-primary{% elif action_enabled %}is-secondary{% else %}is-disabled{% endif %}" type="submit" {% if not action_enabled %}disabled{% endif %}>
+                            <span class="staff-mobile-action-icon">
+                                {% if action == 'check_in' %}
+                                    {{ icon('check-circle') }}
+                                {% elif action == 'check_out' %}
+                                    {{ icon('logout') }}
+                                {% else %}
+                                    {{ icon('clock') }}
+                                {% endif %}
+                            </span>
+                            <span class="staff-mobile-action-copy">
+                                <strong>{{ action|title_event }}</strong>
+                                <small>
+                                    {% if action_enabled and action_is_primary %}
+                                        Recommended now
+                                    {% elif action_enabled %}
+                                        Available now
+                                    {% else %}
+                                        Not available yet
+                                    {% endif %}
+                                </small>
+                            </span>
                         </button>
                     </form>
                 {% endfor %}
             </div>
-            <p class="panel-note">
-                {% if location_policy.enabled %}
-                GPS is required for this QR action. You must be inside {{ location_policy.location_name }} within {{ location_policy.radius_meters }} meters.
-                {% else %}
-                This QR page will attach your GPS coordinates automatically when your browser allows location access.
-                {% endif %}
-            </p>
-        </article>
 
-        <article class="panel-card auth-side-panel">
-            <p class="section-kicker">Today's Snapshot</p>
-            <h3>Attendance state</h3>
-            <div class="detail-stack">
-                <div class="detail-row">
-                    <span>Check In</span>
-                    <strong>{{ today_status.check_in_at|human_time if today_status.check_in_at else '--' }}</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Check Out</span>
-                    <strong>{{ today_status.check_out_at|human_time if today_status.check_out_at else '--' }}</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Worked Minutes</span>
-                    <strong>{{ today_status.worked_minutes }}</strong>
-                </div>
-                <div class="detail-row">
-                    <span>Location Rule</span>
-                    <strong>{% if location_policy.enabled %}Restricted{% else %}Open{% endif %}</strong>
-                </div>
+            <div class="staff-mobile-note-card">
+                <strong>Location requirement</strong>
+                <p>
+                    {% if location_policy.enabled %}
+                    GPS is required for this QR action. You must be inside {{ location_policy.location_name }} within {{ location_policy.radius_meters }} meters.
+                    {% else %}
+                    This QR page will attach your GPS coordinates automatically when your browser allows location access.
+                    {% endif %}
+                </p>
             </div>
         </article>
-    </div>
+    </section>
 </section>
 
 <script>

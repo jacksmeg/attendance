@@ -26,59 +26,71 @@
         <form method="post" class="staff-login-form" id="staff-login-form">
             <input type="hidden" name="next" value="{{ next_url }}">
             <input type="hidden" name="selfie_data" id="staff-login-selfie-data">
-            <label class="staff-login-field">
-                <span>Staff Number or Email Address</span>
-                <input type="text" name="staff_identifier" placeholder="Enter your staff number or email" autocomplete="username" required>
-                <small>Use your staff code like `EMP-001` or the email saved on your staff profile.</small>
-            </label>
+            <section class="staff-login-block">
+                <div class="staff-login-block-head">
+                    <strong>Account Details</strong>
+                    <span>Use the same details assigned on your staff profile.</span>
+                </div>
 
-            <div class="staff-login-secret-panel is-active" data-panel="password">
                 <label class="staff-login-field">
-                    <span>Password</span>
-                    <div class="staff-login-secret-row">
-                        <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password">
-                        <button class="staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
-                            {{ icon('eye') }}
-                        </button>
-                    </div>
+                    <span>Staff Number or Email Address</span>
+                    <input type="text" name="staff_identifier" placeholder="Enter your staff number or email" autocomplete="username" required>
+                    <small>Use your staff code like `EMP-001` or the email saved on your staff profile.</small>
                 </label>
-            </div>
 
-            <div class="staff-login-secret-panel" data-panel="pin" hidden>
-                <label class="staff-login-field">
-                    <span>PIN</span>
-                    <div class="staff-login-secret-row">
-                        <input type="password" name="pin" placeholder="Enter your PIN" inputmode="numeric" autocomplete="one-time-code">
-                        <button class="staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">
-                            {{ icon('eye') }}
-                        </button>
-                    </div>
-                    <small>Use the PIN assigned to your staff profile.</small>
-                </label>
-            </div>
+                <div class="staff-login-secret-panel is-active" data-panel="password">
+                    <label class="staff-login-field">
+                        <span>Password</span>
+                        <div class="staff-login-secret-row">
+                            <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password">
+                            <button class="staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
+                                {{ icon('eye') }}
+                            </button>
+                        </div>
+                    </label>
+                </div>
 
-            <section class="staff-login-camera-card" aria-label="Selfie audit">
+                <div class="staff-login-secret-panel" data-panel="pin" hidden>
+                    <label class="staff-login-field">
+                        <span>PIN</span>
+                        <div class="staff-login-secret-row">
+                            <input type="password" name="pin" placeholder="Enter your PIN" inputmode="numeric" autocomplete="one-time-code">
+                            <button class="staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">
+                                {{ icon('eye') }}
+                            </button>
+                        </div>
+                        <small>Use the PIN assigned to your staff profile.</small>
+                    </label>
+                </div>
+            </section>
+
+            <section class="staff-login-block staff-login-camera-card" aria-label="Selfie audit">
                 <div class="staff-login-camera-head">
                     <div>
                         <strong>Selfie Audit Capture</strong>
-                        <p>Before staff login completes, the system captures one live selfie for audit evidence only.</p>
+                        <p>Open the camera only when you are ready, then tap capture once before signing in.</p>
                     </div>
-                    <span class="staff-login-camera-badge">No face recognition</span>
+                    <span class="staff-login-camera-badge">Audit only</span>
                 </div>
 
-                <div class="staff-login-camera-stage">
-                    <video id="staff-login-video" class="staff-login-video" autoplay playsinline muted></video>
+                <div class="staff-login-camera-stage is-idle" id="staff-login-camera-stage">
+                    <div class="staff-login-camera-placeholder" id="staff-login-camera-placeholder">
+                        <span class="staff-login-camera-placeholder-icon">{{ icon('mobile') }}</span>
+                        <strong>Camera is off</strong>
+                        <p>Tap <em>Open Camera</em> when you want to take your selfie.</p>
+                    </div>
+                    <video id="staff-login-video" class="staff-login-video" autoplay playsinline muted hidden></video>
                     <img id="staff-login-preview" class="staff-login-preview" alt="Captured selfie preview" hidden>
-                    <div class="staff-login-camera-overlay" id="staff-login-camera-overlay">
-                        <span>Camera loading...</span>
+                    <div class="staff-login-camera-overlay" id="staff-login-camera-overlay" hidden>
+                        <span>Live camera ready</span>
                     </div>
                 </div>
 
                 <canvas id="staff-login-canvas" hidden></canvas>
 
                 <div class="staff-login-camera-actions">
-                    <button class="staff-login-camera-button" type="button" id="staff-login-start-camera">Turn On Camera</button>
-                    <button class="staff-login-camera-button is-primary" type="button" id="staff-login-capture-selfie">Capture Selfie</button>
+                    <button class="staff-login-camera-button" type="button" id="staff-login-start-camera">Open Camera</button>
+                    <button class="staff-login-camera-button is-primary" type="button" id="staff-login-capture-selfie" disabled>Capture Selfie</button>
                     <button class="staff-login-camera-button" type="button" id="staff-login-retake-selfie" hidden>Retake Selfie</button>
                 </div>
 
@@ -113,6 +125,8 @@
     const preview = document.querySelector("#staff-login-preview");
     const canvas = document.querySelector("#staff-login-canvas");
     const cameraNote = document.querySelector("#staff-login-camera-note");
+    const cameraStage = document.querySelector("#staff-login-camera-stage");
+    const cameraPlaceholder = document.querySelector("#staff-login-camera-placeholder");
     const cameraOverlay = document.querySelector("#staff-login-camera-overlay");
     const startCameraButton = document.querySelector("#staff-login-start-camera");
     const captureSelfieButton = document.querySelector("#staff-login-capture-selfie");
@@ -169,6 +183,9 @@
         if (!cameraStream) return;
         cameraStream.getTracks().forEach((track) => track.stop());
         cameraStream = null;
+        if (captureSelfieButton) {
+            captureSelfieButton.disabled = true;
+        }
     };
 
     const startCamera = async () => {
@@ -189,12 +206,20 @@
                 audio: false
             });
             video.srcObject = cameraStream;
-            if (cameraOverlay) {
-                cameraOverlay.hidden = true;
-            }
-            preview.hidden = true;
             video.hidden = false;
+            preview.hidden = true;
+            if (cameraPlaceholder) {
+                cameraPlaceholder.hidden = true;
+            }
+            if (cameraOverlay) {
+                cameraOverlay.hidden = false;
+            }
+            if (cameraStage) {
+                cameraStage.classList.remove("is-idle");
+                cameraStage.classList.add("is-live");
+            }
             retakeSelfieButton.hidden = true;
+            captureSelfieButton.disabled = false;
             updateCameraNote("Camera is ready. Capture one selfie before signing in.");
             return true;
         } catch (error) {
@@ -227,6 +252,15 @@
         preview.hidden = false;
         video.hidden = true;
         retakeSelfieButton.hidden = false;
+        startCameraButton.textContent = "Open Camera Again";
+        captureSelfieButton.disabled = true;
+        if (cameraOverlay) {
+            cameraOverlay.hidden = true;
+        }
+        if (cameraStage) {
+            cameraStage.classList.remove("is-live");
+            cameraStage.classList.add("is-captured");
+        }
         stopCamera();
         updateCameraNote("Selfie captured. You can now sign in.");
         return true;
@@ -249,24 +283,27 @@
         }
         preview.hidden = true;
         preview.removeAttribute("src");
+        if (cameraPlaceholder) {
+            cameraPlaceholder.hidden = true;
+        }
         await startCamera();
     });
 
-    form?.addEventListener("submit", async (event) => {
+    form?.addEventListener("submit", (event) => {
         if (selfieInput?.value) {
             return;
         }
         event.preventDefault();
-        const ready = await startCamera();
-        if (!ready) {
-            return;
+        if (cameraStage) {
+            cameraStage.scrollIntoView({ behavior: "smooth", block: "center" });
         }
-        if (captureSelfie()) {
-            form.requestSubmit();
+        if (cameraPlaceholder && cameraPlaceholder.hidden) {
+            updateCameraNote("Capture your selfie before signing in.", true);
+        } else {
+            updateCameraNote("Open the camera, take one selfie, then sign in.", true);
         }
     });
 
     window.addEventListener("beforeunload", stopCamera);
-    startCamera();
 </script>
 {% endblock %}

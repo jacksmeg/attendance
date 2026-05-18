@@ -744,7 +744,7 @@ class AttendanceAppTests(unittest.TestCase):
             follow_redirects=True,
         )
         self.assertEqual(login_response.status_code, 200)
-        self.assertIn(b"attendance for today", login_response.data)
+        self.assertIn(b"Clock Actions", login_response.data)
 
         for payload in (
             {
@@ -880,7 +880,7 @@ class AttendanceAppTests(unittest.TestCase):
             follow_redirects=True,
         )
         self.assertEqual(login_response.status_code, 200)
-        self.assertIn(b"attendance for today", login_response.data)
+        self.assertIn(b"Clock Actions", login_response.data)
 
     def test_staff_login_requires_selfie_and_creates_audit_record(self) -> None:
         missing_selfie_response = self.client.post(
@@ -897,7 +897,7 @@ class AttendanceAppTests(unittest.TestCase):
             follow_redirects=True,
         )
         self.assertEqual(login_response.status_code, 200)
-        self.assertIn(b"attendance for today", login_response.data)
+        self.assertIn(b"Clock Actions", login_response.data)
 
         self.client.get("/logout", follow_redirects=True)
         self.client.post(
@@ -1000,7 +1000,7 @@ class AttendanceAppTests(unittest.TestCase):
         settings_response = self.client.get("/admin/settings", follow_redirects=True)
         self.assertEqual(settings_response.status_code, 200)
         self.assertIn(b"You are not authorized", settings_response.data)
-        self.assertIn(b"attendance for today", settings_response.data)
+        self.assertIn(b"Clock Actions", settings_response.data)
 
     def test_staff_form_includes_hospital_shift_presets(self) -> None:
         self.client.post(
