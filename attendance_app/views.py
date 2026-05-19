@@ -89,9 +89,10 @@ from .services.settings import (
     WORKDAY_OPTIONS,
     admin_password_matches,
     get_admin_security,
+    get_admin_security_for_database,
     get_app_settings,
     save_admin_password,
-    save_admin_password_for_database,
+    save_admin_credentials_for_database,
     save_app_settings,
 )
 from .services.staff import (
@@ -631,12 +632,13 @@ self.addEventListener("fetch", (event) => {{
     def admin_login():
         settings = current_app.config["APP_SETTINGS"]
         live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
+        admin_security = get_admin_security(default_username=settings.admin_username)
         if request.method == "POST":
             username = request.form.get("username", "").strip()
             password = request.form.get("password", "")
             next_url = request.form.get("next") or url_for("app.admin_dashboard")
             if (
-                username == settings.admin_username
+                username == admin_security["admin_username"]
                 and admin_password_matches(password, settings.admin_password)
             ):
                 start_institution_admin_session(username, live_settings["organization_name"])
@@ -754,6 +756,7 @@ self.addEventListener("fetch", (event) => {{
             "display_name": "",
             "hostnames": "",
             "is_default": False,
+            "admin_username": "admin",
             "admin_password": "",
             "confirm_admin_password": "",
             "plan_name": "Standard",
@@ -798,9 +801,10 @@ self.addEventListener("fetch", (event) => {{
                             license_notes=create_form["license_notes"],
                         )
                         init_db(created_organization.database_path)
-                        save_admin_password_for_database(
+                        save_admin_credentials_for_database(
                             created_organization.database_path,
-                            create_form["admin_password"],
+                            username=create_form["admin_username"],
+                            password=create_form["admin_password"],
                         )
                     except ValueError as exc:
                         flash(str(exc), "error")
@@ -839,9 +843,15 @@ self.addEventListener("fetch", (event) => {{
                             license_notes=update_form["license_notes"],
                         )
                         if update_form["admin_password"]:
-                            save_admin_password_for_database(
+                            save_admin_credentials_for_database(
                                 updated_organization.database_path,
-                                update_form["admin_password"],
+                                username=update_form["admin_username"],
+                                password=update_form["admin_password"],
+                            )
+                        else:
+                            save_admin_credentials_for_database(
+                                updated_organization.database_path,
+                                username=update_form["admin_username"],
                             )
                     except ValueError as exc:
                         flash(str(exc), "error")
@@ -2738,12 +2748,17 @@ def _platform_organization_rows(
     update_forms = update_forms or {}
     for organization in organizations:
         hostnames = list(organization.hostnames)
+        admin_security = get_admin_security_for_database(
+            organization.database_path,
+            default_username=current_app.config["APP_SETTINGS"].admin_username,
+        )
         form = update_forms.get(organization.slug) or {
             "slug": organization.slug,
             "display_name": organization.display_name,
             "hostnames": "\n".join(hostnames),
             "hostnames_list": hostnames,
             "is_default": organization.is_default,
+            "admin_username": admin_security["admin_username"],
             "admin_password": "",
             "confirm_admin_password": "",
             "plan_name": organization.plan_name,
@@ -2773,6 +2788,7 @@ def _platform_organization_rows(
                 "hostnames": hostnames,
                 "primary_url": primary_url,
                 "login_url": f"{primary_url}/admin/login" if primary_url else "",
+                "admin_username": admin_security["admin_username"],
                 "form": form,
                 "plan_name": organization.plan_name,
                 "license_status": organization.license_status,
@@ -2819,6 +2835,7 @@ def _read_platform_organization_form(form) -> dict[str, Any]:
         "hostnames": hostnames_raw,
         "hostnames_list": hostnames_list,
         "is_default": form.get("is_default") in {"on", "true", "1", "yes"},
+        "admin_username": str(form.get("admin_username", "") or "").strip(),
         "admin_password": str(form.get("admin_password", "") or ""),
         "confirm_admin_password": str(form.get("confirm_admin_password", "") or ""),
         "plan_name": str(form.get("plan_name", "") or "").strip() or "Standard",
@@ -2847,6 +2864,8 @@ def _validate_platform_organization_form(
         return "Use only letters, numbers, and dashes for the organization slug."
     if not str(form_values.get("display_name", "")).strip():
         return "Enter the institution name."
+    if not str(form_values.get("admin_username", "")).strip():
+        return "Enter the institution admin username."
     hostnames = form_values.get("hostnames_list", [])
     if not hostnames:
         return "Enter at least one domain or subdomain for the institution."

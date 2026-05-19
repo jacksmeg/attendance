@@ -37,6 +37,7 @@ DEFAULT_SETTINGS = {
 }
 
 ADMIN_PASSWORD_HASH_KEY = "platform_admin_password_hash"
+ADMIN_USERNAME_KEY = "institution_admin_username"
 
 
 def get_app_settings(default_app_name: str = "") -> dict[str, Any]:
@@ -98,13 +99,34 @@ def save_app_settings(data: Mapping[str, Any], default_app_name: str = "") -> di
 
 def get_admin_security(default_username: str = "") -> dict[str, Any]:
     db = get_db()
+    return _read_admin_security(db, default_username=default_username)
+
+
+def get_admin_security_for_database(database_path: Path, default_username: str = "") -> dict[str, Any]:
+    db = sqlite3.connect(Path(database_path).resolve())
+    db.row_factory = sqlite3.Row
+    try:
+        return _read_admin_security(db, default_username=default_username)
+    finally:
+        db.close()
+
+
+def _read_admin_security(db, default_username: str = "") -> dict[str, Any]:
+    username_row = db.execute(
+        "SELECT value, updated_at FROM app_settings WHERE key = ?",
+        (ADMIN_USERNAME_KEY,),
+    ).fetchone()
     row = db.execute(
         "SELECT value, updated_at FROM app_settings WHERE key = ?",
         (ADMIN_PASSWORD_HASH_KEY,),
     ).fetchone()
+    stored_username = str(username_row["value"]).strip() if username_row and username_row["value"] else ""
+    admin_username = stored_username or default_username
     return {
-        "admin_username": default_username,
+        "admin_username": admin_username,
+        "username_is_custom": bool(stored_username and stored_username != default_username),
         "password_is_custom": bool(row and row["value"]),
+        "username_updated_at": str(username_row["updated_at"]) if username_row and username_row["updated_at"] else "",
         "password_updated_at": str(row["updated_at"]) if row and row["updated_at"] else "",
     }
 
@@ -152,6 +174,37 @@ def save_admin_password_for_database(database_path: Path, new_password: str) -> 
             hash_secret(new_password),
             timestamp=datetime.now().isoformat(timespec="seconds"),
         )
+        db.commit()
+    finally:
+        db.close()
+
+
+def save_admin_credentials_for_database(
+    database_path: Path,
+    *,
+    username: str,
+    password: str | None = None,
+) -> None:
+    cleaned_username = str(username or "").strip()
+    if not cleaned_username:
+        raise ValueError("Institution admin username is required.")
+
+    db = sqlite3.connect(Path(database_path).resolve())
+    try:
+        timestamp = datetime.now().isoformat(timespec="seconds")
+        _upsert_setting(
+            db,
+            ADMIN_USERNAME_KEY,
+            cleaned_username,
+            timestamp=timestamp,
+        )
+        if password:
+            _upsert_setting(
+                db,
+                ADMIN_PASSWORD_HASH_KEY,
+                hash_secret(password),
+                timestamp=timestamp,
+            )
         db.commit()
     finally:
         db.close()

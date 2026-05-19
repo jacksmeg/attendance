@@ -42,6 +42,10 @@
                     <small class="admin-side-note">Enter one hostname per line. The first hostname becomes the main login link for that institution.</small>
                 </label>
                 <label class="admin-field">
+                    <span>Institution Admin Username</span>
+                    <input type="text" name="admin_username" value="{{ create_form.admin_username }}" placeholder="admin" required>
+                </label>
+                <label class="admin-field">
                     <span>Plan Name</span>
                     <input type="text" name="plan_name" value="{{ create_form.plan_name }}" placeholder="Standard" required>
                 </label>
@@ -148,6 +152,10 @@
                             {% else %}
                             <strong>No domain assigned yet</strong>
                             {% endif %}
+                        </div>
+                        <div class="platform-org-meta">
+                            <span>Institution Admin</span>
+                            <strong>{{ organization.admin_username }}</strong>
                         </div>
                         <div class="platform-org-meta">
                             <span>Database</span>
@@ -286,6 +294,10 @@
                             <textarea name="hostnames" rows="3" required>{{ organization.form.hostnames }}</textarea>
                         </label>
                         <label class="admin-field">
+                            <span>Institution Admin Username</span>
+                            <input type="text" name="admin_username" value="{{ organization.form.admin_username }}" required>
+                        </label>
+                        <label class="admin-field">
                             <span>Plan Name</span>
                             <input type="text" name="plan_name" value="{{ organization.form.plan_name }}" required>
                         </label>
@@ -405,11 +417,11 @@
                 </div>
                 <div class="admin-note-item">
                     <strong>3. Set admin password</strong>
-                    <span>Choose the initial institution admin password during provisioning or reset it later.</span>
+                    <span>Choose the institution admin username and password during provisioning or reset them later.</span>
                 </div>
                 <div class="admin-note-item">
                     <strong>4. Open the customer portal</strong>
-                    <span>Use the generated institution login link to access their isolated workspace.</span>
+                    <span>The institution signs into its own portal with its own admin credentials and manages only its own settings, staff, branding, and reports.</span>
                 </div>
             </div>
         </article>

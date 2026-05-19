@@ -159,6 +159,7 @@ class AttendanceAppTests(unittest.TestCase):
                 "display_name": "Mercy Hospital",
                 "slug": "mercy-hospital",
                 "hostnames": "attendance.mercy.example",
+                "admin_username": "mercyadmin",
                 "admin_password": "Mercy@1234",
                 "confirm_admin_password": "Mercy@1234",
                 "is_default": "",
@@ -172,7 +173,7 @@ class AttendanceAppTests(unittest.TestCase):
         institution_login = self.client.post(
             "/admin/login",
             base_url="https://attendance.mercy.example",
-            data={"username": "boss", "password": "Mercy@1234"},
+            data={"username": "mercyadmin", "password": "Mercy@1234"},
             follow_redirects=True,
         )
         self.assertEqual(institution_login.status_code, 200)
@@ -203,6 +204,7 @@ class AttendanceAppTests(unittest.TestCase):
                 "display_name": "Cedar Clinic",
                 "slug": "cedar-clinic",
                 "hostnames": "attendance.cedar.example",
+                "admin_username": "cedaradmin",
                 "plan_name": "Enterprise Care",
                 "license_status": "trial",
                 "expires_on": expiry_date,
