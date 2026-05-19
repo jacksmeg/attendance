@@ -154,8 +154,8 @@
                 <div class="staff-login-camera-stage is-idle" id="staff-login-camera-stage">
                     <div class="staff-login-camera-placeholder" id="staff-login-camera-placeholder">
                         <span class="staff-login-camera-placeholder-icon">{{ icon('mobile') }}</span>
-                        <strong>Camera is off</strong>
-                        <p>Tap <em>Open Camera</em> when you are ready to take your selfie.</p>
+                        <strong id="staff-login-camera-placeholder-title">Camera is off</strong>
+                        <p id="staff-login-camera-placeholder-text">Tap <em>Open Camera</em> when you are ready to take your selfie.</p>
                     </div>
                     <video id="staff-login-video" class="staff-login-video" autoplay playsinline muted hidden></video>
                     <img id="staff-login-preview" class="staff-login-preview" alt="Captured selfie preview" hidden>
@@ -202,6 +202,8 @@
     const cameraNote = document.querySelector("#staff-login-camera-note");
     const cameraStage = document.querySelector("#staff-login-camera-stage");
     const cameraPlaceholder = document.querySelector("#staff-login-camera-placeholder");
+    const cameraPlaceholderTitle = document.querySelector("#staff-login-camera-placeholder-title");
+    const cameraPlaceholderText = document.querySelector("#staff-login-camera-placeholder-text");
     const cameraOverlay = document.querySelector("#staff-login-camera-overlay");
     const startCameraButton = document.querySelector("#staff-login-start-camera");
     const captureSelfieButton = document.querySelector("#staff-login-capture-selfie");
@@ -263,6 +265,18 @@
         }
     };
 
+    const setCameraPlaceholder = (title, message, success = false) => {
+        if (cameraPlaceholderTitle) {
+            cameraPlaceholderTitle.textContent = title;
+        }
+        if (cameraPlaceholderText) {
+            cameraPlaceholderText.innerHTML = message;
+        }
+        if (cameraPlaceholder) {
+            cameraPlaceholder.classList.toggle("is-success", success);
+        }
+    };
+
     const startCamera = async () => {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !video) {
             updateCameraNote("This browser does not support camera access for selfie audit.", true);
@@ -283,6 +297,7 @@
             video.srcObject = cameraStream;
             video.hidden = false;
             preview.hidden = true;
+            preview.removeAttribute("src");
             if (cameraPlaceholder) {
                 cameraPlaceholder.hidden = true;
             }
@@ -290,11 +305,13 @@
                 cameraOverlay.hidden = false;
             }
             if (cameraStage) {
-                cameraStage.classList.remove("is-idle", "is-captured");
+                cameraStage.classList.remove("is-idle", "is-captured", "is-confirmed");
                 cameraStage.classList.add("is-live");
             }
+            setCameraPlaceholder("Camera is off", "Tap <em>Open Camera</em> when you are ready to take your selfie.");
             retakeSelfieButton.hidden = true;
             captureSelfieButton.disabled = false;
+            startCameraButton.textContent = "Open Camera";
             updateCameraNote("Camera is ready. Capture one selfie before signing in.");
             return true;
         } catch (error) {
@@ -323,18 +340,22 @@
         context.drawImage(video, 0, 0, width, height);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
         selfieInput.value = dataUrl;
-        preview.src = dataUrl;
-        preview.hidden = false;
         video.hidden = true;
+        preview.hidden = true;
+        preview.removeAttribute("src");
         retakeSelfieButton.hidden = false;
-        startCameraButton.textContent = "Open Camera Again";
+        startCameraButton.textContent = "Open Camera";
         captureSelfieButton.disabled = true;
+        if (cameraPlaceholder) {
+            cameraPlaceholder.hidden = false;
+        }
+        setCameraPlaceholder("Selfie captured", "Your selfie was saved successfully. Tap <em>Retake Selfie</em> if you want to take another one.", true);
         if (cameraOverlay) {
             cameraOverlay.hidden = true;
         }
         if (cameraStage) {
             cameraStage.classList.remove("is-live");
-            cameraStage.classList.add("is-captured");
+            cameraStage.classList.add("is-confirmed");
         }
         stopCamera();
         updateCameraNote("Selfie captured. You can now sign in.");
@@ -361,6 +382,7 @@
         if (cameraPlaceholder) {
             cameraPlaceholder.hidden = true;
         }
+        setCameraPlaceholder("Camera is off", "Tap <em>Open Camera</em> when you are ready to take your selfie.");
         await startCamera();
     });
 

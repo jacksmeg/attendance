@@ -3884,6 +3884,12 @@ html[data-theme="dark"] .auth-section-card {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
+.staff-login-minimal-body .auth-input-shell {
+    background: #ffffff;
+    border-color: rgba(214, 221, 229, 0.96);
+    box-shadow: 0 2px 8px rgba(27, 38, 59, 0.04);
+}
+
 .auth-input-shell:focus-within {
     border-color: rgba(36, 99, 255, 0.44);
     box-shadow:
@@ -3903,8 +3909,16 @@ html[data-theme="dark"] .auth-section-card {
     font-family: inherit;
 }
 
+.staff-login-minimal-body .auth-input-shell input {
+    color: #18263a;
+}
+
 .auth-input-shell input::placeholder {
     color: color-mix(in srgb, var(--auth-muted) 75%, white 25%);
+}
+
+.staff-login-minimal-body .auth-input-shell input::placeholder {
+    color: #8a97aa;
 }
 
 .auth-input-shell--action input {
@@ -3931,6 +3945,10 @@ html[data-theme="dark"] .auth-section-card {
     background: rgba(36, 99, 255, 0.08);
     color: var(--auth-accent-strong);
     outline: none;
+}
+
+.staff-login-minimal-body .auth-input-action {
+    color: #5f6f85;
 }
 
 .auth-helper {
@@ -4071,9 +4089,20 @@ html[data-theme="dark"] .auth-mode-tab.is-active {
     background: #111823;
 }
 
+.staff-login-camera-stage.is-confirmed {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(180deg, #f4fbef, #e7f7dc);
+}
+
 html[data-theme="dark"] .staff-login-camera-stage {
     border-color: rgba(84, 105, 141, 0.3);
     background: linear-gradient(180deg, #0f1b2e 0%, #0b1525 100%);
+}
+
+html[data-theme="dark"] .staff-login-camera-stage.is-confirmed {
+    background: linear-gradient(180deg, #f4fbef, #e7f7dc);
+    border-color: rgba(180, 214, 162, 0.48);
 }
 
 .staff-login-camera-placeholder {
@@ -4104,6 +4133,11 @@ html[data-theme="dark"] .staff-login-camera-stage {
     border-radius: 20px;
     background: var(--auth-accent-soft);
     color: var(--auth-accent-strong);
+}
+
+.staff-login-camera-placeholder.is-success .staff-login-camera-placeholder-icon {
+    background: rgba(43, 164, 0, 0.14);
+    color: #2b9800;
 }
 
 .staff-login-video,
@@ -4148,6 +4182,12 @@ html[data-theme="dark"] .staff-login-camera-stage {
 
 html[data-theme="dark"] .staff-login-camera-note.is-error {
     color: #ff8e8e;
+}
+
+html[data-theme="dark"] .staff-login-camera-stage.is-confirmed .staff-login-camera-placeholder,
+html[data-theme="dark"] .staff-login-camera-stage.is-confirmed .staff-login-camera-placeholder strong,
+html[data-theme="dark"] .staff-login-camera-stage.is-confirmed .staff-login-camera-placeholder p {
+    color: #203018;
 }
 
 .auth-detail-list {
