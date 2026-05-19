@@ -169,20 +169,25 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(create_response.status_code, 200)
         self.assertIn(b"Mercy Hospital was provisioned successfully", create_response.data)
         self.assertIn(b"attendance.mercy.example", create_response.data)
+        self.assertIn(b"mercyadmin", create_response.data)
+        self.assertIn(b"/portal/mercy-hospital/admin/login", create_response.data)
+
+        institution_login = self.client.get(
+            "/portal/mercy-hospital/admin/login",
+            follow_redirects=True,
+        )
+        self.assertEqual(institution_login.status_code, 200)
+        self.assertIn(b"Mercy Hospital", institution_login.data)
 
         institution_login = self.client.post(
             "/admin/login",
-            base_url="https://attendance.mercy.example",
             data={"username": "mercyadmin", "password": "Mercy@1234"},
             follow_redirects=True,
         )
         self.assertEqual(institution_login.status_code, 200)
         self.assertIn(b"Attendance Overview", institution_login.data)
 
-        branded_staff_login = self.client.get(
-            "/staff/login",
-            base_url="https://attendance.mercy.example",
-        )
+        branded_staff_login = self.client.get("/portal/mercy-hospital/staff/login", follow_redirects=True)
         self.assertEqual(branded_staff_login.status_code, 200)
         self.assertIn(b"Mercy Hospital", branded_staff_login.data)
 

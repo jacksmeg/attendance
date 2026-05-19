@@ -93,7 +93,12 @@ def start_platform_admin_session(username: str) -> None:
     session["managed_department"] = ""
 
 
-def start_institution_admin_session(username: str, organization_name: str = "") -> None:
+def start_institution_admin_session(
+    username: str,
+    organization_name: str = "",
+    *,
+    organization_slug: str = "",
+) -> None:
     clear_user_session()
     session["admin_authenticated"] = True
     session["staff_authenticated"] = False
@@ -102,9 +107,11 @@ def start_institution_admin_session(username: str, organization_name: str = "") 
     session["display_name"] = organization_name or "Admin User"
     session["access_role"] = SUPER_ADMIN
     session["managed_department"] = ""
+    session["organization_slug"] = organization_slug
+    session["pending_organization_slug"] = organization_slug
 
 
-def start_staff_session(staff: dict[str, object]) -> None:
+def start_staff_session(staff: dict[str, object], *, organization_slug: str = "") -> None:
     access_role = normalize_access_role(str(staff.get("access_role", STAFF)))
     full_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip() or str(
         staff.get("staff_code", "Staff")
@@ -121,6 +128,8 @@ def start_staff_session(staff: dict[str, object]) -> None:
     session["admin_authenticated"] = access_role in ADMIN_PANEL_ROLES
     session["admin_username"] = full_name if access_role in ADMIN_PANEL_ROLES else ""
     session["is_platform_admin"] = False
+    session["organization_slug"] = organization_slug
+    session["pending_organization_slug"] = organization_slug
 
 
 def current_access_role() -> str:

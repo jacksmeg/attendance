@@ -302,6 +302,24 @@ def register_routes(app: Flask) -> None:
             next_url=request.args.get("next", ""),
         )
 
+    @bp.route("/portal/<slug>/admin/login")
+    def portal_admin_login(slug: str):
+        organization = get_organization_by_slug(current_app.config["APP_SETTINGS"], slug)
+        if not organization:
+            flash("That institution portal could not be found.", "error")
+            return redirect(url_for("app.home"))
+        session["pending_organization_slug"] = organization.slug
+        return redirect(url_for("app.admin_login"))
+
+    @bp.route("/portal/<slug>/staff/login")
+    def portal_staff_login(slug: str):
+        organization = get_organization_by_slug(current_app.config["APP_SETTINGS"], slug)
+        if not organization:
+            flash("That institution portal could not be found.", "error")
+            return redirect(url_for("app.home"))
+        session["pending_organization_slug"] = organization.slug
+        return redirect(url_for("app.staff_login"))
+
     @bp.route("/health")
     def health():
         provider = build_provider(current_app.config["APP_SETTINGS"])
@@ -631,6 +649,7 @@ self.addEventListener("fetch", (event) => {{
     @bp.route("/admin/login", methods=["GET", "POST"])
     def admin_login():
         settings = current_app.config["APP_SETTINGS"]
+        organization = get_current_organization()
         live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
         admin_security = get_admin_security(default_username=settings.admin_username)
         if request.method == "POST":
@@ -641,7 +660,11 @@ self.addEventListener("fetch", (event) => {{
                 username == admin_security["admin_username"]
                 and admin_password_matches(password, settings.admin_password)
             ):
-                start_institution_admin_session(username, live_settings["organization_name"])
+                start_institution_admin_session(
+                    username,
+                    live_settings["organization_name"],
+                    organization_slug=organization.slug,
+                )
                 log_admin_activity(
                     actor_type="user",
                     actor_name=live_settings["organization_name"] or username,
@@ -663,6 +686,7 @@ self.addEventListener("fetch", (event) => {{
 
     @bp.route("/staff/login", methods=["GET", "POST"])
     def staff_login():
+        organization = get_current_organization()
         if request.method == "POST":
             staff_identifier = request.form.get("staff_identifier", "").strip()
             staff_code = request.form.get("staff_code", "").strip().upper()
@@ -698,7 +722,7 @@ self.addEventListener("fetch", (event) => {{
                     ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "")[:255],
                     device_name=_request_device_name(),
                 )
-                start_staff_session(staff)
+                start_staff_session(staff, organization_slug=organization.slug)
                 flash("Welcome back. You are signed in.", "success")
                 if next_url:
                     return redirect(next_url)
@@ -2788,6 +2812,8 @@ def _platform_organization_rows(
                 "hostnames": hostnames,
                 "primary_url": primary_url,
                 "login_url": f"{primary_url}/admin/login" if primary_url else "",
+                "platform_login_url": url_for("app.portal_admin_login", slug=organization.slug),
+                "platform_staff_login_url": url_for("app.portal_staff_login", slug=organization.slug),
                 "admin_username": admin_security["admin_username"],
                 "form": form,
                 "plan_name": organization.plan_name,

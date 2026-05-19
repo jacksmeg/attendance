@@ -7,7 +7,7 @@ from typing import Any, Iterable
 import re
 import sqlite3
 
-from flask import current_app, g, has_request_context, request
+from flask import current_app, g, has_request_context, request, session
 
 from attendance_app.config import AppConfig
 
@@ -483,6 +483,14 @@ def get_current_organization() -> OrganizationContext:
 
     if has_request_context():
         organization = get_organization_by_host(settings, request.host)
+        if organization is None:
+            session_slug = str(
+                session.get("organization_slug")
+                or session.get("pending_organization_slug")
+                or ""
+            ).strip()
+            if session_slug:
+                organization = get_organization_by_slug(settings, session_slug)
 
     if organization is None:
         organization = get_organization_by_slug(settings, settings.default_organization_slug)

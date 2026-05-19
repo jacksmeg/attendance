@@ -147,7 +147,9 @@
                     <div class="platform-org-meta-grid">
                         <div class="platform-org-meta">
                             <span>Main Login</span>
-                            {% if organization.login_url %}
+                            {% if organization.platform_login_url %}
+                            <a href="{{ organization.platform_login_url }}" target="_blank" rel="noreferrer">{{ organization.platform_login_url }}</a>
+                            {% elif organization.login_url %}
                             <a href="{{ organization.login_url }}" target="_blank" rel="noreferrer">{{ organization.login_url }}</a>
                             {% else %}
                             <strong>No domain assigned yet</strong>
@@ -369,7 +371,12 @@
                                 {{ icon('settings') }}
                                 <span>Save Institution</span>
                             </button>
-                            {% if organization.login_url %}
+                            {% if organization.platform_login_url %}
+                            <a class="admin-toolbar-button" href="{{ organization.platform_login_url }}" target="_blank" rel="noreferrer">
+                                {{ icon('arrow-right') }}
+                                <span>Open Institution Portal</span>
+                            </a>
+                            {% elif organization.login_url %}
                             <a class="admin-toolbar-button" href="{{ organization.login_url }}" target="_blank" rel="noreferrer">
                                 {{ icon('arrow-right') }}
                                 <span>Open Institution</span>
