@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 from attendance_app import create_app
 from attendance_app.db import init_db
 from attendance_app.services.attendance import get_staff_today_status, list_attendance_events, record_attendance
-from attendance_app.services.settings import save_app_settings
+from attendance_app.services.settings import save_admin_credentials_for_database, save_app_settings
 from attendance_app.services.staff import count_active_staff, create_staff, get_staff, get_staff_by_code, upsert_fingerprint
 from attendance_app.services.tenancy import get_current_organization, get_organization_by_slug, provision_organization
 
@@ -559,6 +559,51 @@ class AttendanceAppTests(unittest.TestCase):
         offline_response = self.client.get("/pwa/offline")
         self.assertEqual(offline_response.status_code, 200)
         self.assertIn(b"Offline Mode", offline_response.data)
+
+    def test_institution_portal_uses_tenant_specific_pwa_manifest(self) -> None:
+        shared_host = "attendance.jhimssoftware.com"
+
+        with self.app.app_context():
+            shared_front = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="shared-front",
+                display_name="Shared Front Office",
+                hostnames=[shared_host],
+            )
+            init_db(shared_front.database_path)
+            provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="mercy-hospital",
+                display_name="Mercy Hospital",
+                hostnames=["attendance.mercy.example"],
+            )
+            mercy_org = get_organization_by_slug(self.app.config["APP_SETTINGS"], "mercy-hospital")
+            self.assertIsNotNone(mercy_org)
+            assert mercy_org is not None
+            init_db(mercy_org.database_path)
+            save_admin_credentials_for_database(
+                mercy_org.database_path,
+                username="mercyadmin",
+                password="Mercy@1234",
+            )
+
+        self.client.get(
+            "/portal/mercy-hospital/staff/login",
+            base_url=f"https://{shared_host}",
+            follow_redirects=True,
+        )
+
+        manifest_response = self.client.get(
+            "/pwa/manifest.webmanifest",
+            base_url=f"https://{shared_host}",
+        )
+        self.assertEqual(manifest_response.status_code, 200)
+        manifest = json.loads(manifest_response.get_data(as_text=True))
+        self.assertEqual(manifest["name"], "Mercy Hospital Staff App")
+        self.assertEqual(manifest["id"], "/portal/mercy-hospital/staff/login")
+        self.assertEqual(manifest["start_url"], "/portal/mercy-hospital/staff/login")
+        self.assertEqual(manifest["shortcuts"][0]["url"], "/portal/mercy-hospital/staff/login")
+        self.assertEqual(manifest["shortcuts"][2]["url"], "/portal/mercy-hospital/admin/login")
 
     def test_settings_branding_name_and_logo_reflect_across_system(self) -> None:
         self.client.post(

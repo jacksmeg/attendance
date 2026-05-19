@@ -358,24 +358,45 @@ def register_routes(app: Flask) -> None:
     @bp.route("/pwa/manifest.webmanifest")
     def pwa_manifest():
         product_name = current_app.config["APP_SETTINGS"].app_name
+        organization = get_current_organization()
         live_settings = get_app_settings(
             default_app_name=_tenant_default_app_name()
         )
         institution_name = live_settings["organization_name"]
+        tenant_scoped_install = bool(institution_name and institution_name != product_name)
+        if tenant_scoped_install:
+            manifest_name = f"{institution_name} Staff App"
+            short_name = _pwa_short_name(f"{institution_name} Staff")
+            manifest_id = url_for("app.portal_staff_login", slug=organization.slug)
+            start_url = url_for("app.portal_staff_login", slug=organization.slug)
+            staff_login_url = url_for("app.portal_staff_login", slug=organization.slug)
+            admin_login_url = url_for("app.portal_admin_login", slug=organization.slug)
+            description = (
+                f"{institution_name} staff mobile app powered by {product_name} "
+                "for attendance, QR access, and staff self-service."
+            )
+        else:
+            manifest_name = product_name
+            short_name = _pwa_short_name(product_name)
+            manifest_id = url_for("app.home")
+            start_url = url_for("app.home")
+            staff_login_url = url_for("app.staff_login")
+            admin_login_url = url_for("app.admin_login")
+            description = (
+                f"{product_name} mobile attendance portal for "
+                f"{institution_name} staff clocking, QR access, and attendance status."
+            )
         manifest = {
-            "name": product_name,
-            "short_name": _pwa_short_name(product_name),
-            "id": url_for("app.home"),
-            "start_url": url_for("app.home"),
+            "name": manifest_name,
+            "short_name": short_name,
+            "id": manifest_id,
+            "start_url": start_url,
             "scope": "/",
             "display": "standalone",
             "orientation": "portrait-primary",
             "background_color": "#11161f",
             "theme_color": "#2f6bff",
-            "description": (
-                f"{product_name} mobile attendance portal for "
-                f"{institution_name} staff clocking, QR access, and attendance status."
-            ),
+            "description": description,
             "icons": [
                 {
                     "src": url_for("app.pwa_icon_png", size=180),
@@ -400,7 +421,7 @@ def register_routes(app: Flask) -> None:
                 {
                     "name": "Staff Login",
                     "short_name": "Login",
-                    "url": url_for("app.staff_login"),
+                    "url": staff_login_url,
                     "icons": [{"src": url_for("app.pwa_icon_png", size=192), "sizes": "192x192"}],
                 },
                 {
@@ -412,7 +433,7 @@ def register_routes(app: Flask) -> None:
                 {
                     "name": "Admin Login",
                     "short_name": "Admin",
-                    "url": url_for("app.admin_login"),
+                    "url": admin_login_url,
                     "icons": [{"src": url_for("app.pwa_icon_png", size=192), "sizes": "192x192"}],
                 },
             ],
@@ -425,6 +446,13 @@ def register_routes(app: Flask) -> None:
 
     @bp.route("/service-worker.js")
     def pwa_service_worker():
+        organization = get_current_organization()
+        product_name = current_app.config["APP_SETTINGS"].app_name
+        live_settings = get_app_settings(
+            default_app_name=_tenant_default_app_name()
+        )
+        institution_name = live_settings["organization_name"]
+        tenant_scoped_install = bool(institution_name and institution_name != product_name)
         precache_urls = [
             url_for("app.home"),
             url_for("app.staff_login"),
@@ -434,10 +462,17 @@ def register_routes(app: Flask) -> None:
             url_for("static", filename="admin_styles.css"),
               url_for("static", filename="pwa.js"),
               url_for("static", filename="theme.js"),
-              url_for("app.pwa_icon_png", size=180),
-              url_for("app.pwa_icon_png", size=192),
-              url_for("app.pwa_icon_png", size=512),
-          ]
+                url_for("app.pwa_icon_png", size=180),
+                url_for("app.pwa_icon_png", size=192),
+                url_for("app.pwa_icon_png", size=512),
+            ]
+        if tenant_scoped_install:
+            precache_urls.extend(
+                [
+                    url_for("app.portal_staff_login", slug=organization.slug),
+                    url_for("app.portal_admin_login", slug=organization.slug),
+                ]
+            )
         cache_name = f"attendance-pwa-{current_app.config['APP_SETTINGS'].fingerprint_backend}"
         script = f"""
 const CACHE_NAME = {json.dumps(cache_name)};
