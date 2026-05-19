@@ -15,7 +15,7 @@
                 </span>
                 <div>
                     <strong>{{ app_name }}</strong>
-                    <span>Administrator workspace</span>
+                    <span>{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}Administrator workspace{% endif %}</span>
                 </div>
             </div>
             <span class="auth-showcase-chip">Secure access</span>
@@ -62,7 +62,7 @@
             <span class="auth-surface-badge">{{ icon('shield-check') }} Verified Admin</span>
             <div class="auth-surface-copy">
                 <h1>Admin sign in</h1>
-                <p>Enter your administrator username and password to open the full control workspace for {{ app_name }}.</p>
+                <p>Enter your administrator username and password to open the full control workspace for {% if institution_name %}{{ institution_name }}{% else %}your institution{% endif %}.</p>
             </div>
         </div>
 

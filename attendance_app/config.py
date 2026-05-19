@@ -46,7 +46,7 @@ def load_config(
         os.getenv("ATTENDANCE_INSTANCE_DIR", str(project_root / "instance"))
     )
     settings = AppConfig(
-        app_name=os.getenv("ATTENDANCE_APP_NAME", "Staff Attendance System"),
+        app_name=os.getenv("ATTENDANCE_APP_NAME", "JHIMS ATTENDANCE SYSTEM"),
         secret_key=os.getenv("ATTENDANCE_SECRET_KEY", "change-me-before-production"),
         admin_username=os.getenv("ATTENDANCE_ADMIN_USER", "admin"),
         admin_password=os.getenv("ATTENDANCE_ADMIN_PASSWORD", "admin123"),

@@ -198,6 +198,7 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(institution_login.status_code, 200)
         self.assertIn(b"Mercy Hospital", institution_login.data)
         self.assertNotIn(b"Shared Front Office", institution_login.data)
+        self.assertIn(self.app.config["APP_SETTINGS"].app_name.encode(), institution_login.data)
 
         institution_login = self.client.post(
             "/admin/login",
@@ -208,6 +209,7 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(institution_login.status_code, 200)
         self.assertIn(b"Attendance Overview", institution_login.data)
         self.assertIn(b"Mercy Hospital", institution_login.data)
+        self.assertIn(self.app.config["APP_SETTINGS"].app_name.encode(), institution_login.data)
 
         branded_staff_login = self.client.get(
             "/portal/mercy-hospital/staff/login",

@@ -15,7 +15,7 @@
                 </span>
                 <div>
                     <strong>{{ app_name }}</strong>
-                    <span>Staff self-service portal</span>
+                    <span>{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}Staff self-service portal{% endif %}</span>
                 </div>
             </div>
             <span class="auth-showcase-chip">PWA Ready</span>
@@ -68,7 +68,13 @@
                 {% endif %}
             </span>
             <strong>{{ app_name|upper }}</strong>
-            <p>Sign in with your Staff Number, Email or use PIN.</p>
+            <p>
+                {% if institution_name and institution_name != app_name %}
+                    {{ institution_name }}
+                {% else %}
+                    Sign in with your Staff Number, Email or use PIN.
+                {% endif %}
+            </p>
         </div>
 
         <div class="auth-surface-head">
@@ -176,7 +182,7 @@
             <p class="auth-foot-note">Need access? Contact HR or an administrator to activate your staff portal.</p>
             <div class="auth-foot-brand">
                 <strong>{{ app_name }}</strong>
-                <span>Staff self-service attendance portal</span>
+                <span>{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}Staff self-service attendance portal{% endif %}</span>
             </div>
         </div>
     </article>

@@ -46,7 +46,13 @@
                 </span>
                 <span class="sidebar-brand-copy">
                     <span class="sidebar-brand-title">{{ app_name }}</span>
-                    <span class="sidebar-brand-subtitle">Fingerprint attendance</span>
+                    <span class="sidebar-brand-subtitle">
+                        {% if institution_name and institution_name != app_name %}
+                            {{ institution_name }}
+                        {% else %}
+                            Fingerprint attendance
+                        {% endif %}
+                    </span>
                 </span>
             </a>
 

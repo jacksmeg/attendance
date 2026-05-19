@@ -214,7 +214,9 @@ def register_routes(app: Flask) -> None:
         live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
         organization = get_current_organization()
         return {
-            "app_name": live_settings["organization_name"],
+            "app_name": settings.app_name,
+            "product_name": settings.app_name,
+            "institution_name": live_settings["organization_name"],
             "app_logo_url": _system_logo_url_for_filename(live_settings.get("system_logo_filename")),
             "fingerprint_backend": settings.fingerprint_backend,
             "is_cloud_fingerprint_mode": settings.fingerprint_backend == "disabled",
@@ -355,13 +357,14 @@ def register_routes(app: Flask) -> None:
 
     @bp.route("/pwa/manifest.webmanifest")
     def pwa_manifest():
+        product_name = current_app.config["APP_SETTINGS"].app_name
         live_settings = get_app_settings(
             default_app_name=_tenant_default_app_name()
         )
-        app_name = live_settings["organization_name"]
+        institution_name = live_settings["organization_name"]
         manifest = {
-            "name": app_name,
-            "short_name": _pwa_short_name(app_name),
+            "name": product_name,
+            "short_name": _pwa_short_name(product_name),
             "id": url_for("app.home"),
             "start_url": url_for("app.home"),
             "scope": "/",
@@ -369,7 +372,10 @@ def register_routes(app: Flask) -> None:
             "orientation": "portrait-primary",
             "background_color": "#11161f",
             "theme_color": "#2f6bff",
-            "description": f"{app_name} mobile attendance portal for staff clocking, QR access, and attendance status.",
+            "description": (
+                f"{product_name} mobile attendance portal for "
+                f"{institution_name} staff clocking, QR access, and attendance status."
+            ),
             "icons": [
                 {
                     "src": url_for("app.pwa_icon_png", size=180),

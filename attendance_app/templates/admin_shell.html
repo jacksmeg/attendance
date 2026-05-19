@@ -109,7 +109,7 @@
                 </span>
                 <div class="admin-brand-copy">
                     <strong>{{ app_name }}</strong>
-                    <span>Attendance system</span>
+                    <span>{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}Attendance system{% endif %}</span>
                 </div>
             </a>
 
@@ -195,10 +195,10 @@
                             <details class="admin-profile-menu">
                                 <summary class="admin-profile-chip">
                                     <div class="admin-profile-avatar">{{ initials }}</div>
-                                    <div class="admin-profile-copy">
-                                        <strong>{{ app_name }}</strong>
+                                <div class="admin-profile-copy">
+                                        <strong>{% if institution_name %}{{ institution_name }}{% else %}{{ app_name }}{% endif %}</strong>
                                         <span>{{ display_name }} · {{ current_role }}</span>
-                                    </div>
+                                </div>
                                     <span class="admin-profile-caret">{{ icon('chevron-down') }}</span>
                                 </summary>
                                 <div class="admin-profile-dropdown">
