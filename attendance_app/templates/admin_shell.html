@@ -183,7 +183,7 @@
                         <div class="admin-topbar-actions">
                             {% block toolbar_actions %}{% endblock %}
                             <div class="admin-live-clock" data-admin-live-clock data-now="{{ admin_now_iso }}">
-                                <span class="admin-live-clock-date">Today</span>
+                                <span class="admin-live-clock-date">Current time</span>
                                 <strong class="admin-live-clock-time">--:--:--</strong>
                             </div>
                             <a class="admin-icon-button admin-notification-button" href="{{ url_for('app.admin_notifications') }}" aria-label="Notifications">
@@ -254,19 +254,10 @@
             const clock = document.querySelector("[data-admin-live-clock]");
             if (!clock) return;
 
-            const dateNode = clock.querySelector(".admin-live-clock-date");
             const timeNode = clock.querySelector(".admin-live-clock-time");
 
             const renderClock = () => {
                 const now = new Date();
-                if (dateNode) {
-                    dateNode.textContent = now.toLocaleDateString([], {
-                        weekday: "short",
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric"
-                    });
-                }
                 if (timeNode) {
                     timeNode.textContent = now.toLocaleTimeString([], {
                         hour: "2-digit",

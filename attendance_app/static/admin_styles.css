@@ -2570,6 +2570,10 @@ html[data-theme="dark"] .platform-org-license-card {
     min-width: 0;
     justify-content: space-between;
     gap: 16px;
+    display: grid;
+    grid-template-columns: minmax(250px, 430px) minmax(0, 1fr);
+    justify-content: end;
+    align-items: center;
 }
 
 .admin-topbar-center {
@@ -2578,7 +2582,8 @@ html[data-theme="dark"] .platform-org-license-card {
 }
 
 .admin-topbar-actions {
-    flex-wrap: wrap;
+    min-width: 0;
+    flex-wrap: nowrap;
     justify-content: flex-end;
     gap: 12px;
 }
@@ -2623,13 +2628,20 @@ html[data-theme="dark"] .platform-org-license-card {
 }
 
 .admin-topbar-center .admin-search-box {
-    width: min(100%, 430px);
+    width: 100%;
     max-width: 100%;
 }
 
 .admin-topbar-actions .admin-topbar-input,
 .admin-topbar-actions .admin-toolbar-button {
     min-width: 180px;
+}
+
+.admin-topbar-actions .admin-toolbar-form,
+.admin-topbar-actions .admin-notification-button,
+.admin-topbar-actions .admin-live-clock,
+.admin-topbar-actions .admin-profile-menu {
+    flex: 0 0 auto;
 }
 
 .admin-search-box input,
@@ -2897,6 +2909,7 @@ html[data-theme="dark"] .admin-side-link-logout {
 
 /* Admin shell interaction polish */
 .admin-live-clock {
+    min-width: 152px;
     min-height: 48px;
     padding: 7px 14px;
     border-radius: 18px;
@@ -2906,7 +2919,7 @@ html[data-theme="dark"] .admin-side-link-logout {
     display: grid;
     align-content: center;
     gap: 2px;
-    text-align: right;
+    text-align: left;
 }
 
 .admin-live-clock-date {
@@ -2923,6 +2936,7 @@ html[data-theme="dark"] .admin-side-link-logout {
 
 .admin-profile-menu {
     position: relative;
+    min-width: 0;
 }
 
 .admin-profile-menu summary {
@@ -2947,6 +2961,23 @@ html[data-theme="dark"] .admin-side-link-logout {
     display: grid;
     gap: 6px;
     z-index: 30;
+}
+
+.admin-profile-chip {
+    min-width: 0;
+    max-width: 340px;
+}
+
+.admin-profile-copy {
+    min-width: 0;
+}
+
+.admin-profile-copy strong,
+.admin-profile-copy span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .admin-profile-dropdown-link {
@@ -3097,6 +3128,11 @@ html[data-theme="dark"] .admin-notification-row.tone-activity {
 }
 
 @media (max-width: 860px) {
+    .admin-topbar-tools {
+        display: flex;
+        grid-template-columns: none;
+    }
+
     .admin-live-clock,
     .admin-profile-menu,
     .admin-profile-chip,
