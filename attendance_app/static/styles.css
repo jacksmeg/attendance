@@ -3890,6 +3890,12 @@ html[data-theme="dark"] .auth-section-card {
     box-shadow: 0 2px 8px rgba(27, 38, 59, 0.04);
 }
 
+.auth-workbench--staff .auth-input-shell {
+    background: #ffffff;
+    border-color: rgba(214, 221, 229, 0.96);
+    box-shadow: 0 2px 8px rgba(27, 38, 59, 0.04);
+}
+
 .auth-input-shell:focus-within {
     border-color: rgba(36, 99, 255, 0.44);
     box-shadow:
@@ -3913,11 +3919,21 @@ html[data-theme="dark"] .auth-section-card {
     color: #18263a;
 }
 
+.auth-workbench--staff .auth-input-shell input {
+    color: #18263a;
+    caret-color: #18263a;
+    -webkit-text-fill-color: #18263a;
+}
+
 .auth-input-shell input::placeholder {
     color: color-mix(in srgb, var(--auth-muted) 75%, white 25%);
 }
 
 .staff-login-minimal-body .auth-input-shell input::placeholder {
+    color: #8a97aa;
+}
+
+.auth-workbench--staff .auth-input-shell input::placeholder {
     color: #8a97aa;
 }
 
@@ -3948,6 +3964,10 @@ html[data-theme="dark"] .auth-section-card {
 }
 
 .staff-login-minimal-body .auth-input-action {
+    color: #5f6f85;
+}
+
+.auth-workbench--staff .auth-input-action {
     color: #5f6f85;
 }
 
@@ -4077,6 +4097,10 @@ html[data-theme="dark"] .auth-mode-tab.is-active {
     overflow: hidden;
     border: 1px solid rgba(128, 149, 177, 0.22);
     background: linear-gradient(180deg, #f4f8ff 0%, #ecf3fb 100%);
+}
+
+.staff-login-camera-stage[hidden] {
+    display: none !important;
 }
 
 .staff-login-camera-stage.is-idle {
