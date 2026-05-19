@@ -109,6 +109,7 @@ def start_institution_admin_session(
     session["managed_department"] = ""
     session["organization_slug"] = organization_slug
     session["pending_organization_slug"] = organization_slug
+    session["portal_organization_slug"] = organization_slug
 
 
 def start_staff_session(staff: dict[str, object], *, organization_slug: str = "") -> None:
@@ -130,6 +131,7 @@ def start_staff_session(staff: dict[str, object], *, organization_slug: str = ""
     session["is_platform_admin"] = False
     session["organization_slug"] = organization_slug
     session["pending_organization_slug"] = organization_slug
+    session["portal_organization_slug"] = organization_slug
 
 
 def current_access_role() -> str:

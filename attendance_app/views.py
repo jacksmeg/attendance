@@ -308,6 +308,8 @@ def register_routes(app: Flask) -> None:
         if not organization:
             flash("That institution portal could not be found.", "error")
             return redirect(url_for("app.home"))
+        session["portal_organization_slug"] = organization.slug
+        session["organization_slug"] = organization.slug
         session["pending_organization_slug"] = organization.slug
         return redirect(url_for("app.admin_login"))
 
@@ -317,6 +319,8 @@ def register_routes(app: Flask) -> None:
         if not organization:
             flash("That institution portal could not be found.", "error")
             return redirect(url_for("app.home"))
+        session["portal_organization_slug"] = organization.slug
+        session["organization_slug"] = organization.slug
         session["pending_organization_slug"] = organization.slug
         return redirect(url_for("app.staff_login"))
 

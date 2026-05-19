@@ -144,6 +144,7 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn(b"Institution administrator signed in successfully.", audit_response.data)
 
     def test_platform_super_admin_can_provision_institution_from_web_ui(self) -> None:
+        shared_host = "attendance.jhimssoftware.com"
         login_response = self.client.post(
             "/platform/login",
             data={"username": "boss", "password": "letmein"},
@@ -172,22 +173,47 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn(b"mercyadmin", create_response.data)
         self.assertIn(b"/portal/mercy-hospital/admin/login", create_response.data)
 
+        with self.app.app_context():
+            shared_front = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="shared-front",
+                display_name="Shared Front Office",
+                hostnames=[shared_host],
+            )
+            init_db(shared_front.database_path)
+
+        with self.app.test_request_context("/", base_url=f"https://{shared_host}"):
+            save_app_settings(
+                {"organization_name": "Shared Front Office"},
+                default_app_name=self.app.config["APP_SETTINGS"].app_name,
+            )
+
+        self.client.get("/logout", follow_redirects=True)
+
         institution_login = self.client.get(
             "/portal/mercy-hospital/admin/login",
+            base_url=f"https://{shared_host}",
             follow_redirects=True,
         )
         self.assertEqual(institution_login.status_code, 200)
         self.assertIn(b"Mercy Hospital", institution_login.data)
+        self.assertNotIn(b"Shared Front Office", institution_login.data)
 
         institution_login = self.client.post(
             "/admin/login",
             data={"username": "mercyadmin", "password": "Mercy@1234"},
+            base_url=f"https://{shared_host}",
             follow_redirects=True,
         )
         self.assertEqual(institution_login.status_code, 200)
         self.assertIn(b"Attendance Overview", institution_login.data)
+        self.assertIn(b"Mercy Hospital", institution_login.data)
 
-        branded_staff_login = self.client.get("/portal/mercy-hospital/staff/login", follow_redirects=True)
+        branded_staff_login = self.client.get(
+            "/portal/mercy-hospital/staff/login",
+            base_url=f"https://{shared_host}",
+            follow_redirects=True,
+        )
         self.assertEqual(branded_staff_login.status_code, 200)
         self.assertIn(b"Mercy Hospital", branded_staff_login.data)
 
