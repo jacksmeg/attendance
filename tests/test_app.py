@@ -381,16 +381,24 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(manifest_response.status_code, 200)
         manifest = json.loads(manifest_response.get_data(as_text=True))
         self.assertEqual(manifest["display"], "standalone")
-        self.assertIn("/pwa/icon-192.png", manifest["icons"][0]["src"])
+        self.assertIn("/pwa/icon-180.png", manifest["icons"][0]["src"])
 
         service_worker_response = self.client.get("/service-worker.js")
         self.assertEqual(service_worker_response.status_code, 200)
         self.assertIn("CACHE_NAME", service_worker_response.get_data(as_text=True))
 
+        ios_icon_response = self.client.get("/pwa/icon-180.png")
+        self.assertEqual(ios_icon_response.status_code, 200)
+        self.assertEqual(ios_icon_response.mimetype, "image/png")
+
         icon_response = self.client.get("/pwa/icon-192.png")
         self.assertEqual(icon_response.status_code, 200)
         self.assertEqual(icon_response.mimetype, "image/png")
         self.assertTrue(icon_response.data.startswith(b"\x89PNG"))
+
+        login_response = self.client.get("/staff/login")
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Add this app to your Home Screen", login_response.data)
 
         offline_response = self.client.get("/pwa/offline")
         self.assertEqual(offline_response.status_code, 200)

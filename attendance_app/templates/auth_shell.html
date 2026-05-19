@@ -6,10 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }} | {{ app_name }}</title>
     {% include "_theme_head.html" %}
+    <meta name="theme-color" content="#2f6bff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="{{ app_name }}">
     <link rel="manifest" href="{{ url_for('app.pwa_manifest') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('app.pwa_icon_png', size=180) }}">
     <link rel="apple-touch-icon" href="{{ url_for('app.pwa_icon_png', size=192) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="{{ url_for('static', filename='pwa.js') }}" defer></script>
@@ -37,5 +39,19 @@
         {% block content %}{% endblock %}
     </main>
     <button class="pwa-install-fab" type="button" data-pwa-install hidden>Install App</button>
+    <section class="pwa-ios-sheet" data-pwa-ios-sheet hidden aria-label="Install app on iPhone">
+        <div class="pwa-ios-sheet-backdrop" data-pwa-ios-close></div>
+        <div class="pwa-ios-sheet-card" role="dialog" aria-modal="true" aria-labelledby="pwa-ios-title">
+            <button class="pwa-ios-close" type="button" data-pwa-ios-close aria-label="Close install instructions">&times;</button>
+            <span class="pwa-ios-kicker">iPhone install</span>
+            <h2 id="pwa-ios-title">Add this app to your Home Screen</h2>
+            <p>Open this page in Safari, then follow these quick steps to install the app like a real iPhone app.</p>
+            <ol class="pwa-ios-steps">
+                <li>Tap the <strong>Share</strong> button in Safari.</li>
+                <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+                <li>Tap <strong>Add</strong> to place it on your iPhone.</li>
+            </ol>
+        </div>
+    </section>
 </body>
 </html>

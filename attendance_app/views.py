@@ -335,6 +335,12 @@ def register_routes(app: Flask) -> None:
             "description": f"{app_name} mobile attendance portal for staff clocking, QR access, and attendance status.",
             "icons": [
                 {
+                    "src": url_for("app.pwa_icon_png", size=180),
+                    "sizes": "180x180",
+                    "type": "image/png",
+                    "purpose": "any",
+                },
+                {
                     "src": url_for("app.pwa_icon_png", size=192),
                     "sizes": "192x192",
                     "type": "image/png",
@@ -383,11 +389,12 @@ def register_routes(app: Flask) -> None:
             url_for("app.pwa_offline"),
             url_for("static", filename="styles.css"),
             url_for("static", filename="admin_styles.css"),
-            url_for("static", filename="pwa.js"),
-            url_for("static", filename="theme.js"),
-            url_for("app.pwa_icon_png", size=192),
-            url_for("app.pwa_icon_png", size=512),
-        ]
+              url_for("static", filename="pwa.js"),
+              url_for("static", filename="theme.js"),
+              url_for("app.pwa_icon_png", size=180),
+              url_for("app.pwa_icon_png", size=192),
+              url_for("app.pwa_icon_png", size=512),
+          ]
         cache_name = f"attendance-pwa-{current_app.config['APP_SETTINGS'].fingerprint_backend}"
         script = f"""
 const CACHE_NAME = {json.dumps(cache_name)};
@@ -457,8 +464,8 @@ self.addEventListener("fetch", (event) => {{
 
     @bp.route("/pwa/icon-<int:size>.png")
     def pwa_icon_png(size: int):
-        if size not in {192, 512}:
-            size = 192
+        if size not in {120, 152, 167, 180, 192, 512}:
+            size = 180
         return Response(
             _generate_pwa_icon_png(size=size),
             mimetype="image/png",

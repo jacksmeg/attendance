@@ -2295,6 +2295,94 @@ tbody tr:hover {
     outline: none;
 }
 
+.pwa-ios-sheet[hidden] {
+    display: none;
+}
+
+.pwa-ios-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    display: grid;
+    place-items: end center;
+    padding: 18px;
+}
+
+.pwa-ios-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 20, 35, 0.48);
+    backdrop-filter: blur(4px);
+}
+
+.pwa-ios-sheet-card {
+    position: relative;
+    width: min(100%, 420px);
+    padding: 22px 20px 20px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(198, 212, 232, 0.72);
+    box-shadow: 0 28px 60px rgba(11, 25, 49, 0.22);
+    color: #16263b;
+    display: grid;
+    gap: 12px;
+}
+
+.pwa-ios-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(238, 243, 252, 0.96);
+    color: #48627d;
+    font-size: 1.3rem;
+    cursor: pointer;
+}
+
+.pwa-ios-kicker {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    width: fit-content;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(36, 99, 255, 0.08);
+    color: #2857da;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.pwa-ios-sheet-card h2 {
+    margin: 0;
+    font-size: 1.45rem;
+    line-height: 1.12;
+    letter-spacing: -0.035em;
+    color: #10203a;
+}
+
+.pwa-ios-sheet-card p {
+    margin: 0;
+    color: #64758a;
+    line-height: 1.55;
+}
+
+.pwa-ios-steps {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: #20344f;
+    display: grid;
+    gap: 10px;
+}
+
+.pwa-ios-steps li {
+    line-height: 1.5;
+}
+
 .pwa-offline-card {
     width: min(100%, 520px);
 }
@@ -2359,6 +2447,16 @@ tbody tr:hover {
         bottom: 12px;
         width: auto;
         justify-content: center;
+    }
+
+    .pwa-ios-sheet {
+        padding: 12px;
+    }
+
+    .pwa-ios-sheet-card {
+        width: 100%;
+        padding: 20px 18px 18px;
+        border-radius: 22px;
     }
 }
 
@@ -2481,6 +2579,39 @@ html[data-theme="dark"] .staff-photo,
 html[data-theme="dark"] .status-inline-icon,
 html[data-theme="dark"] .pwa-install-fab {
     box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .pwa-ios-sheet-backdrop {
+    background: rgba(5, 11, 20, 0.66);
+}
+
+html[data-theme="dark"] .pwa-ios-sheet-card {
+    background: rgba(16, 26, 42, 0.98);
+    border-color: rgba(73, 94, 128, 0.54);
+    color: #eef5ff;
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.34);
+}
+
+html[data-theme="dark"] .pwa-ios-close {
+    background: rgba(29, 44, 67, 0.96);
+    color: #d9e8ff;
+}
+
+html[data-theme="dark"] .pwa-ios-kicker {
+    background: rgba(65, 118, 255, 0.18);
+    color: #b5cfff;
+}
+
+html[data-theme="dark"] .pwa-ios-sheet-card h2 {
+    color: #f2f7ff;
+}
+
+html[data-theme="dark"] .pwa-ios-sheet-card p {
+    color: #a9bbd2;
+}
+
+html[data-theme="dark"] .pwa-ios-steps {
+    color: #e1ecfb;
 }
 
 html[data-theme="dark"] .metric-icon-teal,
