@@ -71,6 +71,10 @@ def _apply_schema(db: sqlite3.Connection, schema_path: Path) -> None:
         "CREATE INDEX IF NOT EXISTS idx_staff_selfie_audits_staff_created "
         "ON staff_selfie_audits(staff_id, created_at DESC)"
     )
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_admin_activity_logs_created "
+        "ON admin_activity_logs(created_at DESC, id DESC)"
+    )
     db.commit()
 
 

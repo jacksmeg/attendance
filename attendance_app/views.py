@@ -54,6 +54,7 @@ from .auth import (
     start_staff_session,
 )
 from .fingerprint import build_provider
+from .services.admin_activity import list_admin_activity_logs, log_admin_activity
 from .services.attendance import (
     get_dashboard_data,
     get_recent_events,
@@ -626,6 +627,15 @@ self.addEventListener("fetch", (event) => {{
                 and admin_password_matches(password, settings.admin_password)
             ):
                 start_institution_admin_session(username, live_settings["organization_name"])
+                log_admin_activity(
+                    actor_type="user",
+                    actor_name=live_settings["organization_name"] or username,
+                    actor_role="Institution Admin",
+                    event_type="admin_login",
+                    details="Institution administrator signed in successfully.",
+                    ip_address=_request_ip_address(),
+                    device_name=_request_device_name(),
+                )
                 flash("Administrator session started.", "success")
                 return redirect(next_url)
             flash("Invalid administrator credentials.", "error")
@@ -694,6 +704,18 @@ self.addEventListener("fetch", (event) => {{
         was_staff = bool(session.get("staff_authenticated"))
         was_admin = bool(session.get("admin_authenticated"))
         was_platform_admin = bool(session.get("is_platform_admin"))
+        actor_name = current_display_name()
+        actor_role = current_access_role()
+        if was_admin and not was_platform_admin:
+            log_admin_activity(
+                actor_type="user",
+                actor_name=actor_name,
+                actor_role=actor_role or "Institution Admin",
+                event_type="logout",
+                details="Administrator session closed.",
+                ip_address=_request_ip_address(),
+                device_name=_request_device_name(),
+            )
         clear_user_session()
         flash("Session closed.", "success")
         if was_platform_admin:
@@ -1433,10 +1455,11 @@ self.addEventListener("fetch", (event) => {{
     @bp.route("/admin/notifications")
     @roles_required(*REPORTING_ROLES)
     def admin_notifications():
+        notification_rows = _build_admin_notification_rows(limit=20)
         return render_template(
             "admin/notifications.html",
             title="Notifications",
-            notification_rows=[],
+            notification_rows=notification_rows,
             **_admin_context("Notifications", "notifications", ["Dashboard", "Notifications"]),
         )
 
@@ -1471,6 +1494,21 @@ self.addEventListener("fetch", (event) => {{
                     department_scope=department_scope,
                 )
                 if updated:
+                    target_staff = get_staff(staff_id, department_scope=department_scope)
+                    log_admin_activity(
+                        actor_type="user",
+                        actor_name=current_display_name(),
+                        actor_role=current_access_role() or "Institution Admin",
+                        event_type="user_role_updated",
+                        target_name=(
+                            f"{target_staff.get('first_name', '')} {target_staff.get('last_name', '')}".strip()
+                            if target_staff
+                            else f"Staff #{staff_id}"
+                        ),
+                        details=f"Access role changed to {access_role or 'Staff'} and account status was updated.",
+                        ip_address=_request_ip_address(),
+                        device_name=_request_device_name(),
+                    )
                     flash("User role updated successfully.", "success")
                 else:
                     flash("That user account could not be updated.", "error")
@@ -1500,11 +1538,17 @@ self.addEventListener("fetch", (event) => {{
     @bp.route("/admin/audit-logs")
     @roles_required(*SETTINGS_ROLES)
     def admin_audit_logs():
-        audit_rows = _selfie_audit_rows(list_staff_selfie_audits(limit=120))
+        active_group = request.args.get("group", "all").strip().lower()
+        if active_group not in {"all", "staff", "users"}:
+            active_group = "all"
+        staff_audit_rows = _selfie_audit_rows(list_staff_selfie_audits(limit=120))
+        user_activity_rows = _admin_activity_rows(list_admin_activity_logs(limit=120))
         return render_template(
             "admin/audit_logs.html",
             title="Audit Logs",
-            audit_rows=audit_rows,
+            active_group=active_group,
+            staff_audit_rows=staff_audit_rows,
+            user_activity_rows=user_activity_rows,
             **_admin_context("Audit Logs", "audit", ["Dashboard", "Audit Logs"]),
         )
 
@@ -1652,6 +1696,15 @@ self.addEventListener("fetch", (event) => {{
                     admin_security = get_admin_security(
                         default_username=current_app.config["APP_SETTINGS"].admin_username
                     )
+                    log_admin_activity(
+                        actor_type="user",
+                        actor_name=current_display_name(),
+                        actor_role=current_access_role() or "Institution Admin",
+                        event_type="admin_password_changed",
+                        details="Institution administrator password was updated from Settings.",
+                        ip_address=_request_ip_address(),
+                        device_name=_request_device_name(),
+                    )
                     password_form = {
                         "current_password": "",
                         "new_password": "",
@@ -1688,6 +1741,15 @@ self.addEventListener("fetch", (event) => {{
                             _delete_system_logo(previous_logo_filename)
                         elif request.form.get("remove_system_logo") == "on" and previous_logo_filename:
                             _delete_system_logo(previous_logo_filename)
+                        log_admin_activity(
+                            actor_type="user",
+                            actor_name=current_display_name(),
+                            actor_role=current_access_role() or "Institution Admin",
+                            event_type="attendance_settings_saved",
+                            details="Organization settings, branding, or location policy were updated.",
+                            ip_address=_request_ip_address(),
+                            device_name=_request_device_name(),
+                        )
                         flash("Attendance settings saved successfully.", "success")
 
         return render_template(
@@ -2282,6 +2344,13 @@ def _request_device_name() -> str:
     return user_agent[:120]
 
 
+def _request_ip_address() -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.headers.get("X-Real-IP", "").strip() or (request.remote_addr or "")
+
+
 def _normalize_qr_value(raw_value: str) -> str:
     value = raw_value.strip()
     if value.startswith("ATTENDANCE|"):
@@ -2473,12 +2542,16 @@ def _admin_context(
     nav_secondary: str = "",
     body_class: str = "",
 ) -> dict[str, Any]:
+    notification_rows = _build_admin_notification_rows(limit=8)
     return {
         "page_title": page_title,
         "nav_primary": nav_primary,
         "nav_secondary": nav_secondary,
         "breadcrumbs": breadcrumbs,
         "body_class": body_class,
+        "admin_notification_count": len(notification_rows),
+        "admin_notification_rows": notification_rows,
+        "admin_now_iso": datetime.now().isoformat(timespec="seconds"),
     }
 
 
@@ -4038,6 +4111,88 @@ def _selfie_audit_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return formatted_rows
+
+
+def _admin_activity_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    formatted_rows: list[dict[str, Any]] = []
+    for row in rows:
+        created_at = str(row.get("created_at") or "")
+        try:
+            display_time = datetime.fromisoformat(created_at).strftime("%d %b %Y, %I:%M %p")
+        except ValueError:
+            display_time = created_at
+        actor_type = str(row.get("actor_type") or "user").strip().lower()
+        formatted_rows.append(
+            {
+                "time": display_time,
+                "actor": str(row.get("actor_name") or "Unknown User"),
+                "actor_role": str(row.get("actor_role") or "System User"),
+                "event": str(row.get("event_type") or "").replace("_", " ").title(),
+                "details": str(row.get("details") or row.get("target_name") or "No additional details"),
+                "target_name": str(row.get("target_name") or ""),
+                "ip_address": row.get("ip_address", ""),
+                "device_name": row.get("device_name", ""),
+                "actor_type": actor_type,
+                "area": "User Activity" if actor_type == "user" else "Platform",
+            }
+        )
+    return formatted_rows
+
+
+def _build_admin_notification_rows(limit: int = 12) -> list[dict[str, str]]:
+    app_defaults = get_app_settings(default_app_name=_tenant_default_app_name())
+    admin_security = get_admin_security(
+        default_username=current_app.config["APP_SETTINGS"].admin_username
+    )
+    rows: list[dict[str, str]] = []
+
+    active_staff_total = count_active_staff(department_scope=current_department_scope())
+    if active_staff_total == 0:
+        rows.append(
+            {
+                "title": "Add your first staff records",
+                "meta": "No active staff accounts exist yet. Open Staff and create your institution team.",
+                "tone": "warning",
+            }
+        )
+
+    if not admin_security.get("password_is_custom"):
+        rows.append(
+            {
+                "title": "Institution admin password still uses the default source",
+                "meta": "Open Settings and set a custom admin password for this institution.",
+                "tone": "warning",
+            }
+        )
+
+    if not app_defaults.get("location_enforcement_enabled"):
+        rows.append(
+            {
+                "title": "Work location restriction is disabled",
+                "meta": "Staff can currently clock in online from any location until GPS restriction is enabled.",
+                "tone": "info",
+            }
+        )
+
+    for audit_row in _selfie_audit_rows(list_staff_selfie_audits(limit=4)):
+        rows.append(
+            {
+                "title": f"{audit_row['actor']} signed in with selfie audit",
+                "meta": f"{audit_row['time']} · {audit_row['auth_method']} · {audit_row['department'] or 'Unassigned department'}",
+                "tone": "activity",
+            }
+        )
+
+    for activity_row in _admin_activity_rows(list_admin_activity_logs(limit=4)):
+        rows.append(
+            {
+                "title": f"{activity_row['actor']} - {activity_row['event']}",
+                "meta": f"{activity_row['time']} · {activity_row['details']}",
+                "tone": "neutral",
+            }
+        )
+
+    return rows[:limit]
 
 
 def _staff_display_rows(staff_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

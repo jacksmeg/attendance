@@ -95,3 +95,19 @@ CREATE TABLE IF NOT EXISTS staff_selfie_audits (
 
 CREATE INDEX IF NOT EXISTS idx_staff_selfie_audits_staff_created
 ON staff_selfie_audits(staff_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS admin_activity_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_type TEXT NOT NULL,
+    actor_name TEXT NOT NULL,
+    actor_role TEXT,
+    event_type TEXT NOT NULL,
+    target_name TEXT,
+    details TEXT,
+    ip_address TEXT,
+    device_name TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_activity_logs_created
+ON admin_activity_logs(created_at DESC, id DESC);

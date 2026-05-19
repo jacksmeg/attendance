@@ -2,59 +2,165 @@
 {% from "_admin_macros.html" import section_title %}
 
 {% block content %}
+<section class="admin-stats-grid cols-4">
+    <article class="admin-stat-card tone-blue">
+        <div class="admin-stat-copy">
+            <span class="admin-stat-label">All Audit Entries</span>
+            <strong>{{ staff_audit_rows|length + user_activity_rows|length }}</strong>
+            <span class="admin-stat-sub">Staff and user activity combined</span>
+        </div>
+    </article>
+    <article class="admin-stat-card tone-green">
+        <div class="admin-stat-copy">
+            <span class="admin-stat-label">Staff Audit</span>
+            <strong>{{ staff_audit_rows|length }}</strong>
+            <span class="admin-stat-sub">Selfie-backed staff sign-ins</span>
+        </div>
+    </article>
+    <article class="admin-stat-card tone-purple">
+        <div class="admin-stat-copy">
+            <span class="admin-stat-label">User Activity</span>
+            <strong>{{ user_activity_rows|length }}</strong>
+            <span class="admin-stat-sub">Admin and user management actions</span>
+        </div>
+    </article>
+    <article class="admin-stat-card tone-orange">
+        <div class="admin-stat-copy">
+            <span class="admin-stat-label">Current View</span>
+            <strong>{{ active_group|title }}</strong>
+            <span class="admin-stat-sub">Use the filters below to switch groups</span>
+        </div>
+    </article>
+</section>
+
 <article class="admin-table-card">
-    <div class="admin-card-head">{{ section_title('Audit Logs') }}</div>
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Staff</th>
-                    <th>Event</th>
-                    <th>Method</th>
-                    <th>IP / Device</th>
-                    <th>Evidence</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if audit_rows %}
-                {% for row in audit_rows %}
-                <tr>
-                    <td>{{ row.time }}</td>
-                    <td>
-                        <strong>{{ row.actor }}</strong>
-                        <div class="cell-sub">{{ row.staff_code }} · {{ row.department }}</div>
-                    </td>
-                    <td>{{ row.event }}</td>
-                    <td>{{ row.auth_method }}</td>
-                    <td>
-                        <strong>{{ row.ip_address or 'Unknown IP' }}</strong>
-                        <div class="cell-sub">{{ row.device_name or 'Unknown device' }}</div>
-                    </td>
-                    <td>
-                        {% if row.photo_url %}
-                        <a href="{{ row.photo_url }}" target="_blank" rel="noopener" class="admin-inline-media-link">
-                            <img src="{{ row.photo_url }}" alt="Captured login selfie" class="admin-inline-audit-photo">
-                            <span>Open image</span>
-                        </a>
-                        {% else %}
-                        <span class="cell-sub">No evidence</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-                {% else %}
-                <tr>
-                    <td colspan="6">
-                        <div class="admin-empty">
-                            <strong>No audit activity yet.</strong>
-                            <p>Selfie-backed staff login activity will start appearing here after staff sign in online.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+    <div class="admin-card-head">
+        {{ section_title('Audit Groups', 'Switch between staff audit evidence and user activity records') }}
+        <div class="admin-tab-strip">
+            <a class="admin-tab-link {% if active_group == 'all' %}is-active{% endif %}" href="{{ url_for('app.admin_audit_logs', group='all') }}">All</a>
+            <a class="admin-tab-link {% if active_group == 'staff' %}is-active{% endif %}" href="{{ url_for('app.admin_audit_logs', group='staff') }}">Staff</a>
+            <a class="admin-tab-link {% if active_group == 'users' %}is-active{% endif %}" href="{{ url_for('app.admin_audit_logs', group='users') }}">Users</a>
+        </div>
     </div>
+
+    {% if active_group in ['all', 'staff'] %}
+    <section class="admin-audit-group">
+        <div class="admin-subsection-head">
+            <div>
+                <strong>Staff Audit Activity</strong>
+                <span>Online selfie-backed staff access records</span>
+            </div>
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Staff</th>
+                        <th>Event</th>
+                        <th>Method</th>
+                        <th>IP / Device</th>
+                        <th>Evidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if staff_audit_rows %}
+                    {% for row in staff_audit_rows %}
+                    <tr>
+                        <td>{{ row.time }}</td>
+                        <td>
+                            <strong>{{ row.actor }}</strong>
+                            <div class="cell-sub">{{ row.staff_code }} · {{ row.department }}</div>
+                        </td>
+                        <td>{{ row.event }}</td>
+                        <td>{{ row.auth_method }}</td>
+                        <td>
+                            <strong>{{ row.ip_address or 'Unknown IP' }}</strong>
+                            <div class="cell-sub">{{ row.device_name or 'Unknown device' }}</div>
+                        </td>
+                        <td>
+                            {% if row.photo_url %}
+                            <a href="{{ row.photo_url }}" target="_blank" rel="noopener" class="admin-inline-media-link">
+                                <img src="{{ row.photo_url }}" alt="Captured login selfie" class="admin-inline-audit-photo">
+                                <span>Open image</span>
+                            </a>
+                            {% else %}
+                            <span class="cell-sub">No evidence</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="admin-empty">
+                                <strong>No staff audit activity yet.</strong>
+                                <p>Selfie-backed staff login activity will start appearing here after staff sign in online.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if active_group in ['all', 'users'] %}
+    <section class="admin-audit-group">
+        <div class="admin-subsection-head">
+            <div>
+                <strong>User Activity</strong>
+                <span>Administrator and user management actions inside this institution</span>
+            </div>
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Event</th>
+                        <th>Details</th>
+                        <th>IP / Device</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if user_activity_rows %}
+                    {% for row in user_activity_rows %}
+                    <tr>
+                        <td>{{ row.time }}</td>
+                        <td>
+                            <strong>{{ row.actor }}</strong>
+                            <div class="cell-sub">{{ row.actor_role }}</div>
+                        </td>
+                        <td>{{ row.event }}</td>
+                        <td>
+                            <strong>{{ row.details }}</strong>
+                            {% if row.target_name %}
+                            <div class="cell-sub">{{ row.target_name }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ row.ip_address or 'Unknown IP' }}</strong>
+                            <div class="cell-sub">{{ row.device_name or 'Unknown device' }}</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="admin-empty">
+                                <strong>No user activity yet.</strong>
+                                <p>Admin logins, password changes, settings changes, and role updates will appear here.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
 </article>
 {% endblock %}

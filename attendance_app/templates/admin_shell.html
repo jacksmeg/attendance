@@ -182,18 +182,36 @@
                         </div>
                         <div class="admin-topbar-actions">
                             {% block toolbar_actions %}{% endblock %}
-                            <button class="admin-icon-button admin-notification-button" type="button" aria-label="Notifications">
-                                {{ icon('bell') }}
-                                <span class="admin-notification-badge">5</span>
-                            </button>
-                            <div class="admin-profile-chip">
-                                <div class="admin-profile-avatar">{{ initials }}</div>
-                                <div class="admin-profile-copy">
-                                    <strong>{{ display_name }}</strong>
-                                    <span>{{ current_role }}</span>
-                                </div>
-                                <span class="admin-profile-caret">{{ icon('chevron-down') }}</span>
+                            <div class="admin-live-clock" data-admin-live-clock data-now="{{ admin_now_iso }}">
+                                <span class="admin-live-clock-date">Today</span>
+                                <strong class="admin-live-clock-time">--:--:--</strong>
                             </div>
+                            <a class="admin-icon-button admin-notification-button" href="{{ url_for('app.admin_notifications') }}" aria-label="Notifications">
+                                {{ icon('bell') }}
+                                {% if admin_notification_count %}
+                                <span class="admin-notification-badge">{{ admin_notification_count }}</span>
+                                {% endif %}
+                            </a>
+                            <details class="admin-profile-menu">
+                                <summary class="admin-profile-chip">
+                                    <div class="admin-profile-avatar">{{ initials }}</div>
+                                    <div class="admin-profile-copy">
+                                        <strong>{{ app_name }}</strong>
+                                        <span>{{ display_name }} · {{ current_role }}</span>
+                                    </div>
+                                    <span class="admin-profile-caret">{{ icon('chevron-down') }}</span>
+                                </summary>
+                                <div class="admin-profile-dropdown">
+                                    <a class="admin-profile-dropdown-link" href="{{ url_for('app.admin_settings') }}#admin-password-card">
+                                        {{ icon('settings') }}
+                                        <span>Change Password</span>
+                                    </a>
+                                    <a class="admin-profile-dropdown-link tone-danger" href="{{ url_for('app.logout') }}">
+                                        {{ icon('logout') }}
+                                        <span>Logout</span>
+                                    </a>
+                                </div>
+                            </details>
                         </div>
                     </div>
                 </div>
@@ -231,5 +249,36 @@
             </ol>
         </div>
     </section>
+    <script>
+        (() => {
+            const clock = document.querySelector("[data-admin-live-clock]");
+            if (!clock) return;
+
+            const dateNode = clock.querySelector(".admin-live-clock-date");
+            const timeNode = clock.querySelector(".admin-live-clock-time");
+
+            const renderClock = () => {
+                const now = new Date();
+                if (dateNode) {
+                    dateNode.textContent = now.toLocaleDateString([], {
+                        weekday: "short",
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric"
+                    });
+                }
+                if (timeNode) {
+                    timeNode.textContent = now.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit"
+                    });
+                }
+            };
+
+            renderClock();
+            window.setInterval(renderClock, 1000);
+        })();
+    </script>
 </body>
 </html>

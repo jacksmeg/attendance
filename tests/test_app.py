@@ -125,6 +125,24 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn("Staff Code", payload)
         self.assertIn("EMP-100", payload)
 
+    def test_admin_notifications_and_audit_groups_render_live_data(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        notifications_response = self.client.get("/admin/notifications")
+        self.assertEqual(notifications_response.status_code, 200)
+        self.assertIn(b"Work location restriction is disabled", notifications_response.data)
+        self.assertIn(b"default source", notifications_response.data)
+
+        audit_response = self.client.get("/admin/audit-logs?group=users")
+        self.assertEqual(audit_response.status_code, 200)
+        self.assertIn(b"User Activity", audit_response.data)
+        self.assertIn(b"Admin Login", audit_response.data)
+        self.assertIn(b"Institution administrator signed in successfully.", audit_response.data)
+
     def test_platform_super_admin_can_provision_institution_from_web_ui(self) -> None:
         login_response = self.client.post(
             "/platform/login",
