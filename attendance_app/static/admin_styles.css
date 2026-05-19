@@ -2646,9 +2646,9 @@ html[data-theme="dark"] .platform-backup-row {
     flex: 1;
     min-width: 0;
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
     display: grid;
-    grid-template-columns: minmax(250px, 430px) minmax(0, 1fr);
+    grid-template-columns: minmax(240px, 1fr) auto;
     justify-content: end;
     align-items: center;
 }
@@ -2656,13 +2656,14 @@ html[data-theme="dark"] .platform-backup-row {
 .admin-topbar-center {
     flex: 1;
     min-width: 0;
+    max-width: 460px;
 }
 
 .admin-topbar-actions {
     min-width: 0;
     flex-wrap: nowrap;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 10px;
 }
 
 .admin-page-shell {
@@ -2719,6 +2720,19 @@ html[data-theme="dark"] .platform-backup-row {
 .admin-topbar-actions .admin-live-clock,
 .admin-topbar-actions .admin-profile-menu {
     flex: 0 0 auto;
+}
+
+.admin-topbar-actions .admin-toolbar-form {
+    min-width: 0;
+}
+
+.admin-topbar-actions .admin-topbar-input.admin-date-input {
+    width: 152px;
+    min-width: 152px;
+}
+
+.admin-topbar-actions .admin-date-input input[type="date"] {
+    min-width: 0;
 }
 
 .admin-search-box input,
@@ -2986,9 +3000,9 @@ html[data-theme="dark"] .admin-side-link-logout {
 
 /* Admin shell interaction polish */
 .admin-live-clock {
-    min-width: 152px;
+    min-width: 128px;
     min-height: 48px;
-    padding: 7px 14px;
+    padding: 7px 12px;
     border-radius: 18px;
     background: #ffffff;
     border: 1px solid var(--admin-line);
@@ -3000,14 +3014,13 @@ html[data-theme="dark"] .admin-side-link-logout {
 }
 
 .admin-live-clock-date {
-    color: var(--admin-muted);
-    font-size: 0.72rem;
-    font-weight: 600;
+    display: none;
 }
 
 .admin-live-clock-time {
     color: var(--admin-text);
-    font-size: 0.96rem;
+    font-size: 0.92rem;
+    font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
 }
 
@@ -3042,7 +3055,7 @@ html[data-theme="dark"] .admin-side-link-logout {
 
 .admin-profile-chip {
     min-width: 0;
-    max-width: 340px;
+    max-width: 290px;
 }
 
 .admin-profile-copy {

@@ -183,7 +183,7 @@
                         <div class="admin-topbar-actions">
                             {% block toolbar_actions %}{% endblock %}
                             <div class="admin-live-clock" data-admin-live-clock data-now="{{ admin_now_iso }}">
-                                <span class="admin-live-clock-date">Current time</span>
+                                <span class="admin-live-clock-date">Live time</span>
                                 <strong class="admin-live-clock-time">--:--:--</strong>
                             </div>
                             <a class="admin-icon-button admin-notification-button" href="{{ url_for('app.admin_notifications') }}" aria-label="Notifications">
