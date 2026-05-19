@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from base64 import b64decode
 from datetime import date, datetime, time, timedelta
+from io import BytesIO
 import json
 import math
 from pathlib import Path
@@ -12,6 +13,7 @@ import sqlite3
 from uuid import uuid4
 import zlib
 
+from PIL import Image
 from flask import (
     Blueprint,
     Response,
@@ -135,6 +137,8 @@ STAFF_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_STAFF_PHOTO_BYTES = 4 * 1024 * 1024
 SYSTEM_LOGO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_SYSTEM_LOGO_BYTES = 3 * 1024 * 1024
+DEFAULT_LOGO_MARK_STATIC = "branding/jhims-attendance-logo-mark.png"
+DEFAULT_LOGO_FULL_STATIC = "branding/jhims-attendance-logo-full.png"
 AUDIT_SELFIE_MIME_TYPES = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
@@ -2294,9 +2298,9 @@ def _delete_system_logo(filename: str | None) -> None:
 
 
 def _system_logo_url_for_filename(filename: str | None) -> str:
-    if not filename:
-        return ""
-    return url_for("app.system_logo", filename=filename)
+    if filename:
+        return url_for("app.system_logo", filename=filename)
+    return url_for("static", filename=DEFAULT_LOGO_MARK_STATIC)
 
 
 def _audit_selfie_url_for_filename(filename: str | None) -> str:
@@ -2542,6 +2546,86 @@ def _pwa_short_name(app_name: str) -> str:
 
 
 def _generate_pwa_icon_png(*, size: int) -> bytes:
+    source_path = _pwa_logo_source_path()
+    if source_path is not None:
+        try:
+            return _generate_logo_based_pwa_icon_png(source_path=source_path, size=size)
+        except Exception:
+            pass
+    return _generate_fallback_pwa_icon_png(size=size)
+
+
+def _generate_logo_based_pwa_icon_png(*, source_path: Path, size: int) -> bytes:
+    with Image.open(source_path) as source_image:
+        image = source_image.convert("RGBA")
+        image = _trim_logo_whitespace(image)
+        canvas = Image.new("RGBA", (size, size), (255, 255, 255, 255))
+        padded_size = max(1, size - int(size * 0.26))
+        logo = image.copy()
+        logo.thumbnail((padded_size, padded_size), Image.Resampling.LANCZOS)
+        offset = ((size - logo.width) // 2, (size - logo.height) // 2)
+        canvas.paste(logo, offset, logo)
+
+    buffer = BytesIO()
+    canvas.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _trim_logo_whitespace(image: Image.Image) -> Image.Image:
+    pixels = image.load()
+    min_x = image.width
+    min_y = image.height
+    max_x = 0
+    max_y = 0
+    found = False
+
+    for y in range(image.height):
+        for x in range(image.width):
+            red, green, blue, alpha = pixels[x, y]
+            if alpha > 0 and (red < 245 or green < 245 or blue < 245):
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x)
+                max_y = max(max_y, y)
+                found = True
+
+    if not found:
+        return image
+
+    padding = max(4, int(min(image.size) * 0.04))
+    return image.crop(
+        (
+            max(0, min_x - padding),
+            max(0, min_y - padding),
+            min(image.width, max_x + padding),
+            min(image.height, max_y + padding),
+        )
+    )
+
+
+def _pwa_logo_source_path() -> Path | None:
+    live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
+    filename = str(live_settings.get("system_logo_filename", "") or "").strip()
+    if filename:
+        candidate = _system_logo_directory() / filename
+        if candidate.exists():
+            return candidate
+
+    default_candidate = _default_logo_mark_path()
+    if default_candidate.exists():
+        return default_candidate
+    return None
+
+
+def _default_logo_mark_path() -> Path:
+    return Path(current_app.static_folder or "") / DEFAULT_LOGO_MARK_STATIC
+
+
+def _default_logo_full_path() -> Path:
+    return Path(current_app.static_folder or "") / DEFAULT_LOGO_FULL_STATIC
+
+
+def _generate_fallback_pwa_icon_png(*, size: int) -> bytes:
     background = (17, 22, 31, 255)
     accent = (47, 107, 255, 255)
     highlight = (78, 219, 12, 255)

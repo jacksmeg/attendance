@@ -42,10 +42,11 @@
                 </label>
                 <div class="admin-field">
                     <span>Logo Preview</span>
+                    {% set preview_logo_url = url_for('app.system_logo', filename=form_values.system_logo_filename) if form_values.system_logo_filename else app_logo_url %}
                     <div class="admin-brand-preview-card">
                         <div class="admin-brand-preview-mark">
-                            {% if form_values.system_logo_filename %}
-                            <img src="{{ url_for('app.system_logo', filename=form_values.system_logo_filename) }}" alt="{{ form_values.organization_name }} logo">
+                            {% if preview_logo_url %}
+                            <img src="{{ preview_logo_url }}" alt="{{ form_values.organization_name }} logo">
                             {% else %}
                             {{ icon('fingerprint') }}
                             {% endif %}
@@ -179,7 +180,7 @@
             </div>
             <div class="admin-summary-list">
                 <div class="admin-summary-row"><span>Live system name</span><strong>{{ form_values.organization_name }}</strong></div>
-                <div class="admin-summary-row"><span>Logo</span><strong>{{ 'Uploaded' if form_values.system_logo_filename else 'Default mark' }}</strong></div>
+                <div class="admin-summary-row"><span>Logo</span><strong>{{ 'Uploaded' if form_values.system_logo_filename else 'JHIMS default mark' }}</strong></div>
                 <div class="admin-summary-row"><span>New staff shift</span><strong>{{ form_values.default_shift_start }} - {{ form_values.default_shift_end }}</strong></div>
                 <div class="admin-summary-row"><span>Grace period</span><strong>{{ form_values.default_grace_minutes }} mins</strong></div>
                 <div class="admin-summary-row"><span>Report range</span><strong>{{ form_values.report_default_range_days }} days</strong></div>
