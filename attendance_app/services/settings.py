@@ -46,6 +46,23 @@ def get_app_settings(default_app_name: str = "") -> dict[str, Any]:
         rows = db.execute("SELECT key, value FROM app_settings").fetchall()
     except sqlite3.OperationalError:
         rows = []
+    return _deserialize_app_settings_rows(rows, default_app_name=default_app_name)
+
+
+def get_app_settings_for_database(database_path: Path, default_app_name: str = "") -> dict[str, Any]:
+    db = sqlite3.connect(Path(database_path).resolve())
+    db.row_factory = sqlite3.Row
+    try:
+        try:
+            rows = db.execute("SELECT key, value FROM app_settings").fetchall()
+        except sqlite3.OperationalError:
+            rows = []
+        return _deserialize_app_settings_rows(rows, default_app_name=default_app_name)
+    finally:
+        db.close()
+
+
+def _deserialize_app_settings_rows(rows, *, default_app_name: str = "") -> dict[str, Any]:
     values = {row["key"]: row["value"] for row in rows}
     merged = {**DEFAULT_SETTINGS, **values}
     organization_name = str(merged.get("organization_name", "")).strip() or default_app_name

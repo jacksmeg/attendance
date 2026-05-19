@@ -5,14 +5,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }} | {{ app_name }}</title>
+    {% set pwa_app_title = institution_name ~ ' Staff App' if institution_name and institution_name != app_name else app_name %}
     {% include "_theme_head.html" %}
     <meta name="theme-color" content="#2f6bff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="{{ app_name }}">
-    <link rel="manifest" href="{{ url_for('app.pwa_manifest') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('app.pwa_icon_png', size=180) }}">
-    <link rel="apple-touch-icon" href="{{ url_for('app.pwa_icon_png', size=192) }}">
+    <meta name="apple-mobile-web-app-title" content="{{ pwa_app_title }}">
+    <meta name="pwa-sw-url" content="{{ url_for('app.pwa_service_worker', org=organization_slug) if organization_slug else url_for('app.pwa_service_worker') }}">
+    <link rel="manifest" href="{{ url_for('app.pwa_manifest', org=organization_slug) if organization_slug else url_for('app.pwa_manifest') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('app.pwa_icon_png', size=180, org=organization_slug) if organization_slug else url_for('app.pwa_icon_png', size=180) }}">
+    <link rel="apple-touch-icon" href="{{ url_for('app.pwa_icon_png', size=192, org=organization_slug) if organization_slug else url_for('app.pwa_icon_png', size=192) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="{{ url_for('static', filename='pwa.js') }}" defer></script>
     <script src="{{ url_for('static', filename='theme.js') }}" defer></script>

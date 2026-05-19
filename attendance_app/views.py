@@ -91,6 +91,7 @@ from .services.settings import (
     get_admin_security,
     get_admin_security_for_database,
     get_app_settings,
+    get_app_settings_for_database,
     save_admin_password,
     save_admin_credentials_for_database,
     save_app_settings,
@@ -358,12 +359,14 @@ def register_routes(app: Flask) -> None:
     @bp.route("/pwa/manifest.webmanifest")
     def pwa_manifest():
         product_name = current_app.config["APP_SETTINGS"].app_name
-        organization = get_current_organization()
-        live_settings = get_app_settings(
-            default_app_name=_tenant_default_app_name()
+        organization = _resolve_pwa_request_organization()
+        live_settings = _get_app_settings_for_organization(
+            organization,
+            default_app_name=organization.display_name or product_name,
         )
         institution_name = live_settings["organization_name"]
         tenant_scoped_install = bool(institution_name and institution_name != product_name)
+        icon_query = {"org": organization.slug} if tenant_scoped_install else {}
         if tenant_scoped_install:
             manifest_name = f"{institution_name} Staff App"
             short_name = _pwa_short_name(f"{institution_name} Staff")
@@ -396,48 +399,48 @@ def register_routes(app: Flask) -> None:
             "orientation": "portrait-primary",
             "background_color": "#11161f",
             "theme_color": "#2f6bff",
-            "description": description,
-            "icons": [
-                {
-                    "src": url_for("app.pwa_icon_png", size=180),
-                    "sizes": "180x180",
-                    "type": "image/png",
-                    "purpose": "any",
-                },
-                {
-                    "src": url_for("app.pwa_icon_png", size=192),
-                    "sizes": "192x192",
-                    "type": "image/png",
-                    "purpose": "any maskable",
-                },
-                {
-                    "src": url_for("app.pwa_icon_png", size=512),
-                    "sizes": "512x512",
-                    "type": "image/png",
-                    "purpose": "any maskable",
-                },
-            ],
-            "shortcuts": [
-                {
-                    "name": "Staff Login",
-                    "short_name": "Login",
-                    "url": staff_login_url,
-                    "icons": [{"src": url_for("app.pwa_icon_png", size=192), "sizes": "192x192"}],
-                },
-                {
-                    "name": "My Attendance",
-                    "short_name": "Attendance",
-                    "url": url_for("app.staff_home"),
-                    "icons": [{"src": url_for("app.pwa_icon_png", size=192), "sizes": "192x192"}],
-                },
-                {
-                    "name": "Admin Login",
-                    "short_name": "Admin",
-                    "url": admin_login_url,
-                    "icons": [{"src": url_for("app.pwa_icon_png", size=192), "sizes": "192x192"}],
-                },
-            ],
-        }
+                "description": description,
+                "icons": [
+                    {
+                        "src": url_for("app.pwa_icon_png", size=180, **icon_query),
+                        "sizes": "180x180",
+                        "type": "image/png",
+                        "purpose": "any",
+                    },
+                    {
+                        "src": url_for("app.pwa_icon_png", size=192, **icon_query),
+                        "sizes": "192x192",
+                        "type": "image/png",
+                        "purpose": "any maskable",
+                    },
+                    {
+                        "src": url_for("app.pwa_icon_png", size=512, **icon_query),
+                        "sizes": "512x512",
+                        "type": "image/png",
+                        "purpose": "any maskable",
+                    },
+                ],
+                "shortcuts": [
+                    {
+                        "name": "Staff Login",
+                        "short_name": "Login",
+                        "url": staff_login_url,
+                        "icons": [{"src": url_for("app.pwa_icon_png", size=192, **icon_query), "sizes": "192x192"}],
+                    },
+                    {
+                        "name": "My Attendance",
+                        "short_name": "Attendance",
+                        "url": url_for("app.staff_home"),
+                        "icons": [{"src": url_for("app.pwa_icon_png", size=192, **icon_query), "sizes": "192x192"}],
+                    },
+                    {
+                        "name": "Admin Login",
+                        "short_name": "Admin",
+                        "url": admin_login_url,
+                        "icons": [{"src": url_for("app.pwa_icon_png", size=192, **icon_query), "sizes": "192x192"}],
+                    },
+                ],
+            }
         return Response(
             json.dumps(manifest),
             mimetype="application/manifest+json",
@@ -446,13 +449,15 @@ def register_routes(app: Flask) -> None:
 
     @bp.route("/service-worker.js")
     def pwa_service_worker():
-        organization = get_current_organization()
+        organization = _resolve_pwa_request_organization()
         product_name = current_app.config["APP_SETTINGS"].app_name
-        live_settings = get_app_settings(
-            default_app_name=_tenant_default_app_name()
+        live_settings = _get_app_settings_for_organization(
+            organization,
+            default_app_name=organization.display_name or product_name,
         )
         institution_name = live_settings["organization_name"]
         tenant_scoped_install = bool(institution_name and institution_name != product_name)
+        icon_query = {"org": organization.slug} if tenant_scoped_install else {}
         precache_urls = [
             url_for("app.home"),
             url_for("app.staff_login"),
@@ -460,12 +465,12 @@ def register_routes(app: Flask) -> None:
             url_for("app.pwa_offline"),
             url_for("static", filename="styles.css"),
             url_for("static", filename="admin_styles.css"),
-              url_for("static", filename="pwa.js"),
-              url_for("static", filename="theme.js"),
-                url_for("app.pwa_icon_png", size=180),
-                url_for("app.pwa_icon_png", size=192),
-                url_for("app.pwa_icon_png", size=512),
-            ]
+            url_for("static", filename="pwa.js"),
+            url_for("static", filename="theme.js"),
+            url_for("app.pwa_icon_png", size=180, **icon_query),
+            url_for("app.pwa_icon_png", size=192, **icon_query),
+            url_for("app.pwa_icon_png", size=512, **icon_query),
+        ]
         if tenant_scoped_install:
             precache_urls.extend(
                 [
@@ -473,7 +478,7 @@ def register_routes(app: Flask) -> None:
                     url_for("app.portal_admin_login", slug=organization.slug),
                 ]
             )
-        cache_name = f"attendance-pwa-{current_app.config['APP_SETTINGS'].fingerprint_backend}"
+        cache_name = f"attendance-pwa-{organization.slug}-{current_app.config['APP_SETTINGS'].fingerprint_backend}"
         script = f"""
 const CACHE_NAME = {json.dumps(cache_name)};
 const PRECACHE_URLS = {json.dumps(precache_urls)};
@@ -544,10 +549,15 @@ self.addEventListener("fetch", (event) => {{
     def pwa_icon_png(size: int):
         if size not in {120, 152, 167, 180, 192, 512}:
             size = 180
+        organization = _resolve_pwa_request_organization()
+        live_settings = _get_app_settings_for_organization(
+            organization,
+            default_app_name=organization.display_name or current_app.config["APP_SETTINGS"].app_name,
+        )
         return Response(
-            _generate_pwa_icon_png(size=size),
+            _generate_pwa_icon_png(size=size, organization=organization, live_settings=live_settings),
             mimetype="image/png",
-            headers={"Cache-Control": "public, max-age=86400"},
+            headers={"Cache-Control": "public, max-age=3600"},
         )
 
     @bp.route("/media/staff/<path:filename>")
@@ -2624,8 +2634,30 @@ def _pwa_short_name(app_name: str) -> str:
     return first_word[:12]
 
 
-def _generate_pwa_icon_png(*, size: int) -> bytes:
-    source_path = _pwa_logo_source_path()
+def _resolve_pwa_request_organization():
+    requested_slug = str(request.args.get("org", "") or "").strip()
+    if requested_slug:
+        requested_organization = get_organization_by_slug(
+            current_app.config["APP_SETTINGS"],
+            requested_slug,
+        )
+        if requested_organization is not None:
+            return requested_organization
+    return get_current_organization()
+
+
+def _get_app_settings_for_organization(organization, *, default_app_name: str = "") -> dict[str, Any]:
+    current_organization = get_current_organization()
+    if current_organization.slug == organization.slug:
+        return get_app_settings(default_app_name=default_app_name)
+    return get_app_settings_for_database(
+        organization.database_path,
+        default_app_name=default_app_name,
+    )
+
+
+def _generate_pwa_icon_png(*, size: int, organization=None, live_settings: dict[str, Any] | None = None) -> bytes:
+    source_path = _pwa_logo_source_path(organization=organization, live_settings=live_settings)
     if source_path is not None:
         try:
             return _generate_logo_based_pwa_icon_png(source_path=source_path, size=size)
@@ -2682,11 +2714,18 @@ def _trim_logo_whitespace(image: Image.Image) -> Image.Image:
     )
 
 
-def _pwa_logo_source_path() -> Path | None:
-    live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
-    filename = str(live_settings.get("system_logo_filename", "") or "").strip()
+def _pwa_logo_source_path(*, organization=None, live_settings: dict[str, Any] | None = None) -> Path | None:
+    chosen_organization = organization or get_current_organization()
+    chosen_settings = live_settings or _get_app_settings_for_organization(
+        chosen_organization,
+        default_app_name=chosen_organization.display_name or current_app.config["APP_SETTINGS"].app_name,
+    )
+    filename = str(chosen_settings.get("system_logo_filename", "") or "").strip()
     if filename:
-        candidate = _system_logo_directory() / filename
+        if organization is None or chosen_organization.slug == get_current_organization().slug:
+            candidate = _system_logo_directory() / filename
+        else:
+            candidate = chosen_organization.instance_dir / "system" / filename
         if candidate.exists():
             return candidate
 

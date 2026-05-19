@@ -2,6 +2,8 @@
     const installButton = document.querySelector("[data-pwa-install]");
     const iosSheet = document.querySelector("[data-pwa-ios-sheet]");
     const iosCloseButtons = Array.from(document.querySelectorAll("[data-pwa-ios-close]"));
+    const serviceWorkerMeta = document.querySelector('meta[name="pwa-sw-url"]');
+    const serviceWorkerUrl = serviceWorkerMeta?.content || "/service-worker.js";
     const inStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
     let deferredInstallPrompt = null;
     const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
@@ -21,7 +23,7 @@
 
     if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
-            navigator.serviceWorker.register("/service-worker.js").catch(function () {
+            navigator.serviceWorker.register(serviceWorkerUrl).catch(function () {
                 /* Keep the app usable even if SW registration fails. */
             });
         });

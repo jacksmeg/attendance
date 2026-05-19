@@ -218,6 +218,8 @@ class AttendanceAppTests(unittest.TestCase):
         )
         self.assertEqual(branded_staff_login.status_code, 200)
         self.assertIn(b"Mercy Hospital", branded_staff_login.data)
+        self.assertIn(b"/pwa/manifest.webmanifest?org=mercy-hospital", branded_staff_login.data)
+        self.assertIn(b"/pwa/icon-180.png?org=mercy-hospital", branded_staff_login.data)
 
     def test_platform_super_admin_can_store_subscription_and_billing_fields(self) -> None:
         self.client.post(
@@ -602,6 +604,7 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(manifest["name"], "Mercy Hospital Staff App")
         self.assertEqual(manifest["id"], "/portal/mercy-hospital/staff/login")
         self.assertEqual(manifest["start_url"], "/portal/mercy-hospital/staff/login")
+        self.assertIn("/pwa/icon-180.png?org=mercy-hospital", manifest["icons"][0]["src"])
         self.assertEqual(manifest["shortcuts"][0]["url"], "/portal/mercy-hospital/staff/login")
         self.assertEqual(manifest["shortcuts"][2]["url"], "/portal/mercy-hospital/admin/login")
 
