@@ -182,6 +182,91 @@
                         </div>
                     </div>
 
+                    <div class="platform-org-license-grid">
+                        <div class="platform-org-license-card">
+                            <span>Latest Backup</span>
+                            <strong>{{ organization.latest_backup.created_label if organization.latest_backup else 'No backups yet' }}</strong>
+                            <small>
+                                {% if organization.latest_backup %}
+                                    {{ organization.latest_backup.reason_label }} · {{ organization.latest_backup.size_label }}
+                                {% else %}
+                                    Automatic backups run every 24 hours while the platform is active.
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="platform-org-license-card">
+                            <span>Backup History</span>
+                            <strong>{{ organization.backups|length }} snapshot{{ '' if organization.backups|length == 1 else 's' }}</strong>
+                            <small>Manual, automatic, and pre-restore safety backups are stored separately per institution.</small>
+                        </div>
+                        <div class="platform-org-license-card">
+                            <span>Restore Scope</span>
+                            <strong>Tenant only</strong>
+                            <small>Restore affects only this institution’s staff, attendance, branding, and uploaded files.</small>
+                        </div>
+                        <div class="platform-org-license-card">
+                            <span>Safety Rule</span>
+                            <strong>Pre-restore snapshot</strong>
+                            <small>The system creates a safety backup automatically before every restore.</small>
+                        </div>
+                    </div>
+
+                    <section class="platform-backup-section">
+                        <div class="admin-card-head">
+                            {{ section_title('Backups & Restore', 'Create instant snapshots, download archives, and restore this institution from a previous backup.') }}
+                        </div>
+                        <div class="platform-backup-controls">
+                            <form method="post" class="platform-backup-action-form">
+                                <input type="hidden" name="action" value="create_backup">
+                                <input type="hidden" name="organization_slug" value="{{ organization.slug }}">
+                                <button class="admin-toolbar-button tone-primary" type="submit">
+                                    {{ icon('plus') }}
+                                    <span>Create Backup Now</span>
+                                </button>
+                            </form>
+                            {% if organization.backups %}
+                            <form method="post" class="platform-backup-restore-form">
+                                <input type="hidden" name="action" value="restore_backup">
+                                <input type="hidden" name="organization_slug" value="{{ organization.slug }}">
+                                <label class="admin-field platform-backup-select">
+                                    <span>Restore from snapshot</span>
+                                    <select name="backup_name" required>
+                                        {% for backup in organization.backups %}
+                                        <option value="{{ backup.name }}">{{ backup.reason_label }} · {{ backup.created_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <button class="admin-toolbar-button" type="submit">
+                                    {{ icon('settings') }}
+                                    <span>Restore Selected Backup</span>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                        {% if organization.backups %}
+                        <div class="platform-backup-list">
+                            {% for backup in organization.backups %}
+                            <div class="platform-backup-row">
+                                <div class="platform-backup-row-copy">
+                                    <strong>{{ backup.reason_label }}</strong>
+                                    <span>{{ backup.created_label }} · {{ backup.size_label }}</span>
+                                </div>
+                                <a class="admin-toolbar-button" href="{{ backup.download_url }}">
+                                    {{ icon('arrow-right') }}
+                                    <span>Download</span>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="admin-inline-notice">
+                            <strong>First backup pending</strong>
+                            <span>Create a manual snapshot now or revisit the platform later to let the automatic daily backup run.</span>
+                        </div>
+                        {% endif %}
+                    </section>
+
                     {% if organization.license_notes %}
                     <div class="admin-inline-notice platform-license-note">
                         <strong>License Notes</strong>

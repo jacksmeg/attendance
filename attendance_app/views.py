@@ -18,6 +18,7 @@ from flask import (
     Flask,
     current_app,
     flash,
+    g,
     jsonify,
     redirect,
     render_template,
@@ -55,6 +56,13 @@ from .auth import (
 )
 from .fingerprint import build_provider
 from .services.admin_activity import list_admin_activity_logs, log_admin_activity
+from .services.backups import (
+    create_organization_backup,
+    ensure_automatic_backups,
+    list_organization_backups,
+    resolve_backup_archive_path,
+    restore_organization_backup,
+)
 from .services.attendance import (
     get_dashboard_data,
     get_recent_events,
@@ -117,6 +125,7 @@ from .services.tenancy import (
     count_organizations_by_license,
     get_current_organization_access_state,
     get_organization_access_state,
+    get_organization_by_slug,
     list_organizations,
     provision_organization,
     update_organization,
@@ -838,7 +847,51 @@ self.addEventListener("fetch", (event) => {{
                             "success",
                         )
                         return redirect(url_for("app.platform_organizations"))
+            elif action == "create_backup":
+                slug = request.form.get("organization_slug", "").strip()
+                target_organization = get_organization_by_slug(settings, slug)
+                if not target_organization:
+                    flash("The selected institution could not be found.", "error")
+                else:
+                    backup_path = create_organization_backup(
+                        target_organization,
+                        reason="manual",
+                        note="Created from the platform super admin portal.",
+                    )
+                    flash(
+                        f"Backup created for {target_organization.display_name}: {backup_path.name}",
+                        "success",
+                    )
+                    return redirect(url_for("app.platform_organizations"))
+            elif action == "restore_backup":
+                slug = request.form.get("organization_slug", "").strip()
+                backup_name = request.form.get("backup_name", "").strip()
+                target_organization = get_organization_by_slug(settings, slug)
+                if not target_organization:
+                    flash("The selected institution could not be found.", "error")
+                elif not backup_name:
+                    flash("Choose a backup snapshot before restoring.", "error")
+                else:
+                    try:
+                        existing_db = g.pop("db", None)
+                        if existing_db is not None:
+                            existing_db.close()
+                        pre_restore_backup = restore_organization_backup(
+                            target_organization,
+                            backup_name,
+                        )
+                    except ValueError as exc:
+                        flash(str(exc), "error")
+                    else:
+                        flash(
+                            f"{target_organization.display_name} was restored from {backup_name}. "
+                            f"A safety snapshot was saved as {pre_restore_backup.name}.",
+                            "success",
+                        )
+                        return redirect(url_for("app.platform_organizations"))
 
+        organizations = list_organizations(settings)
+        ensure_automatic_backups(organizations)
         organizations = list_organizations(settings)
         rows = _platform_organization_rows(organizations, update_forms=update_forms)
         stats = {
@@ -863,6 +916,29 @@ self.addEventListener("fetch", (event) => {{
             license_status_options=_platform_license_status_options(),
             billing_cycle_options=_platform_billing_cycle_options(),
             **_platform_context("Organizations", "organizations", ["Platform", "Organizations"]),
+        )
+
+    @bp.route("/platform/organizations/<slug>/backups/<path:backup_name>")
+    @platform_admin_required
+    def platform_download_backup(slug: str, backup_name: str):
+        settings = current_app.config["APP_SETTINGS"]
+        organization = get_organization_by_slug(settings, slug)
+        if not organization:
+            flash("The selected institution could not be found.", "error")
+            return redirect(url_for("app.platform_organizations"))
+
+        try:
+            archive_path = resolve_backup_archive_path(organization, backup_name)
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(url_for("app.platform_organizations"))
+
+        return send_file(
+            archive_path,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=archive_path.name,
+            max_age=0,
         )
 
     @bp.route("/admin/logout")
@@ -2602,6 +2678,7 @@ def _platform_organization_rows(
         if hostnames:
             primary_url = f"https://{hostnames[0]}"
         access_state = get_organization_access_state(organization)
+        backups = list_organization_backups(organization, limit=6)
         rows.append(
             {
                 "slug": organization.slug,
@@ -2625,6 +2702,21 @@ def _platform_organization_rows(
                 "last_payment_on": organization.last_payment_on,
                 "license_notes": organization.license_notes,
                 "access_state": access_state,
+                "backups": [
+                    {
+                        "name": snapshot.name,
+                        "created_label": snapshot.created_label,
+                        "size_label": snapshot.size_label,
+                        "reason_label": snapshot.reason_label,
+                        "download_url": url_for(
+                            "app.platform_download_backup",
+                            slug=organization.slug,
+                            backup_name=snapshot.name,
+                        ),
+                    }
+                    for snapshot in backups
+                ],
+                "latest_backup": backups[0] if backups else None,
             }
         )
     return rows

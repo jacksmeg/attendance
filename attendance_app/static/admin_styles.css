@@ -2327,9 +2327,79 @@ body.admin-ui {
     resize: vertical;
 }
 
+.platform-backup-section {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid var(--admin-line);
+    border-radius: 20px;
+    background: var(--admin-surface);
+}
+
+.platform-backup-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+    gap: 14px;
+    align-items: end;
+}
+
+.platform-backup-action-form,
+.platform-backup-restore-form {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.platform-backup-action-form .admin-toolbar-button,
+.platform-backup-restore-form .admin-toolbar-button {
+    width: 100%;
+    justify-content: center;
+}
+
+.platform-backup-select {
+    gap: 8px;
+}
+
+.platform-backup-list {
+    display: grid;
+    gap: 10px;
+}
+
+.platform-backup-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid var(--admin-line);
+    background: var(--admin-surface-soft);
+}
+
+.platform-backup-row-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.platform-backup-row-copy strong {
+    color: var(--admin-text);
+    font-size: 0.92rem;
+}
+
+.platform-backup-row-copy span {
+    color: var(--admin-muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
 @media (max-width: 1100px) {
     .platform-org-meta-grid,
     .platform-org-license-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .platform-backup-controls {
         grid-template-columns: 1fr;
     }
 }
@@ -2337,6 +2407,11 @@ body.admin-ui {
 @media (max-width: 760px) {
     .platform-org-card-head {
         flex-direction: column;
+    }
+
+    .platform-backup-row {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 
@@ -2453,7 +2528,9 @@ html[data-theme="dark"] .admin-toolbar-button.tone-primary {
 
 html[data-theme="dark"] .platform-org-card,
 html[data-theme="dark"] .platform-org-meta,
-html[data-theme="dark"] .platform-org-license-card {
+html[data-theme="dark"] .platform-org-license-card,
+html[data-theme="dark"] .platform-backup-section,
+html[data-theme="dark"] .platform-backup-row {
     background: linear-gradient(180deg, #0c1729 0%, #0f1d33 100%);
     border-color: var(--admin-line);
     color: var(--admin-text);

@@ -240,6 +240,108 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(organization.last_payment_on, payment_date)
         self.assertEqual(organization.license_notes, "Annual hospital deployment with onboarding support.")
 
+    def test_platform_organizations_page_creates_automatic_backups(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        response = self.client.get("/platform/organizations")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Backups &amp; Restore", response.data)
+
+        backup_dir = self.app.config["APP_SETTINGS"].instance_dir / "backups"
+        archives = list(backup_dir.glob("*-automatic-backup-*.zip"))
+        self.assertTrue(archives)
+
+    def test_platform_super_admin_can_create_and_download_manual_backup(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "create_backup",
+                "organization_slug": self.app.config["APP_SETTINGS"].default_organization_slug,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Backup created for", response.data)
+
+        backup_dir = self.app.config["APP_SETTINGS"].instance_dir / "backups"
+        archives = sorted(backup_dir.glob("*-manual-backup-*.zip"))
+        self.assertTrue(archives)
+
+        download_response = self.client.get(
+            f"/platform/organizations/{self.app.config['APP_SETTINGS'].default_organization_slug}/backups/{archives[-1].name}"
+        )
+        self.assertEqual(download_response.status_code, 200)
+        self.assertEqual(download_response.mimetype, "application/zip")
+        download_response.close()
+
+    def test_platform_super_admin_can_restore_institution_from_backup(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        backup_response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "create_backup",
+                "organization_slug": self.app.config["APP_SETTINGS"].default_organization_slug,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(backup_response.status_code, 200)
+
+        backup_dir = self.app.config["APP_SETTINGS"].instance_dir / "backups"
+        archives = sorted(backup_dir.glob("*-manual-backup-*.zip"))
+        self.assertTrue(archives)
+        selected_backup = archives[-1].name
+
+        with self.app.app_context():
+            create_staff(
+                {
+                    "staff_code": "EMP-RESTORE",
+                    "first_name": "Restore",
+                    "last_name": "Target",
+                    "email": "restore@example.com",
+                    "phone": "+233100000001",
+                    "department": "Recovery",
+                    "role": "Nurse",
+                    "access_role": "Staff",
+                    "portal_password": "Restore@123",
+                    "portal_pin": "1111",
+                    "shift_start": "08:00",
+                    "shift_end": "16:00",
+                    "grace_minutes": 10,
+                    "is_active": True,
+                }
+            )
+            self.assertIsNotNone(get_staff_by_code("EMP-RESTORE"))
+
+        restore_response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "restore_backup",
+                "organization_slug": self.app.config["APP_SETTINGS"].default_organization_slug,
+                "backup_name": selected_backup,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(restore_response.status_code, 200)
+        self.assertIn(b"was restored from", restore_response.data)
+
+        with self.app.app_context():
+            self.assertIsNone(get_staff_by_code("EMP-RESTORE"))
+
     def test_expired_organization_is_redirected_to_license_page(self) -> None:
         expired_host = "expired.attendance.local"
         expired_on = (date.today() - timedelta(days=3)).isoformat()
