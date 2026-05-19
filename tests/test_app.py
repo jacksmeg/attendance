@@ -1135,6 +1135,85 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn(b"Staff Number or Email Address", logout_response.data)
         self.assertIn(b"Session closed.", logout_response.data)
 
+    def test_portal_staff_logout_returns_to_same_institution_login_page(self) -> None:
+        shared_host = "attendance.jhimssoftware.com"
+
+        with self.app.app_context():
+            shared_front = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="shared-front",
+                display_name="Shared Front Office",
+                hostnames=[shared_host],
+            )
+            init_db(shared_front.database_path)
+            save_admin_credentials_for_database(
+                shared_front.database_path,
+                username="sharedadmin",
+                password="Shared@1234",
+            )
+            mercy_org = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="mercy-hospital",
+                display_name="Mercy Hospital",
+                hostnames=["attendance.mercy.example"],
+            )
+            init_db(mercy_org.database_path)
+            save_admin_credentials_for_database(
+                mercy_org.database_path,
+                username="mercyadmin",
+                password="Mercy@1234",
+            )
+            with self.app.test_request_context("/", base_url=f"https://{shared_host}"):
+                from attendance_app.services.tenancy import set_current_organization
+
+                set_current_organization(mercy_org)
+                create_staff(
+                    {
+                        "staff_code": "MERCY-100",
+                        "first_name": "Mercy",
+                        "last_name": "User",
+                        "email": "mercy@example.com",
+                        "phone": "+233000000111",
+                        "department": "Nursing",
+                        "role": "Nurse",
+                        "access_role": "Staff",
+                        "portal_password": "Mercy@1234",
+                        "portal_pin": "1234",
+                        "shift_start": "08:00",
+                        "shift_end": "16:00",
+                        "grace_minutes": 10,
+                        "is_active": True,
+                    }
+                )
+
+        self.client.get(
+            "/portal/mercy-hospital/staff/login",
+            base_url=f"https://{shared_host}",
+            follow_redirects=True,
+        )
+        login_response = self.client.post(
+            "/staff/login",
+            data={
+                "staff_code": "MERCY-100",
+                "pin": "1234",
+                "selfie_data": TEST_SELFIE_DATA_URL,
+            },
+            base_url=f"https://{shared_host}",
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Mercy Hospital", login_response.data)
+
+        logout_response = self.client.get(
+            "/logout",
+            base_url=f"https://{shared_host}",
+            follow_redirects=True,
+        )
+        self.assertEqual(logout_response.status_code, 200)
+        self.assertIn(b"Mercy Hospital", logout_response.data)
+        self.assertNotIn(b"Shared Front Office", logout_response.data)
+        self.assertIn(b"Staff Number or Email Address", logout_response.data)
+
     def test_admin_logout_returns_to_admin_login_page(self) -> None:
         login_response = self.client.post(
             "/admin/login",
@@ -1147,6 +1226,59 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(logout_response.status_code, 200)
         self.assertIn(b"Administrator Access", logout_response.data)
         self.assertIn(b"Session closed.", logout_response.data)
+
+    def test_portal_admin_logout_returns_to_same_institution_login_page(self) -> None:
+        shared_host = "attendance.jhimssoftware.com"
+
+        with self.app.app_context():
+            shared_front = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="shared-front",
+                display_name="Shared Front Office",
+                hostnames=[shared_host],
+            )
+            init_db(shared_front.database_path)
+            save_admin_credentials_for_database(
+                shared_front.database_path,
+                username="sharedadmin",
+                password="Shared@1234",
+            )
+            mercy_org = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="mercy-hospital",
+                display_name="Mercy Hospital",
+                hostnames=["attendance.mercy.example"],
+            )
+            init_db(mercy_org.database_path)
+            save_admin_credentials_for_database(
+                mercy_org.database_path,
+                username="mercyadmin",
+                password="Mercy@1234",
+            )
+
+        self.client.get(
+            "/portal/mercy-hospital/admin/login",
+            base_url=f"https://{shared_host}",
+            follow_redirects=True,
+        )
+        login_response = self.client.post(
+            "/admin/login",
+            data={"username": "mercyadmin", "password": "Mercy@1234"},
+            base_url=f"https://{shared_host}",
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Mercy Hospital", login_response.data)
+
+        logout_response = self.client.get(
+            "/logout",
+            base_url=f"https://{shared_host}",
+            follow_redirects=True,
+        )
+        self.assertEqual(logout_response.status_code, 200)
+        self.assertIn(b"Mercy Hospital", logout_response.data)
+        self.assertNotIn(b"Shared Front Office", logout_response.data)
+        self.assertIn(b"Administrator Access", logout_response.data)
 
     def test_kiosk_quick_access_supports_pin_and_qr(self) -> None:
         pin_response = self.client.post(

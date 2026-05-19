@@ -798,6 +798,12 @@ self.addEventListener("fetch", (event) => {{
         was_staff = bool(session.get("staff_authenticated"))
         was_admin = bool(session.get("admin_authenticated"))
         was_platform_admin = bool(session.get("is_platform_admin"))
+        organization_slug = str(
+            session.get("portal_organization_slug")
+            or session.get("organization_slug")
+            or session.get("pending_organization_slug")
+            or ""
+        ).strip()
         actor_name = current_display_name()
         actor_role = current_access_role()
         if was_admin and not was_platform_admin:
@@ -815,9 +821,9 @@ self.addEventListener("fetch", (event) => {{
         if was_platform_admin:
             return redirect(url_for("app.platform_login"))
         if was_staff:
-            return redirect(url_for("app.staff_login"))
+            return redirect(_portal_aware_login_url("staff", organization_slug))
         if was_admin:
-            return redirect(url_for("app.admin_login"))
+            return redirect(_portal_aware_login_url("admin", organization_slug))
         if current_app.config["APP_SETTINGS"].fingerprint_backend == "disabled":
             return redirect(url_for("app.staff_login"))
         return redirect(url_for("app.kiosk"))
@@ -2368,6 +2374,17 @@ def _tenant_instance_dir() -> Path:
 def _tenant_default_app_name() -> str:
     organization = get_current_organization()
     return organization.display_name or current_app.config["APP_SETTINGS"].app_name
+
+
+def _portal_aware_login_url(login_kind: str, organization_slug: str = "") -> str:
+    cleaned_slug = str(organization_slug or "").strip()
+    if cleaned_slug:
+        if login_kind == "admin":
+            return url_for("app.portal_admin_login", slug=cleaned_slug)
+        return url_for("app.portal_staff_login", slug=cleaned_slug)
+    if login_kind == "admin":
+        return url_for("app.admin_login")
+    return url_for("app.staff_login")
 
 
 def _delete_staff_photo(filename: str | None) -> None:
