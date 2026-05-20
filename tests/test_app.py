@@ -13,6 +13,7 @@ from attendance_app import create_app
 from attendance_app.db import init_db
 from attendance_app.services.attendance import get_staff_today_status, list_attendance_events, record_attendance
 from attendance_app.services.settings import save_admin_credentials_for_database, save_app_settings
+from attendance_app.services.settings import get_admin_security_for_database
 from attendance_app.services.staff import count_active_staff, create_staff, get_staff, get_staff_by_code, upsert_fingerprint
 from attendance_app.services.tenancy import get_current_organization, get_organization_by_slug, provision_organization
 
@@ -221,6 +222,56 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn(b"Mercy Hospital", branded_staff_login.data)
         self.assertIn(b"/pwa/manifest.webmanifest?org=mercy-hospital", branded_staff_login.data)
         self.assertIn(b"/pwa/icon-180.png?org=mercy-hospital", branded_staff_login.data)
+
+    def test_cli_create_organization_sets_institution_admin_credentials(self) -> None:
+        runner = self.app.test_cli_runner()
+        result = runner.invoke(
+            args=[
+                "create-organization",
+                "--slug",
+                "river-clinic",
+                "--name",
+                "River Clinic",
+                "--hostname",
+                "attendance.river.example",
+                "--admin-username",
+                "riveradmin",
+                "--admin-password",
+                "River@1234",
+            ]
+        )
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn("Organization created: River Clinic (river-clinic)", result.output)
+        self.assertIn("Admin username: riveradmin", result.output)
+
+        with self.app.app_context():
+            organization = get_organization_by_slug(
+                self.app.config["APP_SETTINGS"],
+                "river-clinic",
+            )
+            self.assertIsNotNone(organization)
+            admin_security = get_admin_security_for_database(
+                organization.database_path,
+                default_username=self.app.config["APP_SETTINGS"].admin_username,
+            )
+            self.assertEqual(admin_security["admin_username"], "riveradmin")
+
+        login_response = self.client.get(
+            "/portal/river-clinic/admin/login",
+            base_url="https://attendance.jhimssoftware.com",
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"River Clinic", login_response.data)
+
+        login_response = self.client.post(
+            "/admin/login",
+            data={"username": "riveradmin", "password": "River@1234"},
+            base_url="https://attendance.jhimssoftware.com",
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Attendance Overview", login_response.data)
 
     def test_platform_super_admin_can_store_subscription_and_billing_fields(self) -> None:
         self.client.post(

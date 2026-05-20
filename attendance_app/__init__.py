@@ -10,6 +10,7 @@ from .config import load_config
 from .db import close_db, init_db
 from .services.maintenance import reset_system_data
 from .services.seed import seed_demo_data
+from .services.settings import save_admin_credentials_for_database
 from .services.tenancy import (
     ensure_default_organization,
     get_organization_by_slug,
@@ -90,12 +91,28 @@ def register_cli(app: Flask) -> None:
     @click.option("--slug", required=True, help="Unique organization slug, for example acme-hospital.")
     @click.option("--name", required=True, help="Display name for the organization.")
     @click.option(
+        "--admin-username",
+        default="",
+        help="Institution admin username. Defaults to ATTENDANCE_ADMIN_USER if omitted.",
+    )
+    @click.option(
+        "--admin-password",
+        default="",
+        help="Institution admin password. Defaults to ATTENDANCE_ADMIN_PASSWORD if omitted.",
+    )
+    @click.option(
         "--hostname",
         "hostnames",
         multiple=True,
         help="Optional custom hostname or subdomain. Repeat to add multiple hostnames.",
     )
-    def create_organization_command(slug: str, name: str, hostnames: tuple[str, ...]) -> None:
+    def create_organization_command(
+        slug: str,
+        name: str,
+        admin_username: str,
+        admin_password: str,
+        hostnames: tuple[str, ...],
+    ) -> None:
         settings = app.config["APP_SETTINGS"]
         organization = provision_organization(
             settings,
@@ -104,9 +121,16 @@ def register_cli(app: Flask) -> None:
             hostnames=hostnames,
         )
         init_db(organization.database_path)
+        save_admin_credentials_for_database(
+            organization.database_path,
+            username=admin_username.strip() or settings.admin_username,
+            password=admin_password or settings.admin_password,
+        )
         print(f"Organization created: {organization.display_name} ({organization.slug})")
         print(f"Database: {organization.database_path}")
         print(f"Files: {organization.instance_dir}")
+        print(f"Admin username: {admin_username.strip() or settings.admin_username}")
+        print("Admin password configured for institution login.")
         if organization.hostnames:
             print("Hostnames: " + ", ".join(organization.hostnames))
 
