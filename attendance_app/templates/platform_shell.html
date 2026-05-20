@@ -32,6 +32,7 @@
                 </span>
                 <div class="admin-brand-copy">
                     <strong>{{ app_name }}</strong>
+                    <span class="admin-brand-version">{{ software_version }}</span>
                     <span>Platform control</span>
                 </div>
             </a>
@@ -58,6 +59,10 @@
                     <span>{{ current_role }}</span>
                 </div>
                 <span class="admin-user-caret">{{ icon('chevron-down') }}</span>
+            </div>
+            <div class="admin-sidebar-legal">
+                <strong>{{ copyright_notice }}</strong>
+                <span>{{ software_version }}</span>
             </div>
         </aside>
 

@@ -15,6 +15,7 @@
                 </span>
                 <div>
                     <strong>{{ app_name }}</strong>
+                    <small class="auth-brand-version">{{ software_version }}</small>
                     <span>{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}Staff self-service portal{% endif %}</span>
                 </div>
             </div>
@@ -66,6 +67,7 @@
                 {% endif %}
             </span>
             <strong>{{ app_name|upper }}</strong>
+            <small class="auth-mobile-brand-version">{{ software_version }}</small>
             <p>
                 {% if institution_name and institution_name != app_name %}
                     {{ institution_name }}
@@ -201,7 +203,9 @@
             <p class="auth-foot-note">Need access? Contact HR or an administrator to activate your staff portal.</p>
             <div class="auth-foot-brand">
                 <strong>{{ app_name }}</strong>
+                <span class="auth-foot-version">{{ software_version }}</span>
                 <span>{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}Staff self-service attendance portal{% endif %}</span>
+                <small class="auth-foot-legal">{{ copyright_notice }}</small>
             </div>
         </div>
     </article>

@@ -130,6 +130,14 @@ body.admin-ui {
     line-height: 1.2;
 }
 
+.admin-brand-version {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.68);
+}
+
 .admin-brand-copy span {
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.84);
@@ -300,6 +308,26 @@ body.admin-ui {
 .admin-profile-caret {
     margin-left: auto;
     color: rgba(255, 255, 255, 0.76);
+}
+
+.admin-sidebar-legal {
+    display: grid;
+    gap: 4px;
+    margin-top: 14px;
+    padding: 0 8px;
+}
+
+.admin-sidebar-legal strong {
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.94);
+}
+
+.admin-sidebar-legal span {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
 }
 
 .admin-workspace {

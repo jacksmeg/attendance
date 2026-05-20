@@ -9,6 +9,8 @@ import os
 @dataclass(slots=True)
 class AppConfig:
     app_name: str
+    software_version: str
+    copyright_notice: str
     secret_key: str
     admin_username: str
     admin_password: str
@@ -47,6 +49,11 @@ def load_config(
     )
     settings = AppConfig(
         app_name=os.getenv("ATTENDANCE_APP_NAME", "JHIMS ATTENDANCE SYSTEM"),
+        software_version=os.getenv("ATTENDANCE_SOFTWARE_VERSION", "Version 1.0.0"),
+        copyright_notice=os.getenv(
+            "ATTENDANCE_COPYRIGHT_NOTICE",
+            "All rights reserved to Jackstudios",
+        ),
         secret_key=os.getenv("ATTENDANCE_SECRET_KEY", "change-me-before-production"),
         admin_username=os.getenv("ATTENDANCE_ADMIN_USER", "admin"),
         admin_password=os.getenv("ATTENDANCE_ADMIN_PASSWORD", "admin123"),

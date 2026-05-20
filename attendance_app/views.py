@@ -219,6 +219,8 @@ def register_routes(app: Flask) -> None:
         return {
             "app_name": settings.app_name,
             "product_name": settings.app_name,
+            "software_version": settings.software_version,
+            "copyright_notice": settings.copyright_notice,
             "institution_name": live_settings["organization_name"],
             "app_logo_url": _system_logo_url_for_filename(live_settings.get("system_logo_filename")),
             "fingerprint_backend": settings.fingerprint_backend,

@@ -48,6 +48,7 @@
                 </span>
                 <span class="sidebar-brand-copy">
                     <span class="sidebar-brand-title">{{ app_name }}</span>
+                    <span class="sidebar-brand-version">{{ software_version }}</span>
                     <span class="sidebar-brand-subtitle">
                         {% if institution_name and institution_name != app_name %}
                             {{ institution_name }}
@@ -122,6 +123,10 @@
                             {% endif %}
                         </span>
                     </div>
+                </div>
+                <div class="sidebar-legal">
+                    <strong>{{ copyright_notice }}</strong>
+                    <span>{{ software_version }}</span>
                 </div>
             </div>
         </aside>
