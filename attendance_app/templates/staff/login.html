@@ -112,7 +112,10 @@
 
                 <div class="staff-login-secret-panel is-active" data-panel="password">
                     <label class="auth-field-block">
-                        <span class="auth-field-label">Password</span>
+                        <div class="auth-label-row">
+                            <span class="auth-field-label">Password</span>
+                            <a class="auth-inline-link" href="{{ url_for('app.staff_recover_credentials', mode='password') }}">Forgot password?</a>
+                        </div>
                         <div class="auth-input-shell auth-input-shell--action">
                             <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password">
                             <button class="auth-input-action staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
@@ -124,7 +127,10 @@
 
                 <div class="staff-login-secret-panel" data-panel="pin" hidden>
                     <label class="auth-field-block">
-                        <span class="auth-field-label">PIN</span>
+                        <div class="auth-label-row">
+                            <span class="auth-field-label">PIN</span>
+                            <a class="auth-inline-link" href="{{ url_for('app.staff_recover_credentials', mode='pin') }}">Forgot PIN?</a>
+                        </div>
                         <div class="auth-input-shell auth-input-shell--action">
                             <input type="password" name="pin" placeholder="Enter your PIN" inputmode="numeric" autocomplete="one-time-code">
                             <button class="auth-input-action staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">

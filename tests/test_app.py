@@ -48,6 +48,7 @@ class AttendanceAppTests(unittest.TestCase):
                     "last_name": "User",
                     "email": "test@example.com",
                     "phone": "+233000000000",
+                    "date_of_birth": "1990-01-02",
                     "department": "Operations",
                     "role": "Coordinator",
                     "access_role": "Staff",
@@ -1121,6 +1122,74 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(audit_response.status_code, 200)
         self.assertIn(b"Staff login selfie captured", audit_response.data)
         self.assertIn(b"Open image", audit_response.data)
+
+    def test_staff_login_shows_recovery_links(self) -> None:
+        response = self.client.get("/staff/login")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Forgot password?", response.data)
+        self.assertIn(b"Forgot PIN?", response.data)
+
+    def test_staff_can_reset_password_with_registered_details(self) -> None:
+        response = self.client.post(
+            "/staff/recover",
+            data={
+                "staff_identifier": "EMP-100",
+                "date_of_birth": "1990-01-02",
+                "phone": "+233000000000",
+                "email": "",
+                "reset_mode": "password",
+                "new_password": "Fresh@1234",
+                "confirm_new_password": "Fresh@1234",
+                "new_pin": "",
+                "confirm_new_pin": "",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"reset successfully", response.data)
+
+        login_response = self.client.post(
+            "/staff/login",
+            data={
+                "staff_identifier": "EMP-100",
+                "password": "Fresh@1234",
+                "selfie_data": TEST_SELFIE_DATA_URL,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Clock Actions", login_response.data)
+
+    def test_staff_can_reset_pin_with_registered_details(self) -> None:
+        response = self.client.post(
+            "/staff/recover",
+            data={
+                "staff_identifier": "test@example.com",
+                "date_of_birth": "1990-01-02",
+                "phone": "",
+                "email": "test@example.com",
+                "reset_mode": "pin",
+                "new_password": "",
+                "confirm_new_password": "",
+                "new_pin": "6789",
+                "confirm_new_pin": "6789",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"reset successfully", response.data)
+
+        login_response = self.client.post(
+            "/staff/login",
+            data={
+                "staff_identifier": "EMP-100",
+                "pin": "6789",
+                "selfie_data": TEST_SELFIE_DATA_URL,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Clock Actions", login_response.data)
 
     def test_staff_logout_returns_to_staff_login_page(self) -> None:
         login_response = self.client.post(

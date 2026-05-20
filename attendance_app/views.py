@@ -109,10 +109,12 @@ from .services.staff import (
     list_staff,
     mark_ghana_card_verified,
     remove_fingerprint,
+    reset_staff_credentials,
     rotate_staff_qr_token,
     update_staff_access_role,
     update_staff,
     upsert_fingerprint,
+    verify_staff_reset_identity,
 )
 from .services.tenancy import get_current_organization
 from .services.tenancy import (
@@ -326,6 +328,20 @@ def register_routes(app: Flask) -> None:
         session["organization_slug"] = organization.slug
         session["pending_organization_slug"] = organization.slug
         return redirect(url_for("app.staff_login"))
+
+    @bp.route("/portal/<slug>/staff/recover")
+    def portal_staff_recover(slug: str):
+        organization = get_organization_by_slug(current_app.config["APP_SETTINGS"], slug)
+        if not organization:
+            flash("That institution portal could not be found.", "error")
+            return redirect(url_for("app.home"))
+        session["portal_organization_slug"] = organization.slug
+        session["organization_slug"] = organization.slug
+        session["pending_organization_slug"] = organization.slug
+        mode = request.args.get("mode", "").strip()
+        if mode:
+            return redirect(url_for("app.staff_recover_credentials", mode=mode))
+        return redirect(url_for("app.staff_recover_credentials"))
 
     @bp.route("/health")
     def health():
@@ -790,6 +806,70 @@ self.addEventListener("fetch", (event) => {{
             "staff/login.html",
             title="Staff Login",
             next_url=request.args.get("next", ""),
+            body_class="staff-login-minimal-body",
+        )
+
+    @bp.route("/staff/recover", methods=["GET", "POST"])
+    def staff_recover_credentials():
+        organization = get_current_organization()
+        form_values = {
+            "staff_identifier": request.args.get("identifier", "").strip(),
+            "date_of_birth": "",
+            "phone": "",
+            "email": "",
+            "reset_mode": request.args.get("mode", "password").strip().lower() or "password",
+            "new_password": "",
+            "confirm_new_password": "",
+            "new_pin": "",
+            "confirm_new_pin": "",
+        }
+
+        if request.method == "POST":
+            form_values = _read_staff_recovery_form(request.form)
+            validation_error = _validate_staff_recovery_form(form_values)
+            if validation_error:
+                flash(validation_error, "error")
+            else:
+                staff = verify_staff_reset_identity(
+                    login_identifier=form_values["staff_identifier"],
+                    date_of_birth=form_values["date_of_birth"],
+                    phone=form_values["phone"],
+                    email=form_values["email"],
+                )
+                if not staff:
+                    flash(
+                        "We could not verify that account with the details provided. Use your exact date of birth and a registered phone number or email address.",
+                        "error",
+                    )
+                else:
+                    password_value = form_values["new_password"] if form_values["reset_mode"] in {"password", "both"} else ""
+                    pin_value = form_values["new_pin"] if form_values["reset_mode"] in {"pin", "both"} else ""
+                    reset_staff_credentials(
+                        int(staff["id"]),
+                        password=password_value,
+                        pin=pin_value,
+                    )
+                    full_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip() or str(
+                        staff.get("staff_code", "Staff")
+                    )
+                    reset_target = "password and PIN" if form_values["reset_mode"] == "both" else form_values["reset_mode"].upper()
+                    log_admin_activity(
+                        actor_type="staff",
+                        actor_name=full_name,
+                        actor_role=str(staff.get("access_role", STAFF)),
+                        event_type="staff_self_service_reset",
+                        target_name=reset_target,
+                        details="Staff completed a self-service credential reset after identity verification.",
+                        ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "")[:255],
+                        device_name=_request_device_name(),
+                    )
+                    flash("Your access details were reset successfully. Sign in with your new password or PIN.", "success")
+                    return redirect(url_for("app.staff_login"))
+
+        return render_template(
+            "staff/recover.html",
+            title="Reset Staff Access",
+            form_values=form_values,
             body_class="staff-login-minimal-body",
         )
 
@@ -2227,6 +2307,62 @@ def _read_staff_form(form) -> dict[str, Any]:
         "portal_pin": form.get("portal_pin", "").strip(),
         "regenerate_qr": form.get("regenerate_qr") == "on",
     }
+
+
+def _read_staff_recovery_form(form) -> dict[str, Any]:
+    return {
+        "staff_identifier": form.get("staff_identifier", "").strip(),
+        "date_of_birth": form.get("date_of_birth", "").strip(),
+        "phone": form.get("phone", "").strip(),
+        "email": form.get("email", "").strip(),
+        "reset_mode": form.get("reset_mode", "password").strip().lower() or "password",
+        "new_password": form.get("new_password", ""),
+        "confirm_new_password": form.get("confirm_new_password", ""),
+        "new_pin": form.get("new_pin", "").strip(),
+        "confirm_new_pin": form.get("confirm_new_pin", "").strip(),
+    }
+
+
+def _validate_staff_recovery_form(form_values: dict[str, Any]) -> str | None:
+    if not form_values.get("staff_identifier"):
+        return "Enter your staff number or email address."
+
+    mode = str(form_values.get("reset_mode", "password")).strip().lower()
+    if mode not in {"password", "pin", "both"}:
+        return "Choose whether you want to reset your password, PIN, or both."
+
+    date_of_birth = str(form_values.get("date_of_birth", "")).strip()
+    if not date_of_birth:
+        return "Enter your date of birth to verify your identity."
+    try:
+        date.fromisoformat(date_of_birth)
+    except ValueError:
+        return "Date of birth must use a valid date."
+
+    if not str(form_values.get("phone", "")).strip() and not str(form_values.get("email", "")).strip():
+        return "Provide your registered phone number or registered email address."
+
+    email_value = str(form_values.get("email", "")).strip()
+    if email_value and "@" not in email_value:
+        return "Enter a valid registered email address."
+
+    if mode in {"password", "both"}:
+        password_value = str(form_values.get("new_password", ""))
+        confirm_password = str(form_values.get("confirm_new_password", ""))
+        if len(password_value) < 8:
+            return "New password must be at least 8 characters long."
+        if password_value != confirm_password:
+            return "New password and confirmation do not match."
+
+    if mode in {"pin", "both"}:
+        pin_value = str(form_values.get("new_pin", "")).strip()
+        confirm_pin = str(form_values.get("confirm_new_pin", "")).strip()
+        if not pin_value.isdigit() or len(pin_value) < 4:
+            return "New PIN must be numeric and at least 4 digits long."
+        if pin_value != confirm_pin:
+            return "New PIN and confirmation do not match."
+
+    return None
 
 
 def _validate_staff_form(form_values: dict[str, Any], creating: bool) -> str | None:

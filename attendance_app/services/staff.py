@@ -172,6 +172,58 @@ def authenticate_staff(
     return None
 
 
+def verify_staff_reset_identity(
+    *,
+    login_identifier: str,
+    date_of_birth: str,
+    phone: str = "",
+    email: str = "",
+) -> dict[str, Any] | None:
+    staff = get_staff_by_login_identifier(login_identifier)
+    if not staff:
+        return None
+    if str(staff.get("date_of_birth", "")).strip() != date_of_birth.strip():
+        return None
+
+    phone_match = bool(phone and _normalize_phone(staff.get("phone", "")) == _normalize_phone(phone))
+    email_match = bool(email and str(staff.get("email", "")).strip().lower() == email.strip().lower())
+    if not (phone_match or email_match):
+        return None
+    return staff
+
+
+def reset_staff_credentials(
+    staff_id: int,
+    *,
+    password: str = "",
+    pin: str = "",
+) -> None:
+    updates: list[str] = []
+    params: list[Any] = []
+    if password:
+        updates.append("password_hash = ?")
+        params.append(hash_secret(password))
+    if pin:
+        updates.append("pin_hash = ?")
+        params.append(hash_secret(pin))
+    if not updates:
+        return
+
+    db = get_db()
+    updates.append("updated_at = ?")
+    params.append(datetime.now().isoformat(timespec="seconds"))
+    params.append(staff_id)
+    db.execute(
+        f"""
+        UPDATE staff
+        SET {", ".join(updates)}
+        WHERE id = ?
+        """,
+        params,
+    )
+    db.commit()
+
+
 def create_staff(data: Mapping[str, Any]) -> int:
     db = get_db()
     now = datetime.now().isoformat(timespec="seconds")
@@ -565,3 +617,7 @@ def _ensure_qr_token(staff_id: int) -> str:
     db.commit()
     row = db.execute("SELECT qr_token FROM staff WHERE id = ?", (staff_id,)).fetchone()
     return str(row["qr_token"]) if row and row["qr_token"] else token
+
+
+def _normalize_phone(value: Any) -> str:
+    return "".join(ch for ch in str(value or "") if ch.isdigit())

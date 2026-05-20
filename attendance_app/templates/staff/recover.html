@@ -1,0 +1,248 @@
+{% extends "auth_shell.html" %}
+{% from "_icons.html" import icon %}
+
+{% block content %}
+<section class="auth-workbench auth-workbench--staff">
+    <aside class="auth-showcase">
+        <div class="auth-showcase-top">
+            <div class="auth-showcase-brand">
+                <span class="auth-showcase-mark">
+                    {% if app_logo_url %}
+                    <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                    {% else %}
+                    {{ icon('fingerprint') }}
+                    {% endif %}
+                </span>
+                <div>
+                    <strong>{{ app_name }}</strong>
+                    <span>{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}Staff self-service portal{% endif %}</span>
+                </div>
+            </div>
+            <span class="auth-showcase-chip">Secure recovery</span>
+        </div>
+
+        <div class="auth-showcase-copy">
+            <p class="auth-showcase-kicker">Staff Access Recovery</p>
+            <h1>Reset your staff password or PIN from one secure recovery screen.</h1>
+            <p>Verify your identity with your staff number or email, date of birth, and one registered contact detail before you set a new password, PIN, or both.</p>
+        </div>
+
+        <div class="auth-showcase-grid">
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('staff') }}</span>
+                <div>
+                    <strong>Identity Check</strong>
+                    <span>Use the exact date of birth and a phone number or email saved on your staff profile.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('shield') }}</span>
+                <div>
+                    <strong>Protected Reset</strong>
+                    <span>Your old access stays unchanged until the verification details match your account.</span>
+                </div>
+            </article>
+            <article class="auth-showcase-metric">
+                <span class="auth-showcase-metric-icon">{{ icon('mobile') }}</span>
+                <div>
+                    <strong>Instant Re-entry</strong>
+                    <span>Once reset succeeds, sign in right away with your new password or PIN.</span>
+                </div>
+            </article>
+        </div>
+
+        <ul class="auth-showcase-list" aria-label="Recovery notes">
+            <li>Use the same date of birth saved by your organization.</li>
+            <li>Provide a registered phone number or registered email address.</li>
+            <li>If your details still fail, contact your institution administrator.</li>
+        </ul>
+    </aside>
+
+    <article class="auth-surface auth-surface--staff">
+        <div class="auth-mobile-brand" aria-hidden="true">
+            <span class="auth-mobile-brand-logo">
+                {% if app_logo_url %}
+                <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                {% else %}
+                {{ icon('fingerprint') }}
+                {% endif %}
+            </span>
+            <strong>{{ app_name|upper }}</strong>
+            <p>Recover your staff access securely and return to your attendance workspace.</p>
+        </div>
+
+        <div class="auth-surface-head">
+            <span class="auth-surface-badge">{{ icon('shield') }} Secure recovery</span>
+            <div class="auth-surface-copy">
+                <h1>Reset staff access</h1>
+                <p>Choose what you want to reset, verify your identity, then create new access details.</p>
+            </div>
+        </div>
+
+        <form method="post" class="auth-form-stack" id="staff-recovery-form">
+            <input type="hidden" name="reset_mode" id="staff-reset-mode" value="{{ form_values.reset_mode }}">
+
+            <div class="auth-mode-switch" role="tablist" aria-label="Reset method">
+                <button class="auth-mode-tab staff-reset-tab{% if form_values.reset_mode == 'password' %} is-active{% endif %}" type="button" data-mode="password" aria-pressed="{{ 'true' if form_values.reset_mode == 'password' else 'false' }}">Password</button>
+                <button class="auth-mode-tab staff-reset-tab{% if form_values.reset_mode == 'pin' %} is-active{% endif %}" type="button" data-mode="pin" aria-pressed="{{ 'true' if form_values.reset_mode == 'pin' else 'false' }}">PIN</button>
+                <button class="auth-mode-tab staff-reset-tab{% if form_values.reset_mode == 'both' %} is-active{% endif %}" type="button" data-mode="both" aria-pressed="{{ 'true' if form_values.reset_mode == 'both' else 'false' }}">Both</button>
+            </div>
+
+            <section class="auth-section-card">
+                <div class="auth-section-head">
+                    <div>
+                        <strong>Verify your identity</strong>
+                        <p>These details must match the staff profile saved by your institution.</p>
+                    </div>
+                </div>
+
+                <label class="auth-field-block">
+                    <span class="auth-field-label">Staff Number or Email Address</span>
+                    <div class="auth-input-shell">
+                        <input type="text" name="staff_identifier" value="{{ form_values.staff_identifier }}" placeholder="Enter your staff number or email" autocomplete="username" required>
+                    </div>
+                </label>
+
+                <label class="auth-field-block">
+                    <span class="auth-field-label">Date of Birth</span>
+                    <div class="auth-input-shell">
+                        <input type="date" name="date_of_birth" value="{{ form_values.date_of_birth }}" required>
+                    </div>
+                </label>
+
+                <label class="auth-field-block">
+                    <span class="auth-field-label">Registered Phone Number</span>
+                    <div class="auth-input-shell">
+                        <input type="text" name="phone" value="{{ form_values.phone }}" placeholder="Enter your registered phone number" autocomplete="tel">
+                    </div>
+                    <small class="auth-helper">You can use this or your registered email address below.</small>
+                </label>
+
+                <label class="auth-field-block">
+                    <span class="auth-field-label">Registered Email Address</span>
+                    <div class="auth-input-shell">
+                        <input type="email" name="email" value="{{ form_values.email }}" placeholder="Enter your registered email address" autocomplete="email">
+                    </div>
+                </label>
+            </section>
+
+            <section class="auth-section-card">
+                <div class="auth-section-head">
+                    <div>
+                        <strong>Set new access details</strong>
+                        <p>Create a new password, a new PIN, or both, depending on the reset option you selected.</p>
+                    </div>
+                </div>
+
+                <div class="staff-reset-panel{% if form_values.reset_mode in ['password', 'both'] %} is-active{% endif %}" data-reset-panel="password"{% if form_values.reset_mode not in ['password', 'both'] %} hidden{% endif %}>
+                    <label class="auth-field-block">
+                        <div class="auth-label-row">
+                            <span class="auth-field-label">New Password</span>
+                        </div>
+                        <div class="auth-input-shell auth-input-shell--action">
+                            <input type="password" name="new_password" value="{{ form_values.new_password }}" placeholder="Enter your new password" autocomplete="new-password">
+                            <button class="auth-input-action" type="button" data-toggle-reset-password aria-label="Show or hide new password">
+                                {{ icon('eye') }}
+                            </button>
+                        </div>
+                        <small class="auth-helper">Use at least 8 characters for the new password.</small>
+                    </label>
+
+                    <label class="auth-field-block">
+                        <span class="auth-field-label">Confirm New Password</span>
+                        <div class="auth-input-shell auth-input-shell--action">
+                            <input type="password" name="confirm_new_password" value="{{ form_values.confirm_new_password }}" placeholder="Confirm your new password" autocomplete="new-password">
+                            <button class="auth-input-action" type="button" data-toggle-reset-password-confirm aria-label="Show or hide confirmed password">
+                                {{ icon('eye') }}
+                            </button>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="staff-reset-panel{% if form_values.reset_mode in ['pin', 'both'] %} is-active{% endif %}" data-reset-panel="pin"{% if form_values.reset_mode not in ['pin', 'both'] %} hidden{% endif %}>
+                    <label class="auth-field-block">
+                        <div class="auth-label-row">
+                            <span class="auth-field-label">New PIN</span>
+                        </div>
+                        <div class="auth-input-shell auth-input-shell--action">
+                            <input type="password" name="new_pin" value="{{ form_values.new_pin }}" placeholder="Enter your new PIN" inputmode="numeric" autocomplete="one-time-code">
+                            <button class="auth-input-action" type="button" data-toggle-reset-pin aria-label="Show or hide new PIN">
+                                {{ icon('eye') }}
+                            </button>
+                        </div>
+                        <small class="auth-helper">Use a numeric PIN with at least 4 digits.</small>
+                    </label>
+
+                    <label class="auth-field-block">
+                        <span class="auth-field-label">Confirm New PIN</span>
+                        <div class="auth-input-shell auth-input-shell--action">
+                            <input type="password" name="confirm_new_pin" value="{{ form_values.confirm_new_pin }}" placeholder="Confirm your new PIN" inputmode="numeric" autocomplete="one-time-code">
+                            <button class="auth-input-action" type="button" data-toggle-reset-pin-confirm aria-label="Show or hide confirmed PIN">
+                                {{ icon('eye') }}
+                            </button>
+                        </div>
+                    </label>
+                </div>
+            </section>
+
+            <button class="auth-primary-button staff-login-submit" type="submit">
+                <span>Reset Access</span>
+            </button>
+
+            <div class="auth-link-row auth-link-row--stack">
+                <a class="auth-inline-link" href="{{ url_for('app.staff_login') }}">Back to staff login</a>
+            </div>
+        </form>
+
+        <div class="auth-surface-foot">
+            <p class="auth-foot-note">If your registered details do not work here, contact your institution administrator for manual help.</p>
+            <div class="auth-foot-brand">
+                <strong>{{ app_name }}</strong>
+                <span>{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}Staff self-service attendance portal{% endif %}</span>
+            </div>
+        </div>
+    </article>
+</section>
+
+<script>
+    const resetTabs = Array.from(document.querySelectorAll(".staff-reset-tab"));
+    const resetPanels = Array.from(document.querySelectorAll(".staff-reset-panel"));
+    const resetModeInput = document.querySelector("#staff-reset-mode");
+
+    const bindVisibilityToggle = (selector) => {
+        const button = document.querySelector(selector);
+        if (!button) return;
+        const input = button.closest(".auth-input-shell")?.querySelector("input");
+        if (!input) return;
+        button.addEventListener("click", () => {
+            input.type = input.type === "password" ? "text" : "password";
+        });
+    };
+
+    const setResetMode = (mode) => {
+        if (resetModeInput) {
+            resetModeInput.value = mode;
+        }
+        resetTabs.forEach((tab) => {
+            const active = tab.dataset.mode === mode;
+            tab.classList.toggle("is-active", active);
+            tab.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        resetPanels.forEach((panel) => {
+            const shouldShow = mode === "both" || panel.dataset.resetPanel === mode;
+            panel.classList.toggle("is-active", shouldShow);
+            panel.hidden = !shouldShow;
+        });
+    };
+
+    resetTabs.forEach((tab) => {
+        tab.addEventListener("click", () => setResetMode(tab.dataset.mode));
+    });
+
+    bindVisibilityToggle("[data-toggle-reset-password]");
+    bindVisibilityToggle("[data-toggle-reset-password-confirm]");
+    bindVisibilityToggle("[data-toggle-reset-pin]");
+    bindVisibilityToggle("[data-toggle-reset-pin-confirm]");
+    setResetMode(resetModeInput?.value || "password");
+</script>
+{% endblock %}
