@@ -19,12 +19,30 @@
     <script src="{{ url_for('static', filename='pwa.js') }}" defer></script>
     <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
 </head>
-<body class="auth-shell-body {{ body_class|default('') }}">
+<body
+    class="auth-shell-body {{ body_class|default('') }}"
+    data-show-pwa-splash="{{ '1' if body_class and 'staff-login-minimal-body' in body_class else '0' }}"
+    data-pwa-splash-name="{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}{{ app_name }}{% endif %}"
+    data-pwa-splash-subtitle="{{ app_name }}"
+>
     <div class="auth-shell-backdrop" aria-hidden="true">
         <span class="auth-shell-orb auth-shell-orb-one"></span>
         <span class="auth-shell-orb auth-shell-orb-two"></span>
         <span class="auth-shell-grid"></span>
     </div>
+    <section class="pwa-welcome-splash" data-pwa-welcome hidden aria-label="App welcome screen">
+        <div class="pwa-welcome-splash__panel">
+            <span class="pwa-welcome-splash__logo">
+                {% if app_logo_url %}
+                <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
+                {% else %}
+                {{ icon('fingerprint') }}
+                {% endif %}
+            </span>
+            <strong class="pwa-welcome-splash__name">{% if institution_name and institution_name != app_name %}{{ institution_name }}{% else %}{{ app_name }}{% endif %}</strong>
+            <span class="pwa-welcome-splash__subtitle">{{ app_name }}</span>
+        </div>
+    </section>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <section class="auth-flash-shell">

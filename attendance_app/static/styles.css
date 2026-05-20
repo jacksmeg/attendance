@@ -5052,3 +5052,136 @@ html[data-theme="dark"] .staff-mobile-app-body .staff-mobile-action-icon {
         display: none;
     }
 }
+
+.auth-inline-link--standalone {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-link-row--center {
+    justify-content: center;
+}
+
+.pwa-welcome-splash[hidden] {
+    display: none !important;
+}
+
+.pwa-welcome-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+        radial-gradient(circle at top center, rgba(46, 164, 0, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(247, 251, 255, 0.98), rgba(239, 246, 255, 0.98));
+    transition: opacity 0.36s ease, visibility 0.36s ease;
+}
+
+.pwa-welcome-splash.is-hiding {
+    opacity: 0;
+}
+
+.pwa-welcome-splash__panel {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    text-align: center;
+}
+
+.pwa-welcome-splash__logo {
+    width: 104px;
+    height: 104px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid rgba(198, 212, 232, 0.82);
+    box-shadow:
+        0 0 0 10px rgba(36, 99, 255, 0.05),
+        0 22px 46px rgba(15, 29, 49, 0.15);
+    animation: pwa-welcome-pulse 1.35s ease-in-out infinite;
+    overflow: hidden;
+}
+
+.pwa-welcome-splash__logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+.pwa-welcome-splash__logo svg {
+    width: 52px;
+    height: 52px;
+}
+
+.pwa-welcome-splash__name {
+    color: #0f1d31;
+    font-size: clamp(1.55rem, 5vw, 2.15rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+}
+
+.pwa-welcome-splash__subtitle {
+    color: #6d7f97;
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+@keyframes pwa-welcome-pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow:
+            0 0 0 10px rgba(36, 99, 255, 0.05),
+            0 22px 46px rgba(15, 29, 49, 0.15);
+    }
+    50% {
+        transform: scale(1.045);
+        box-shadow:
+            0 0 0 14px rgba(36, 99, 255, 0.08),
+            0 26px 54px rgba(15, 29, 49, 0.2);
+    }
+}
+
+html[data-theme="dark"] .pwa-welcome-splash {
+    background:
+        radial-gradient(circle at top center, rgba(70, 216, 98, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(8, 17, 29, 0.98), rgba(10, 19, 31, 0.98));
+}
+
+html[data-theme="dark"] .pwa-welcome-splash__logo {
+    background: rgba(16, 29, 47, 0.98);
+    border-color: rgba(73, 94, 128, 0.54);
+    box-shadow:
+        0 0 0 10px rgba(55, 134, 255, 0.06),
+        0 22px 46px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .pwa-welcome-splash__name {
+    color: #f5f9ff;
+}
+
+html[data-theme="dark"] .pwa-welcome-splash__subtitle {
+    color: #a4b7d1;
+}
+
+@media (max-width: 720px) {
+    .staff-login-minimal-body .auth-link-row--center {
+        order: 3;
+    }
+
+    .pwa-welcome-splash__logo {
+        width: 92px;
+        height: 92px;
+    }
+
+    .pwa-welcome-splash__name {
+        font-size: clamp(1.45rem, 7vw, 1.95rem);
+    }
+}

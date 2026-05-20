@@ -2,12 +2,15 @@
     const installButton = document.querySelector("[data-pwa-install]");
     const iosSheet = document.querySelector("[data-pwa-ios-sheet]");
     const iosCloseButtons = Array.from(document.querySelectorAll("[data-pwa-ios-close]"));
+    const welcomeSplash = document.querySelector("[data-pwa-welcome]");
+    const body = document.body;
     const serviceWorkerMeta = document.querySelector('meta[name="pwa-sw-url"]');
     const serviceWorkerUrl = serviceWorkerMeta?.content || "/service-worker.js";
     const inStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
     let deferredInstallPrompt = null;
     const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
     const isSafari = /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
+    const showPwaSplash = body?.dataset.showPwaSplash === "1";
 
     const closeIosSheet = function () {
         if (iosSheet) {
@@ -27,6 +30,17 @@
                 /* Keep the app usable even if SW registration fails. */
             });
         });
+    }
+
+    if (welcomeSplash && inStandalone && showPwaSplash) {
+        welcomeSplash.hidden = false;
+        window.setTimeout(function () {
+            welcomeSplash.classList.add("is-hiding");
+        }, 1150);
+        window.setTimeout(function () {
+            welcomeSplash.hidden = true;
+            welcomeSplash.classList.remove("is-hiding");
+        }, 1650);
     }
 
     if (installButton && inStandalone) {

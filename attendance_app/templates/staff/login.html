@@ -109,10 +109,7 @@
 
                 <div class="staff-login-secret-panel is-active" data-panel="password">
                     <label class="auth-field-block">
-                        <div class="auth-label-row">
-                            <span class="auth-field-label">Password</span>
-                            <a class="auth-inline-link" href="{{ url_for('app.staff_recover_credentials', mode='password') }}">Forgot password?</a>
-                        </div>
+                        <span class="auth-field-label">Password</span>
                         <div class="auth-input-shell auth-input-shell--action">
                             <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password">
                             <button class="auth-input-action staff-login-eye" type="button" data-toggle-password aria-label="Show or hide password">
@@ -124,10 +121,7 @@
 
                 <div class="staff-login-secret-panel" data-panel="pin" hidden>
                     <label class="auth-field-block">
-                        <div class="auth-label-row">
-                            <span class="auth-field-label">PIN</span>
-                            <a class="auth-inline-link" href="{{ url_for('app.staff_recover_credentials', mode='pin') }}">Forgot PIN?</a>
-                        </div>
+                        <span class="auth-field-label">PIN</span>
                         <div class="auth-input-shell auth-input-shell--action">
                             <input type="password" name="pin" placeholder="Enter your PIN" inputmode="numeric" autocomplete="one-time-code">
                             <button class="auth-input-action staff-login-eye" type="button" data-toggle-pin aria-label="Show or hide PIN">
@@ -142,6 +136,10 @@
             <button class="auth-primary-button staff-login-submit" type="submit" id="staff-login-submit">
                 <span>Sign In</span>
             </button>
+
+            <div class="auth-link-row auth-link-row--center">
+                <a class="auth-inline-link auth-inline-link--standalone" id="staff-login-recovery-link" href="{{ url_for('app.staff_recover_credentials', mode='password') }}">Forgot password or PIN?</a>
+            </div>
 
             <p class="auth-mobile-foot-link">Don't have an account?</p>
 
@@ -195,6 +193,7 @@
     const tabs = Array.from(document.querySelectorAll(".staff-login-tab"));
     const panels = Array.from(document.querySelectorAll(".staff-login-secret-panel"));
     const submitLabel = document.querySelector("#staff-login-submit span");
+    const recoveryLink = document.querySelector("#staff-login-recovery-link");
     const form = document.querySelector("#staff-login-form");
     const passwordInput = document.querySelector('input[name="password"]');
     const pinInput = document.querySelector('input[name="pin"]');
@@ -226,6 +225,12 @@
         });
         if (submitLabel) {
             submitLabel.textContent = mode === "pin" ? "Continue with PIN" : "Sign In";
+        }
+        if (recoveryLink) {
+            recoveryLink.href = mode === "pin"
+                ? "{{ url_for('app.staff_recover_credentials', mode='pin') }}"
+                : "{{ url_for('app.staff_recover_credentials', mode='password') }}";
+            recoveryLink.textContent = mode === "pin" ? "Forgot PIN?" : "Forgot password or PIN?";
         }
         if (passwordInput) {
             passwordInput.disabled = mode !== "password";
@@ -300,8 +305,10 @@
             video.srcObject = cameraStream;
             if (cameraStage) {
                 cameraStage.hidden = false;
+                cameraStage.scrollIntoView({ behavior: "smooth", block: "center" });
             }
             video.hidden = false;
+            video.play?.().catch(() => {});
             preview.hidden = true;
             preview.removeAttribute("src");
             if (cameraPlaceholder) {

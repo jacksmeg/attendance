@@ -1126,8 +1126,7 @@ class AttendanceAppTests(unittest.TestCase):
     def test_staff_login_shows_recovery_links(self) -> None:
         response = self.client.get("/staff/login")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Forgot password?", response.data)
-        self.assertIn(b"Forgot PIN?", response.data)
+        self.assertIn(b"Forgot password or PIN?", response.data)
 
     def test_staff_can_reset_password_with_registered_details(self) -> None:
         response = self.client.post(
