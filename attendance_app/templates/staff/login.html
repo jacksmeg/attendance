@@ -152,6 +152,30 @@
                     <span class="auth-audit-badge">Audit only</span>
                 </div>
 
+                <canvas id="staff-login-canvas" hidden></canvas>
+
+                <div class="staff-login-camera-actions">
+                    <button class="staff-login-camera-button" type="button" id="staff-login-start-camera">Open Camera</button>
+                    <button class="staff-login-camera-button" type="button" id="staff-login-retake-selfie" hidden>Retake Selfie</button>
+                </div>
+
+                <p class="staff-login-camera-note" id="staff-login-camera-note">
+                    Capture a selfie before signing in.
+                </p>
+            </section>
+        </form>
+
+        <section class="staff-login-camera-modal" id="staff-login-camera-modal" hidden aria-label="Camera capture window">
+            <div class="staff-login-camera-modal-backdrop" id="staff-login-camera-modal-backdrop"></div>
+            <div class="staff-login-camera-modal-card" role="dialog" aria-modal="true" aria-labelledby="staff-login-camera-modal-title">
+                <div class="staff-login-camera-modal-head">
+                    <div>
+                        <strong id="staff-login-camera-modal-title">Camera Preview</strong>
+                        <p>Position yourself well, then capture and review your selfie.</p>
+                    </div>
+                    <button class="staff-login-camera-close" type="button" id="staff-login-close-camera" aria-label="Close camera window">&times;</button>
+                </div>
+
                 <div class="staff-login-camera-stage is-idle" id="staff-login-camera-stage" hidden>
                     <div class="staff-login-camera-placeholder" id="staff-login-camera-placeholder">
                         <span class="staff-login-camera-placeholder-icon">{{ icon('mobile') }}</span>
@@ -165,19 +189,13 @@
                     </div>
                 </div>
 
-                <canvas id="staff-login-canvas" hidden></canvas>
-
-                <div class="staff-login-camera-actions">
-                    <button class="staff-login-camera-button" type="button" id="staff-login-start-camera">Open Camera</button>
+                <div class="staff-login-camera-actions staff-login-camera-actions--modal">
                     <button class="staff-login-camera-button is-primary" type="button" id="staff-login-capture-selfie" disabled>Capture Selfie</button>
-                    <button class="staff-login-camera-button" type="button" id="staff-login-retake-selfie" hidden>Retake Selfie</button>
+                    <button class="staff-login-camera-button" type="button" id="staff-login-retake-selfie-modal" hidden>Retake Selfie</button>
+                    <button class="staff-login-camera-button" type="button" id="staff-login-use-selfie" hidden>Use This Selfie</button>
                 </div>
-
-                <p class="staff-login-camera-note" id="staff-login-camera-note">
-                    Capture a selfie before signing in.
-                </p>
-            </section>
-        </form>
+            </div>
+        </section>
 
         <div class="auth-surface-foot">
             <p class="auth-foot-note">Need access? Contact HR or an administrator to activate your staff portal.</p>
@@ -202,6 +220,9 @@
     const preview = document.querySelector("#staff-login-preview");
     const canvas = document.querySelector("#staff-login-canvas");
     const cameraNote = document.querySelector("#staff-login-camera-note");
+    const cameraModal = document.querySelector("#staff-login-camera-modal");
+    const cameraModalBackdrop = document.querySelector("#staff-login-camera-modal-backdrop");
+    const closeCameraButton = document.querySelector("#staff-login-close-camera");
     const cameraStage = document.querySelector("#staff-login-camera-stage");
     const cameraPlaceholder = document.querySelector("#staff-login-camera-placeholder");
     const cameraPlaceholderTitle = document.querySelector("#staff-login-camera-placeholder-title");
@@ -210,7 +231,11 @@
     const startCameraButton = document.querySelector("#staff-login-start-camera");
     const captureSelfieButton = document.querySelector("#staff-login-capture-selfie");
     const retakeSelfieButton = document.querySelector("#staff-login-retake-selfie");
+    const retakeSelfieButtonModal = document.querySelector("#staff-login-retake-selfie-modal");
+    const useSelfieButton = document.querySelector("#staff-login-use-selfie");
     let cameraStream = null;
+    let pendingSelfieData = "";
+    let selfieConfirmed = false;
 
     const setMode = (mode) => {
         tabs.forEach((tab) => {
@@ -273,6 +298,19 @@
         }
     };
 
+    const openCameraModal = () => {
+        if (cameraModal) {
+            cameraModal.hidden = false;
+        }
+    };
+
+    const closeCameraModal = () => {
+        if (cameraModal) {
+            cameraModal.hidden = true;
+        }
+        stopCamera();
+    };
+
     const setCameraPlaceholder = (title, message, success = false) => {
         if (cameraPlaceholderTitle) {
             cameraPlaceholderTitle.textContent = title;
@@ -303,9 +341,9 @@
                 audio: false
             });
             video.srcObject = cameraStream;
+            openCameraModal();
             if (cameraStage) {
                 cameraStage.hidden = false;
-                cameraStage.scrollIntoView({ behavior: "smooth", block: "center" });
             }
             video.hidden = false;
             video.play?.().catch(() => {});
@@ -322,10 +360,16 @@
                 cameraStage.classList.add("is-live");
             }
             setCameraPlaceholder("Camera is off", "Tap <em>Open Camera</em> when you are ready to take your selfie.");
-            retakeSelfieButton.hidden = true;
+            retakeSelfieButton.hidden = !selfieConfirmed;
+            if (retakeSelfieButtonModal) {
+                retakeSelfieButtonModal.hidden = true;
+            }
+            if (useSelfieButton) {
+                useSelfieButton.hidden = true;
+            }
             captureSelfieButton.disabled = false;
-            startCameraButton.textContent = "Open Camera";
-            updateCameraNote("Camera is ready. Take your selfie, then review it before signing in.");
+            startCameraButton.textContent = selfieConfirmed ? "Open Camera Again" : "Open Camera";
+            updateCameraNote("Camera is open. Position yourself well, then capture your selfie.");
             return true;
         } catch (error) {
             updateCameraNote("Camera access was blocked. Allow camera permission to continue.", true);
@@ -352,12 +396,16 @@
         }
         context.drawImage(video, 0, 0, width, height);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
-        selfieInput.value = dataUrl;
+        pendingSelfieData = dataUrl;
         preview.src = dataUrl;
         preview.hidden = false;
         video.hidden = true;
-        retakeSelfieButton.hidden = false;
-        startCameraButton.textContent = "Open Camera";
+        if (retakeSelfieButtonModal) {
+            retakeSelfieButtonModal.hidden = false;
+        }
+        if (useSelfieButton) {
+            useSelfieButton.hidden = false;
+        }
         captureSelfieButton.disabled = true;
         if (cameraPlaceholder) {
             cameraPlaceholder.hidden = true;
@@ -370,7 +418,7 @@
             cameraStage.classList.add("is-captured");
         }
         stopCamera();
-        updateCameraNote("Review your selfie. If it looks good, sign in. If not, tap Retake Selfie.");
+        updateCameraNote("Review your selfie. If it is good, tap Use This Selfie. If not, retake it.");
         return true;
     };
 
@@ -385,31 +433,55 @@
         }
     });
 
-    retakeSelfieButton?.addEventListener("click", async () => {
+    const retakeSelfie = async () => {
+        pendingSelfieData = "";
         if (selfieInput) {
             selfieInput.value = "";
         }
+        selfieConfirmed = false;
         preview.hidden = true;
         preview.removeAttribute("src");
         if (cameraPlaceholder) {
             cameraPlaceholder.hidden = true;
         }
         await startCamera();
+    };
+
+    retakeSelfieButton?.addEventListener("click", async () => {
+        await retakeSelfie();
+    });
+
+    retakeSelfieButtonModal?.addEventListener("click", async () => {
+        await retakeSelfie();
+    });
+
+    useSelfieButton?.addEventListener("click", () => {
+        if (!pendingSelfieData || !selfieInput) {
+            updateCameraNote("Capture your selfie first before using it.", true);
+            return;
+        }
+        selfieInput.value = pendingSelfieData;
+        selfieConfirmed = true;
+        retakeSelfieButton.hidden = false;
+        startCameraButton.textContent = "Open Camera Again";
+        updateCameraNote("Selfie is ready. You can now sign in or reopen the camera to retake it.");
+        closeCameraModal();
+    });
+
+    closeCameraButton?.addEventListener("click", () => {
+        closeCameraModal();
+    });
+
+    cameraModalBackdrop?.addEventListener("click", () => {
+        closeCameraModal();
     });
 
     form?.addEventListener("submit", (event) => {
-        if (selfieInput?.value) {
+        if (selfieInput?.value && selfieConfirmed) {
             return;
         }
         event.preventDefault();
-        if (cameraStage) {
-            cameraStage.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-        if (cameraPlaceholder && cameraPlaceholder.hidden) {
-            updateCameraNote("Capture your selfie before signing in.", true);
-        } else {
-            updateCameraNote("Open the camera, take one selfie, then sign in.", true);
-        }
+        updateCameraNote("Open the camera, capture a selfie, review it, and tap Use This Selfie before signing in.", true);
     });
 
     window.addEventListener("beforeunload", stopCamera);

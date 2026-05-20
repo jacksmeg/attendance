@@ -5185,3 +5185,127 @@ html[data-theme="dark"] .pwa-welcome-splash__subtitle {
         font-size: clamp(1.45rem, 7vw, 1.95rem);
     }
 }
+
+.staff-login-camera-modal[hidden] {
+    display: none !important;
+}
+
+.staff-login-camera-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 115;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+}
+
+.staff-login-camera-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 20, 35, 0.62);
+    backdrop-filter: blur(6px);
+}
+
+.staff-login-camera-modal-card {
+    position: relative;
+    width: min(100%, 720px);
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(198, 212, 232, 0.82);
+    box-shadow: 0 32px 70px rgba(11, 25, 49, 0.22);
+}
+
+.staff-login-camera-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.staff-login-camera-modal-head strong {
+    display: block;
+    color: #10203a;
+    font-size: 1.18rem;
+}
+
+.staff-login-camera-modal-head p {
+    margin: 6px 0 0;
+    color: #64758a;
+    line-height: 1.5;
+}
+
+.staff-login-camera-close {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(198, 212, 232, 0.82);
+    background: #ffffff;
+    color: #20344f;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.staff-login-camera-close:hover,
+.staff-login-camera-close:focus-visible {
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.staff-login-camera-actions--modal {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.staff-login-camera-modal .staff-login-camera-stage {
+    min-height: 420px;
+    border-radius: 24px;
+}
+
+html[data-theme="dark"] .staff-login-camera-modal-backdrop {
+    background: rgba(5, 11, 20, 0.72);
+}
+
+html[data-theme="dark"] .staff-login-camera-modal-card {
+    background: rgba(16, 26, 42, 0.98);
+    border-color: rgba(73, 94, 128, 0.54);
+    box-shadow: 0 32px 70px rgba(0, 0, 0, 0.34);
+}
+
+html[data-theme="dark"] .staff-login-camera-modal-head strong {
+    color: #f2f7ff;
+}
+
+html[data-theme="dark"] .staff-login-camera-modal-head p {
+    color: #a9bbd2;
+}
+
+html[data-theme="dark"] .staff-login-camera-close {
+    background: rgba(29, 44, 67, 0.96);
+    border-color: rgba(73, 94, 128, 0.54);
+    color: #d9e8ff;
+}
+
+@media (max-width: 720px) {
+    .staff-login-camera-modal {
+        padding: 12px;
+    }
+
+    .staff-login-camera-modal-card {
+        width: 100%;
+        padding: 18px;
+        border-radius: 22px;
+    }
+
+    .staff-login-camera-modal .staff-login-camera-stage {
+        min-height: 320px;
+    }
+
+    .staff-login-camera-actions--modal {
+        grid-template-columns: 1fr;
+    }
+}
