@@ -5353,3 +5353,96 @@ html[data-theme="dark"] .staff-login-camera-close {
         grid-template-columns: 1fr;
     }
 }
+
+/* Final workspace layout stabilizer */
+.desktop-shell,
+.workspace,
+.workspace-shell,
+.page-wrap,
+.workspace-topbar-inner,
+.tab-nav,
+.topbar-meta,
+.profile-chip,
+.profile-copy,
+.page-hero,
+.kiosk-layout,
+.panel-grid,
+.panel-grid-wide,
+.metric-strip,
+.scan-stage-card,
+.panel-card,
+.metric-card,
+.shortcut-card,
+.table-wrap,
+.staff-mobile-shell,
+.staff-mobile-grid,
+.staff-mobile-side-stack,
+.staff-mobile-action-grid,
+.staff-mobile-mini-grid,
+.staff-mobile-timeline-meta,
+.staff-mobile-panel,
+.staff-mobile-hero-card,
+.staff-mobile-state-card,
+.staff-mobile-mini-card,
+.staff-mobile-note-card,
+.staff-mobile-timeline-item,
+.staff-mobile-qr-frame {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.workspace-topbar-inner > *,
+.tab-nav > *,
+.topbar-meta > *,
+.page-hero > *,
+.kiosk-layout > *,
+.panel-grid > *,
+.panel-grid-wide > *,
+.metric-strip > *,
+.scan-stage-card > * {
+    min-width: 0;
+}
+
+.workspace-topbar-inner,
+.topbar-meta {
+    flex-wrap: wrap;
+}
+
+.profile-chip,
+.topbar-utility {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.kiosk-layout,
+.panel-grid,
+.panel-grid-wide {
+    align-items: start;
+}
+
+.scan-stage-card {
+    grid-template-columns: minmax(0, 1fr) 240px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+@media (max-width: 1360px) {
+    .workspace-topbar-inner {
+        align-items: stretch;
+    }
+
+    .topbar-meta {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .kiosk-layout,
+    .panel-grid,
+    .panel-grid-wide,
+    .scan-stage-card {
+        grid-template-columns: 1fr;
+    }
+}

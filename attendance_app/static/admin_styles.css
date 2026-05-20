@@ -3345,3 +3345,154 @@ html[data-theme="dark"] .admin-notification-row.tone-activity {
         align-items: stretch;
     }
 }
+
+/* Final admin layout stabilizer */
+.admin-app-shell,
+.admin-workspace,
+.admin-page-shell,
+.admin-page-content,
+.admin-main-stack,
+.admin-side-stack,
+.admin-content-grid,
+.admin-content-grid.wide-side,
+.admin-chart-grid,
+.admin-inline-grid-2,
+.admin-form-grid,
+.admin-info-grid,
+.admin-stats-grid,
+.admin-stats-grid.cols-4,
+.admin-stats-grid.cols-6,
+.admin-filter-bar,
+.admin-filter-row,
+.admin-filter-actions,
+.admin-card-head,
+.admin-table-toolbar,
+.admin-tab-row,
+.admin-stat-card,
+.admin-surface-card,
+.admin-table-card,
+.admin-side-card,
+.admin-summary-card,
+.admin-overview-card,
+.admin-line-chart-card,
+.admin-donut-card,
+.admin-quick-filters-card,
+.admin-right-detail-card,
+.admin-summary-list,
+.admin-balance-list,
+.admin-top-users-list,
+.platform-org-meta-grid,
+.platform-org-license-grid,
+.platform-backup-controls {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.admin-topbar-left > *,
+.admin-topbar-center > *,
+.admin-topbar-actions > *,
+.admin-card-head > *,
+.admin-table-toolbar > *,
+.admin-filter-bar > *,
+.admin-filter-row > *,
+.admin-filter-actions > *,
+.admin-summary-row > *,
+.admin-balance-row > *,
+.admin-request-detail-row > *,
+.admin-top-users-row > *,
+.admin-quick-link > * {
+    min-width: 0;
+}
+
+.admin-stats-grid,
+.admin-stats-grid.cols-4,
+.admin-stats-grid.cols-6 {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    align-items: stretch;
+}
+
+.admin-content-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 336px);
+    align-items: start;
+}
+
+.admin-content-grid.wide-side {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+}
+
+.admin-chart-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    align-items: start;
+}
+
+.admin-topbar-inner {
+    align-items: stretch;
+}
+
+.admin-topbar-tools {
+    min-width: min(100%, 720px);
+}
+
+.admin-topbar-actions,
+.admin-profile-chip,
+.admin-live-clock,
+.admin-topbar-input,
+.admin-toolbar-button,
+.admin-toolbar-form,
+.admin-notification-button,
+.admin-profile-menu {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.admin-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.admin-table {
+    min-width: 760px;
+}
+
+.admin-summary-row strong,
+.admin-balance-row strong,
+.admin-request-detail-row span,
+.admin-top-users-row strong,
+.admin-profile-copy strong,
+.admin-profile-copy span,
+.admin-table-meta strong,
+.admin-table-meta span {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 1680px) {
+    .admin-content-grid,
+    .admin-content-grid.wide-side,
+    .admin-chart-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-topbar-tools {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-topbar-center {
+        max-width: none;
+    }
+
+    .admin-topbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .admin-topbar-actions .admin-profile-menu {
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 1180px) {
+    .admin-table {
+        min-width: 680px;
+    }
+}
