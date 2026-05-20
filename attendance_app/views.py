@@ -8,7 +8,7 @@ import json
 import math
 from pathlib import Path
 import struct
-from typing import Any
+from typing import Any, Mapping
 import sqlite3
 from uuid import uuid4
 import zlib
@@ -1747,7 +1747,7 @@ self.addEventListener("fetch", (event) => {{
                 updated = update_staff_access_role(
                     staff_id,
                     access_role,
-                    is_active=request.form.get("is_active") == "on",
+                    is_active=_form_checkbox_checked(request.form, "is_active"),
                     department_scope=department_scope,
                 )
                 if updated:
@@ -2301,7 +2301,7 @@ def _read_staff_form(form) -> dict[str, Any]:
         "shift_end": form.get("shift_end", "17:00"),
         "shift_preset_key": form.get("shift_preset_key", "").strip(),
         "grace_minutes": int(grace_minutes),
-        "is_active": form.get("is_active") == "on",
+        "is_active": _form_checkbox_checked(form, "is_active"),
         "allow_mobile_clock": form.get("allow_mobile_clock") == "on",
         "allow_pin_clock": form.get("allow_pin_clock") == "on",
         "allow_qr_clock": form.get("allow_qr_clock") == "on",
@@ -2888,6 +2888,11 @@ def _pwa_logo_source_path(*, organization=None, live_settings: dict[str, Any] | 
     if default_candidate.exists():
         return default_candidate
     return None
+
+
+def _form_checkbox_checked(form: Mapping[str, Any], key: str) -> bool:
+    value = str(form.get(key, "")).strip().lower()
+    return value in {"1", "on", "true", "yes"}
 
 
 def _default_logo_mark_path() -> Path:

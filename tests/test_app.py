@@ -765,7 +765,7 @@ class AttendanceAppTests(unittest.TestCase):
             data={
                 "staff_id": str(self.staff["id"]),
                 "access_role": "HR/Admin",
-                "is_active": "on",
+                "is_active": "1",
                 "search": "",
                 "department": "",
                 "active_only": "0",
@@ -778,6 +778,46 @@ class AttendanceAppTests(unittest.TestCase):
         with self.app.app_context():
             refreshed_staff = get_staff(self.staff["id"])
             self.assertEqual(refreshed_staff["access_role"], "HR/Admin")
+            self.assertTrue(refreshed_staff["is_active"])
+
+    def test_users_roles_page_can_reactivate_staff_account(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        deactivate_response = self.client.post(
+            "/admin/users-roles",
+            data={
+                "staff_id": str(self.staff["id"]),
+                "access_role": "Staff",
+                "search": "",
+                "department": "",
+                "active_only": "0",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(deactivate_response.status_code, 200)
+
+        reactivate_response = self.client.post(
+            "/admin/users-roles",
+            data={
+                "staff_id": str(self.staff["id"]),
+                "access_role": "Staff",
+                "is_active": "1",
+                "search": "",
+                "department": "",
+                "active_only": "0",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(reactivate_response.status_code, 200)
+        self.assertIn(b"User role updated successfully.", reactivate_response.data)
+
+        with self.app.app_context():
+            refreshed_staff = get_staff(self.staff["id"], fingerprint_adapter="mock")
+            self.assertTrue(refreshed_staff["is_active"])
 
     def test_staff_photo_upload_shows_in_kiosk_match_result(self) -> None:
         self.client.post(
