@@ -2709,6 +2709,7 @@ html[data-theme="dark"] .platform-backup-row {
 .admin-page-content {
     gap: 24px;
     padding: 0;
+    min-width: 0;
 }
 
 .admin-page-heading {
@@ -2791,6 +2792,7 @@ html[data-theme="dark"] .platform-backup-row {
 .admin-content-grid {
     grid-template-columns: minmax(0, 1fr) 336px;
     gap: 22px;
+    min-width: 0;
 }
 
 .admin-content-grid.wide-side {
@@ -2800,6 +2802,7 @@ html[data-theme="dark"] .platform-backup-row {
 .admin-main-stack,
 .admin-side-stack {
     gap: 22px;
+    min-width: 0;
 }
 
 .admin-stat-card,
@@ -2814,6 +2817,8 @@ html[data-theme="dark"] .platform-backup-row {
 .admin-right-detail-card {
     border-radius: 24px;
     padding: 22px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .admin-stat-card {
@@ -2825,6 +2830,9 @@ html[data-theme="dark"] .platform-backup-row {
 .admin-tab-row {
     gap: 16px;
     margin-bottom: 18px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    min-width: 0;
 }
 
 .admin-section-title h2,
@@ -2855,6 +2863,7 @@ html[data-theme="dark"] .platform-backup-row {
     border: 1px solid var(--admin-line);
     border-radius: 20px;
     background: linear-gradient(180deg, #ffffff, #fcfdff);
+    max-width: 100%;
 }
 
 .admin-table th,
@@ -2893,10 +2902,44 @@ html[data-theme="dark"] .platform-backup-row {
     border-radius: 16px;
     border: 1px solid var(--admin-line);
     background: linear-gradient(180deg, #ffffff, #f9fbff);
+    min-width: 0;
+    max-width: 100%;
 }
 
 .admin-quick-link {
     min-height: 52px;
+}
+
+.admin-content-grid > *,
+.admin-chart-grid > *,
+.admin-inline-grid-2 > *,
+.admin-form-grid > *,
+.admin-info-grid > *,
+.admin-stats-grid > *,
+.platform-org-meta-grid > *,
+.platform-org-license-grid > *,
+.platform-backup-controls > * {
+    min-width: 0;
+}
+
+.admin-chart-grid,
+.admin-inline-grid-2,
+.admin-form-grid,
+.admin-info-grid,
+.admin-stats-grid,
+.platform-org-meta-grid,
+.platform-org-license-grid,
+.platform-backup-controls {
+    min-width: 0;
+}
+
+.admin-summary-row strong,
+.admin-balance-row strong,
+.admin-request-detail-row span:last-child,
+.admin-top-users-row strong,
+.admin-profile-copy strong,
+.admin-profile-copy span {
+    overflow-wrap: anywhere;
 }
 
 .admin-form-grid {
