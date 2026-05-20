@@ -1827,6 +1827,16 @@ self.addEventListener("fetch", (event) => {{
         department_scope = current_department_scope()
         department = _resolve_department_filter(request.args.get("department", "").strip(), department_scope)
         search = request.args.get("search", "").strip()
+        report_kind = request.args.get("report_kind", "staff").strip().lower()
+        if report_kind not in {"staff", "daily", "department", "exceptions"}:
+            report_kind = "staff"
+        active_staff_rows = list_staff(
+            search=search,
+            department=department,
+            active_only=True,
+            department_scope=department_scope,
+        )
+        active_staff_total = len(active_staff_rows)
         rows = list_attendance_events(
             date_from=date_from,
             date_to=date_to,
@@ -1836,13 +1846,19 @@ self.addEventListener("fetch", (event) => {{
         )
         snapshot = build_report_snapshot(
             rows=rows,
-            active_staff_total=count_active_staff(department_scope=department_scope),
+            active_staff_total=active_staff_total,
         )
         activity_rows = _attendance_activity_rows(rows)
         detail_rows = _report_detail_rows_from_activity(
             activity_rows,
             date_from=date_from,
             date_to=date_to,
+            staff_rows=active_staff_rows,
+        )
+        report_views = _report_views_model(
+            snapshot=snapshot,
+            detail_rows=detail_rows,
+            report_kind=report_kind,
         )
         return render_template(
             "admin/reports.html",
@@ -1853,7 +1869,7 @@ self.addEventListener("fetch", (event) => {{
             report_model=_report_live_model(
                 snapshot=snapshot,
                 detail_rows=detail_rows,
-                active_staff_total=count_active_staff(department_scope=department_scope),
+                active_staff_total=active_staff_total,
                 labels=_date_labels_from_range(date_from, date_to),
             ),
             detail_rows=detail_rows,
@@ -1863,7 +1879,9 @@ self.addEventListener("fetch", (event) => {{
                 "date_to": date_to,
                 "department": department,
                 "search": search,
+                "report_kind": report_kind,
             },
+            report_views=report_views,
             app_settings=app_settings,
             **_admin_context("Reports", "reports", ["Dashboard", "Reports", "Attendance Report"], nav_secondary="attendance"),
         )
@@ -3328,6 +3346,19 @@ def _date_labels_from_range(date_from: str, date_to: str) -> list[str]:
     return _default_recent_date_labels(end_date=end_date)
 
 
+def _range_day_count(date_from: str, date_to: str) -> int:
+    if not date_from or not date_to:
+        return 1
+    try:
+        start_date = date.fromisoformat(date_from)
+        end_date = date.fromisoformat(date_to)
+    except ValueError:
+        return 1
+    if end_date < start_date:
+        start_date, end_date = end_date, start_date
+    return max((end_date - start_date).days + 1, 1)
+
+
 def _percent_text(value: int, total: int) -> str:
     if total <= 0:
         return "0.00%"
@@ -3968,8 +3999,34 @@ def _report_detail_rows_from_activity(
     activity_rows: list[dict[str, Any]],
     date_from: str,
     date_to: str,
+    staff_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    total_days_in_range = _range_day_count(date_from, date_to)
     staff_map: defaultdict[int, dict[str, Any]] = defaultdict(dict)
+    for staff in staff_rows:
+        staff_id = int(staff["id"])
+        staff_map.setdefault(
+            staff_id,
+            {
+                "staff_id": staff_id,
+                "staff_code": staff["staff_code"],
+                "first_name": staff["first_name"],
+                "last_name": staff["last_name"],
+                "department": staff["department"],
+                "total_days": 0,
+                "present": 0,
+                "absent": total_days_in_range,
+                "late": 0,
+                "half_day": 0,
+                "overtime": "0h 00m",
+                "avg_hours": "0h 00m",
+                "grade": "Good",
+                "grade_tone": "green",
+                "photo_url": staff.get("photo_url", ""),
+                "_work_minutes": [],
+            },
+        )
+
     for row in activity_rows:
         staff_id = int(row["staff_id"])
         entry = staff_map.setdefault(
@@ -4010,8 +4067,12 @@ def _report_detail_rows_from_activity(
     detail_rows = list(staff_map.values())
     for row in detail_rows:
         work_minutes = row.pop("_work_minutes")
+        row["absent"] = max(total_days_in_range - int(row["present"]), 0)
         row["avg_hours"] = _average_work_label(work_minutes)
-        if row["late"] >= 3:
+        if row["absent"] >= max(1, total_days_in_range // 2):
+            row["grade"] = "Poor"
+            row["grade_tone"] = "red"
+        elif row["late"] >= 3:
             row["grade"] = "Poor"
             row["grade_tone"] = "red"
         elif row["late"] >= 1:
@@ -4019,6 +4080,84 @@ def _report_detail_rows_from_activity(
             row["grade_tone"] = "orange"
     detail_rows.sort(key=lambda item: (item["last_name"] if "last_name" in item else "", item["first_name"]))
     return detail_rows
+
+
+def _report_views_model(
+    snapshot: dict[str, Any],
+    detail_rows: list[dict[str, Any]],
+    report_kind: str,
+) -> dict[str, Any]:
+    daily_rows = list(snapshot.get("daily_rows", []))
+    department_rows = list(snapshot.get("department_rows", []))
+    exception_rows = [
+        row for row in detail_rows
+        if int(row.get("late", 0)) > 0
+        or int(row.get("absent", 0)) > 0
+        or int(row.get("half_day", 0)) > 0
+        or row.get("grade_tone") in {"orange", "red"}
+    ]
+    exception_rows.sort(
+        key=lambda item: (
+            -int(item.get("absent", 0)),
+            -int(item.get("late", 0)),
+            str(item.get("last_name", "")),
+            str(item.get("first_name", "")),
+        )
+    )
+
+    tabs = [
+        {"key": "staff", "label": "Staff Summary", "count": len(detail_rows)},
+        {"key": "daily", "label": "Daily Summary", "count": len(daily_rows)},
+        {"key": "department", "label": "Department Summary", "count": len(department_rows)},
+        {"key": "exceptions", "label": "Exceptions", "count": len(exception_rows)},
+    ]
+
+    config_map: dict[str, dict[str, Any]] = {
+        "staff": {
+            "title": "Attendance Details",
+            "subtitle": "Per-staff summary across the selected report period.",
+            "empty_title": "No staff summary data yet.",
+            "empty_text": "Run attendance activity in the selected date range to populate staff performance summaries.",
+            "row_count": len(detail_rows),
+        },
+        "daily": {
+            "title": "Daily Attendance Summary",
+            "subtitle": "Daily operational totals for the selected report period.",
+            "empty_title": "No daily attendance summary yet.",
+            "empty_text": "There are no recorded attendance events inside the selected report period.",
+            "row_count": len(daily_rows),
+        },
+        "department": {
+            "title": "Department Performance",
+            "subtitle": "Department-level attendance performance for the selected report period.",
+            "empty_title": "No department summary yet.",
+            "empty_text": "No attendance events were recorded for the filtered departments in this date range.",
+            "row_count": len(department_rows),
+        },
+        "exceptions": {
+            "title": "Attendance Exceptions",
+            "subtitle": "Staff needing attention due to lateness, absence, or half-day patterns.",
+            "empty_title": "No attendance exceptions in this period.",
+            "empty_text": "Everyone in the selected report set is currently within normal attendance patterns.",
+            "row_count": len(exception_rows),
+        },
+    }
+
+    quick_reports = [
+        {"key": tab["key"], "label": tab["label"], "is_active": tab["key"] == report_kind}
+        for tab in tabs
+    ]
+
+    return {
+        "active_kind": report_kind,
+        "tabs": tabs,
+        "quick_reports": quick_reports,
+        "staff_rows": detail_rows,
+        "daily_rows": daily_rows,
+        "department_rows": department_rows,
+        "exception_rows": exception_rows,
+        "current": config_map[report_kind],
+    }
 
 
 def _report_live_model(

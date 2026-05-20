@@ -3496,3 +3496,38 @@ html[data-theme="dark"] .admin-notification-row.tone-activity {
         min-width: 680px;
     }
 }
+
+.admin-tab-link {
+    gap: 8px;
+}
+
+.admin-tab-link small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: rgba(47, 107, 255, 0.08);
+    color: var(--admin-blue);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.admin-quick-link.is-active {
+    border-color: rgba(47, 107, 255, 0.2);
+    background: linear-gradient(180deg, rgba(240, 247, 255, 0.98), rgba(255, 255, 255, 0.98));
+    color: var(--admin-blue);
+}
+
+html[data-theme="dark"] .admin-tab-link small {
+    background: rgba(83, 124, 255, 0.16);
+    color: #d8e5ff;
+}
+
+html[data-theme="dark"] .admin-quick-link.is-active {
+    border-color: rgba(83, 124, 255, 0.32);
+    background: linear-gradient(180deg, rgba(19, 35, 66, 0.98), rgba(16, 26, 42, 0.98));
+    color: #d8e5ff;
+}

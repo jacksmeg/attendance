@@ -3,23 +3,69 @@
 {% from "_admin_macros.html" import stat_card, avatar, status_badge, toolbar_button, table_icon_action, section_title %}
 
 {% block toolbar_actions %}
-{{ toolbar_button('calendar', 'May 1, 2024 - May 31, 2024') }}
-{{ toolbar_button('export', 'Export', href=url_for('app.admin_reports_export', date_from=filters.date_from, date_to=filters.date_to, department=filters.department, search=filters.search)) }}
-{{ toolbar_button('calendar', 'Schedule Report') }}
+<form class="admin-toolbar-form" method="get" action="{{ url_for('app.admin_reports') }}">
+    <input type="hidden" name="department" value="{{ filters.department }}">
+    <input type="hidden" name="search" value="{{ filters.search }}">
+    <input type="hidden" name="report_kind" value="{{ filters.report_kind }}">
+    <label class="admin-topbar-input admin-date-input">
+        {{ icon('calendar') }}
+        <input type="date" name="date_from" value="{{ filters.date_from }}">
+    </label>
+    <label class="admin-topbar-input admin-date-input">
+        {{ icon('calendar') }}
+        <input type="date" name="date_to" value="{{ filters.date_to }}">
+    </label>
+    <button class="admin-toolbar-button tone-primary" type="submit">
+        {{ icon('filter') }}
+        <span>Apply Range</span>
+    </button>
+</form>
+{{ toolbar_button('export', 'Export CSV', href=url_for('app.admin_reports_export', date_from=filters.date_from, date_to=filters.date_to, department=filters.department, search=filters.search, report_kind=filters.report_kind)) }}
 {% endblock %}
 
 {% block content %}
 <section class="admin-table-card">
     <div class="admin-card-head">
-        {{ section_title('Attendance Report') }}
+        {{ section_title('Attendance Report', 'Filter by department, search terms, and report view to analyze institution performance.') }}
     </div>
-    <div class="admin-filter-bar">
-        <span class="admin-filter-control"><select><option>All Departments</option></select></span>
-        <span class="admin-filter-control"><select><option>All Locations</option></select></span>
-        <span class="admin-filter-control"><select><option>All Shifts</option></select></span>
-        <span class="admin-filter-control"><select><option>All Employees</option></select></span>
-        <span class="admin-filter-control">{{ icon('filter') }} More Filters</span>
-        <button class="admin-toolbar-button tone-primary" type="button">{{ icon('search') }} <span>Apply Filter</span></button>
+    <form class="admin-filter-bar" method="get" action="{{ url_for('app.admin_reports') }}">
+        <label class="admin-filter-control">
+            <select name="department">
+                <option value="">All Departments</option>
+                {% for department_name in departments %}
+                <option value="{{ department_name }}" {% if department_name == filters.department %}selected{% endif %}>{{ department_name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="admin-filter-control">
+            <select name="report_kind">
+                <option value="staff" {% if filters.report_kind == 'staff' %}selected{% endif %}>Staff Summary</option>
+                <option value="daily" {% if filters.report_kind == 'daily' %}selected{% endif %}>Daily Summary</option>
+                <option value="department" {% if filters.report_kind == 'department' %}selected{% endif %}>Department Summary</option>
+                <option value="exceptions" {% if filters.report_kind == 'exceptions' %}selected{% endif %}>Exceptions</option>
+            </select>
+        </label>
+        <label class="admin-search-box">
+            {{ icon('search') }}
+            <input type="text" name="search" value="{{ filters.search }}" placeholder="Search by staff code, name, role, or department...">
+        </label>
+        <input type="hidden" name="date_from" value="{{ filters.date_from }}">
+        <input type="hidden" name="date_to" value="{{ filters.date_to }}">
+        <button class="admin-toolbar-button tone-primary" type="submit">
+            {{ icon('filter') }}
+            <span>Apply Filter</span>
+        </button>
+    </form>
+    <div class="admin-tab-strip">
+        {% for tab in report_views.tabs %}
+        <a
+            class="admin-tab-link {% if report_views.active_kind == tab.key %}is-active{% endif %}"
+            href="{{ url_for('app.admin_reports', date_from=filters.date_from, date_to=filters.date_to, department=filters.department, search=filters.search, report_kind=tab.key) }}"
+        >
+            <span>{{ tab.label }}</span>
+            <small>{{ tab.count }}</small>
+        </a>
+        {% endfor %}
     </div>
 </section>
 
@@ -83,13 +129,147 @@
 
         <article class="admin-table-card">
             <div class="admin-card-head">
-                {{ section_title('Attendance Details') }}
-                <label class="admin-search-box">
-                    {{ icon('search') }}
-                    <input type="text" value="{{ filters.search }}" placeholder="Search by name or employee ID...">
-                </label>
+                {{ section_title(report_views.current.title, report_views.current.subtitle) }}
+                <span class="admin-page-chip is-active">{{ report_views.current.row_count }} records</span>
             </div>
             <div class="admin-table-wrap">
+                {% if report_views.active_kind == 'daily' %}
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Events</th>
+                            <th>Staff Seen</th>
+                            <th>Absent</th>
+                            <th>On Time</th>
+                            <th>Late</th>
+                            <th>Early Checkout</th>
+                            <th>Completed Shift</th>
+                            <th>Break Starts</th>
+                            <th>Break Ends</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if report_views.daily_rows %}
+                        {% for row in report_views.daily_rows %}
+                        <tr>
+                            <td>{{ row.attendance_date }}</td>
+                            <td>{{ row.events }}</td>
+                            <td>{{ row.staff_seen }}</td>
+                            <td>{{ row.absent }}</td>
+                            <td>{{ row.on_time }}</td>
+                            <td>{{ row.late }}</td>
+                            <td>{{ row.early_checkout }}</td>
+                            <td>{{ row.completed_shift }}</td>
+                            <td>{{ row.break_starts }}</td>
+                            <td>{{ row.break_ends }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="10">
+                                <div class="admin-empty">
+                                    <strong>{{ report_views.current.empty_title }}</strong>
+                                    <p>{{ report_views.current.empty_text }}</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+                {% elif report_views.active_kind == 'department' %}
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Events</th>
+                            <th>Staff Seen</th>
+                            <th>On Time</th>
+                            <th>Late</th>
+                            <th>Early Checkout</th>
+                            <th>Completed Shift</th>
+                            <th>Break Starts</th>
+                            <th>Break Ends</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if report_views.department_rows %}
+                        {% for row in report_views.department_rows %}
+                        <tr>
+                            <td>{{ row.department }}</td>
+                            <td>{{ row.events }}</td>
+                            <td>{{ row.staff_seen }}</td>
+                            <td>{{ row.on_time }}</td>
+                            <td>{{ row.late }}</td>
+                            <td>{{ row.early_checkout }}</td>
+                            <td>{{ row.completed_shift }}</td>
+                            <td>{{ row.break_starts }}</td>
+                            <td>{{ row.break_ends }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="9">
+                                <div class="admin-empty">
+                                    <strong>{{ report_views.current.empty_title }}</strong>
+                                    <p>{{ report_views.current.empty_text }}</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+                {% elif report_views.active_kind == 'exceptions' %}
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Department</th>
+                            <th>Present</th>
+                            <th>Absent</th>
+                            <th>Late</th>
+                            <th>Half Day</th>
+                            <th>Overtime</th>
+                            <th>Average Work Hours</th>
+                            <th>Grade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if report_views.exception_rows %}
+                        {% for row in report_views.exception_rows %}
+                        <tr>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                        <span>{{ row.staff_code }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ row.department }}</td>
+                            <td>{{ row.present }}</td>
+                            <td>{{ row.absent }}</td>
+                            <td>{{ row.late }}</td>
+                            <td>{{ row.half_day }}</td>
+                            <td>{{ row.overtime }}</td>
+                            <td>{{ row.avg_hours }}</td>
+                            <td>{{ status_badge(row.grade, row.grade_tone) }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="9">
+                                <div class="admin-empty">
+                                    <strong>{{ report_views.current.empty_title }}</strong>
+                                    <p>{{ report_views.current.empty_text }}</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+                {% else %}
                 <table class="admin-table">
                     <thead>
                         <tr>
@@ -109,8 +289,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% if detail_rows %}
-                        {% for row in detail_rows %}
+                        {% if report_views.staff_rows %}
+                        {% for row in report_views.staff_rows %}
                         <tr>
                             <td>{{ loop.index }}</td>
                             <td>{{ row.staff_code }}</td>
@@ -138,28 +318,18 @@
                         <tr>
                             <td colspan="13">
                                 <div class="admin-empty">
-                                    <strong>No report data yet.</strong>
-                                    <p>Run the kiosk or staff clocking flow to generate attendance data for reporting.</p>
+                                    <strong>{{ report_views.current.empty_title }}</strong>
+                                    <p>{{ report_views.current.empty_text }}</p>
                                 </div>
                             </td>
                         </tr>
                         {% endif %}
                     </tbody>
                 </table>
+                {% endif %}
             </div>
             <div class="admin-table-footer">
-                <span>Showing 1 to {{ detail_rows|length }} of {{ detail_rows|length }} entries</span>
-                <div class="admin-pagination">
-                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
-                    <span class="admin-page-chip is-active">1</span>
-                    <span class="admin-page-chip">2</span>
-                    <span class="admin-page-chip">3</span>
-                    <span class="admin-page-chip">4</span>
-                    <span class="admin-page-chip">5</span>
-                    <span class="admin-page-chip">26</span>
-                    <span class="admin-page-chip">{{ icon('chevron-right') }}</span>
-                    <span class="admin-page-chip admin-page-size">10 / page</span>
-                </div>
+                <span>Showing {{ report_views.current.row_count }} record{% if report_views.current.row_count != 1 %}s{% endif %} for this report view</span>
             </div>
         </article>
     </div>
@@ -180,9 +350,12 @@
         <article class="admin-side-card">
             <div class="admin-card-head">{{ section_title('Quick Reports') }}</div>
             <div class="admin-quick-links">
-                {% for label in report_model.quick_reports %}
-                <a class="admin-quick-link" href="{{ url_for('app.admin_reports') }}">
-                    <span>{{ label }}</span>
+                {% for item in report_views.quick_reports %}
+                <a
+                    class="admin-quick-link {% if item.is_active %}is-active{% endif %}"
+                    href="{{ url_for('app.admin_reports', date_from=filters.date_from, date_to=filters.date_to, department=filters.department, search=filters.search, report_kind=item.key) }}"
+                >
+                    <span>{{ item.label }}</span>
                     {{ icon('chevron-right') }}
                 </a>
                 {% endfor %}

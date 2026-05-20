@@ -1041,6 +1041,28 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn("Daily Summary", payload)
         self.assertIn("Department Summary", payload)
 
+    def test_reports_page_switches_report_views(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+        self.client.post(
+            "/kiosk/scan",
+            data={"mock_template_ref": self.staff["template_ref"]},
+            follow_redirects=True,
+        )
+
+        daily_response = self.client.get("/admin/reports?report_kind=daily")
+        self.assertEqual(daily_response.status_code, 200)
+        self.assertIn(b"Daily Attendance Summary", daily_response.data)
+        self.assertIn(b"Staff Seen", daily_response.data)
+
+        department_response = self.client.get("/admin/reports?report_kind=department")
+        self.assertEqual(department_response.status_code, 200)
+        self.assertIn(b"Department Performance", department_response.data)
+        self.assertIn(b"Completed Shift", department_response.data)
+
     def test_staff_login_mobile_clock_flow_with_breaks_and_gps(self) -> None:
         login_response = self.client.post(
             "/staff/login",
