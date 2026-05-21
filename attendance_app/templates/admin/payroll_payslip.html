@@ -1,6 +1,5 @@
 {% extends "admin_shell.html" %}
 {% from "_icons.html" import icon %}
-{% from "_admin_macros.html" import status_badge %}
 
 {% block extra_head %}
 <style>
@@ -10,7 +9,7 @@
     body.payroll-print-page .admin-flash-stack,
     body.payroll-print-page .pwa-install-fab,
     body.payroll-print-page .pwa-ios-sheet,
-    body.payroll-print-page .payroll-slip-actions {
+    body.payroll-print-page .payroll-print-actions {
         display: none !important;
     }
 
@@ -25,10 +24,10 @@
         background: #ffffff;
     }
 
-    body.payroll-print-page .payroll-slip-sheet {
+    body.payroll-print-page .payroll-classic-sheet {
         margin: 0;
-        box-shadow: none;
         border: 0;
+        box-shadow: none;
     }
 }
 </style>
@@ -39,141 +38,124 @@
     {{ icon('chevron-right') }}
     <span>Back to Payroll</span>
 </a>
-<button class="admin-toolbar-button tone-primary" type="button" onclick="window.print()">
+<button class="admin-toolbar-button tone-primary payroll-print-actions" type="button" onclick="window.print()">
     {{ icon('document') }}
     <span>Print Payslip</span>
 </button>
 {% endblock %}
 
 {% block content %}
-<article class="payroll-slip-sheet">
-    <header class="payroll-slip-head">
-        <div class="payroll-slip-brand">
-            <div class="payroll-slip-brand-mark">
+<article class="payroll-classic-sheet">
+    <header class="payroll-classic-head">
+        <div class="payroll-classic-company">
+            <div class="payroll-classic-logo">
                 {% if app_logo_url %}
                 <img src="{{ app_logo_url }}" alt="{{ institution_name or app_name }} logo">
                 {% else %}
                 <span>{{ (institution_name or app_name)[:1] }}</span>
                 {% endif %}
             </div>
-            <div class="payroll-slip-brand-copy">
+            <div class="payroll-classic-company-copy">
                 <strong>{{ institution_name or app_name }}</strong>
                 <span>{{ app_name }}</span>
-                {% if institution_settings.allowed_location_address %}
-                <small>{{ institution_settings.allowed_location_address }}</small>
-                {% endif %}
+                <small>{{ institution_settings.allowed_location_address or copyright_notice }}</small>
             </div>
         </div>
-
-        <div class="payroll-slip-meta">
-            <span class="payroll-slip-kicker">Salary Payslip</span>
-            <h1>{{ payroll_month_label }}</h1>
-            <div class="payroll-slip-meta-grid">
-                <span>Generated</span>
-                <strong>{{ admin_now_iso[:10] }}</strong>
-                <span>Status</span>
-                <strong>{{ payslip.status }}</strong>
-            </div>
+        <div class="payroll-classic-period">
+            <strong>{{ payroll_month_label|upper }}</strong>
+            <span>END PAYMENT</span>
         </div>
     </header>
 
-    <section class="payroll-slip-hero">
-        <div class="payroll-slip-employee">
-            <div class="payroll-slip-avatar">
-                {% if payslip.photo_url %}
-                <img src="{{ payslip.photo_url }}" alt="{{ payslip.first_name }} {{ payslip.last_name }}">
-                {% else %}
-                <span>{{ payslip.first_name[:1] }}{{ payslip.last_name[:1] }}</span>
-                {% endif %}
+    <section class="payroll-classic-box">
+        <div class="payroll-classic-employee-grid">
+            <div class="payroll-classic-detail-list">
+                <div><span>EMPLOYEE NO.</span><strong>{{ payslip.staff_code }}</strong></div>
+                <div><span>NAME</span><strong>{{ payslip.first_name }} {{ payslip.last_name }}</strong></div>
+                <div><span>DEPARTMENT</span><strong>{{ payslip.department }}</strong></div>
+                <div><span>BASE RATE</span><strong>{{ "$%.2f"|format(payslip.base_salary_amount) }}</strong></div>
+                <div><span>WORKING DAYS</span><strong>{{ payslip.work_days }}</strong></div>
             </div>
-            <div class="payroll-slip-employee-copy">
-                <h2>{{ payslip.first_name }} {{ payslip.last_name }}</h2>
-                <span>{{ payslip.staff_code }} · {{ payslip.role }}</span>
-                <small>{{ payslip.department }}</small>
+            <div class="payroll-classic-detail-list">
+                <div><span>POSITION</span><strong>{{ payslip.role }}</strong></div>
+                <div><span>PAY METHOD</span><strong>{{ payslip.payment_method }}</strong></div>
+                <div><span>BANK</span><strong>{{ payslip.bank_name or "-" }}</strong></div>
+                <div><span>ACCOUNT</span><strong>{{ payslip.account_number or "-" }}</strong></div>
+                <div><span>STATUS</span><strong>{{ payslip.status }}</strong></div>
             </div>
         </div>
-        <div class="payroll-slip-netpay">
-            <span>Net Pay</span>
-            <strong>{{ payslip.net_pay }}</strong>
-            {{ status_badge(payslip.status, payslip.status_tone) }}
+
+        <div class="payroll-classic-stats-strip">
+            <div><span>DW</span><strong>{{ payslip.scheduled_work_days }}</strong></div>
+            <div><span>EO</span><strong>{{ payslip.checked_out_days }}</strong></div>
+            <div><span>LAT</span><strong>{{ payslip.late_days }}</strong></div>
+            <div><span>HFD</span><strong>{{ payslip.half_days }}</strong></div>
+            <div><span>OT</span><strong>{{ payslip.overtime_hours_label }}</strong></div>
         </div>
     </section>
 
-    <section class="payroll-slip-grid">
-        <div class="payroll-slip-section">
-            <div class="payroll-slip-section-head">
-                <h3>Attendance Summary</h3>
-            </div>
-            <div class="payroll-slip-list">
-                <div><span>Scheduled Work Days</span><strong>{{ payslip.scheduled_work_days }}</strong></div>
-                <div><span>Payable Days</span><strong>{{ payslip.work_days }}</strong></div>
-                <div><span>Late Days</span><strong>{{ payslip.late_days }}</strong></div>
-                <div><span>Half Days</span><strong>{{ payslip.half_days }}</strong></div>
-                <div><span>Checked Out Days</span><strong>{{ payslip.checked_out_days }}</strong></div>
-                <div><span>Overtime Hours</span><strong>{{ payslip.overtime_hours_label }}</strong></div>
-            </div>
+    <section class="payroll-classic-columns">
+        <div class="payroll-classic-box">
+            <div class="payroll-classic-box-title">EARNINGS / INCOME</div>
+            <table class="payroll-classic-table">
+                <tbody>
+                    <tr><td>BASIC PAY</td><td>{{ "$%.2f"|format(payslip.base_salary_amount) }}</td></tr>
+                    <tr><td>BASE EARNED</td><td>{{ "$%.2f"|format(payslip.base_earned_amount) }}</td></tr>
+                    <tr><td>OVERTIME PAY</td><td>{{ "$%.2f"|format(payslip.overtime_pay_amount) }}</td></tr>
+                    <tr><td>OVERTIME HOURS</td><td>{{ payslip.overtime_hours_label }}</td></tr>
+                    <tr><td>ATTENDANCE DAYS</td><td>{{ payslip.work_days }}</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr><th>GROSS PAY</th><th>{{ payslip.gross_pay }}</th></tr>
+                </tfoot>
+            </table>
         </div>
 
-        <div class="payroll-slip-section">
-            <div class="payroll-slip-section-head">
-                <h3>Payment Details</h3>
+        <div class="payroll-classic-box">
+            <div class="payroll-classic-box-title">DEDUCTION</div>
+            <table class="payroll-classic-table">
+                <tbody>
+                    <tr><td>TAX</td><td>{{ "$%.2f"|format(payslip.tax_deduction_amount) }}</td></tr>
+                    <tr><td>PROVIDENT FUND</td><td>{{ "$%.2f"|format(payslip.provident_fund_amount) }}</td></tr>
+                    <tr><td>HEALTH INSURANCE</td><td>{{ "$%.2f"|format(payslip.health_insurance_amount) }}</td></tr>
+                    <tr><td>OTHER DEDUCTIONS</td><td>{{ "$%.2f"|format(payslip.other_deduction_amount) }}</td></tr>
+                    <tr><td>LATE DAYS</td><td>{{ payslip.late_days }}</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr><th>TOTAL DEDUCTION</th><th>{{ payslip.deductions }}</th></tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+
+    <section class="payroll-classic-footer-grid">
+        <div class="payroll-classic-box">
+            <div class="payroll-classic-box-title">SUMMARY</div>
+            <table class="payroll-classic-mini-table">
+                <tbody>
+                    <tr><td>Gross Pay</td><td>{{ payslip.gross_pay }}</td></tr>
+                    <tr><td>Total Deduction</td><td>{{ payslip.deductions }}</td></tr>
+                    <tr><td>Net Pay</td><td>{{ payslip.net_pay }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="payroll-classic-box">
+            <div class="payroll-classic-box-title">APPROVAL</div>
+            <div class="payroll-classic-approval-row">
+                <span>APPROVED BY :</span>
+                <span>RECEIVED BY :</span>
             </div>
-            <div class="payroll-slip-list">
-                <div><span>Payment Method</span><strong>{{ payslip.payment_method }}</strong></div>
-                <div><span>Bank Name</span><strong>{{ payslip.bank_name or '-' }}</strong></div>
-                <div><span>Account Name</span><strong>{{ payslip.account_name or '-' }}</strong></div>
-                <div><span>Account Number</span><strong>{{ payslip.account_number or '-' }}</strong></div>
-                <div><span>Processed On</span><strong>{{ payslip.processed_at[:10] if payslip.processed_at else 'Pending' }}</strong></div>
-                <div><span>Software Version</span><strong>{{ software_version }}</strong></div>
+            <div class="payroll-classic-signature-row">
+                <div></div>
+                <div></div>
             </div>
         </div>
     </section>
 
-    <section class="payroll-slip-columns">
-        <div class="payroll-slip-section">
-            <div class="payroll-slip-section-head">
-                <h3>Earnings</h3>
-            </div>
-            <div class="payroll-slip-list">
-                <div><span>Base Salary</span><strong>{{ "$%.2f"|format(payslip.base_salary_amount) }}</strong></div>
-                <div><span>Base Earned</span><strong>{{ "$%.2f"|format(payslip.base_earned_amount) }}</strong></div>
-                <div><span>Overtime Pay</span><strong>{{ "$%.2f"|format(payslip.overtime_pay_amount) }}</strong></div>
-                <div><span>Gross Pay</span><strong>{{ payslip.gross_pay }}</strong></div>
-            </div>
-        </div>
-
-        <div class="payroll-slip-section">
-            <div class="payroll-slip-section-head">
-                <h3>Deductions</h3>
-            </div>
-            <div class="payroll-slip-list">
-                <div><span>Tax</span><strong>{{ "$%.2f"|format(payslip.tax_deduction_amount) }}</strong></div>
-                <div><span>Provident Fund</span><strong>{{ "$%.2f"|format(payslip.provident_fund_amount) }}</strong></div>
-                <div><span>Health Insurance</span><strong>{{ "$%.2f"|format(payslip.health_insurance_amount) }}</strong></div>
-                <div><span>Other Deductions</span><strong>{{ "$%.2f"|format(payslip.other_deduction_amount) }}</strong></div>
-                <div><span>Total Deductions</span><strong>{{ payslip.deductions }}</strong></div>
-            </div>
-        </div>
-    </section>
-
-    <section class="payroll-slip-total-strip">
-        <div class="payroll-slip-total-card">
-            <span>Gross Pay</span>
-            <strong>{{ payslip.gross_pay }}</strong>
-        </div>
-        <div class="payroll-slip-total-card">
-            <span>Total Deductions</span>
-            <strong>{{ payslip.deductions }}</strong>
-        </div>
-        <div class="payroll-slip-total-card highlight">
-            <span>Take Home</span>
-            <strong>{{ payslip.net_pay }}</strong>
-        </div>
-    </section>
-
-    <footer class="payroll-slip-foot">
-        <span>{{ copyright_notice }}</span>
+    <footer class="payroll-classic-note">
         <span>{{ app_name }} · {{ software_version }}</span>
+        <span>{{ copyright_notice }}</span>
     </footer>
 </article>
 {% endblock %}

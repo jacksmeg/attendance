@@ -73,152 +73,120 @@
     {% endfor %}
 </section>
 
-<section class="admin-content-grid">
-    <div class="admin-main-stack">
-        <article class="admin-table-card">
-            <div class="admin-card-head">
-                {{ section_title(payroll_model.payroll_month_label ~ ' Payroll', 'Processed records can open a payslip instantly, while pending rows can be processed or put on hold.') }}
-                <span class="admin-page-chip is-active">{{ payroll_rows|length }} rows</span>
-            </div>
-            <div class="admin-table-wrap">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Department</th>
-                            <th>Work Days</th>
-                            <th>Gross Pay</th>
-                            <th>Deductions</th>
-                            <th>Net Pay</th>
-                            <th>Payment Method</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if payroll_rows %}
-                        {% for row in payroll_rows %}
-                        <tr>
-                            <td>
-                                <div class="admin-person-cell">
-                                    {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
-                                    <div class="admin-table-meta">
-                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
-                                        <span>{{ row.staff_code }} · {{ row.role }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>{{ row.department }}</td>
-                            <td>
-                                <strong>{{ row.work_days }}</strong>
-                                <div class="admin-table-secondary">{{ row.days_summary }}</div>
-                            </td>
-                            <td>
-                                <strong>{{ row.gross_pay }}</strong>
-                                <div class="admin-table-secondary">Base {{ "$%.2f"|format(row.base_earned_amount) }} · OT {{ row.overtime_hours_label }}</div>
-                            </td>
-                            <td>
-                                <strong>{{ row.deductions }}</strong>
-                                <div class="admin-table-secondary">Tax + PF + NHIS + Other</div>
-                            </td>
-                            <td style="color:#16a34a; font-weight:700;">{{ row.net_pay }}</td>
-                            <td>
+<section class="admin-main-stack">
+    <article class="admin-table-card">
+        <div class="admin-card-head">
+            {{ section_title(payroll_model.payroll_month_label ~ ' Payroll', 'Processed records can open a payslip instantly, while pending rows can be processed or put on hold.') }}
+            <span class="admin-page-chip is-active">{{ payroll_rows|length }} rows</span>
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Work Days</th>
+                        <th>Gross Pay</th>
+                        <th>Deductions</th>
+                        <th>Net Pay</th>
+                        <th>Payment Method</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if payroll_rows %}
+                    {% for row in payroll_rows %}
+                    <tr>
+                        <td>
+                            <div class="admin-person-cell">
+                                {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
                                 <div class="admin-table-meta">
-                                    <strong>{{ row.payment_method }}</strong>
-                                    {% if row.account_name or row.account_number %}
-                                    <span>{{ row.account_name or row.bank_name }}{% if row.account_number %} · {{ row.account_number }}{% endif %}</span>
-                                    {% endif %}
+                                    <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                    <span>{{ row.staff_code }} · {{ row.role }}</span>
                                 </div>
-                            </td>
-                            <td>
-                                {{ status_badge(row.status, row.status_tone) }}
-                                {% if row.processed_at %}
-                                <div class="admin-table-secondary">{{ row.processed_at[:10] }}</div>
+                            </div>
+                        </td>
+                        <td>{{ row.department }}</td>
+                        <td>
+                            <strong>{{ row.work_days }}</strong>
+                            <div class="admin-table-secondary">{{ row.days_summary }}</div>
+                        </td>
+                        <td>
+                            <strong>{{ row.gross_pay }}</strong>
+                            <div class="admin-table-secondary">Base {{ "$%.2f"|format(row.base_earned_amount) }} · OT {{ row.overtime_hours_label }}</div>
+                        </td>
+                        <td>
+                            <strong>{{ row.deductions }}</strong>
+                            <div class="admin-table-secondary">Tax + PF + NHIS + Other</div>
+                        </td>
+                        <td style="color:#16a34a; font-weight:700;">{{ row.net_pay }}</td>
+                        <td>
+                            <div class="admin-table-meta">
+                                <strong>{{ row.payment_method }}</strong>
+                                {% if row.account_name or row.account_number %}
+                                <span>{{ row.account_name or row.bank_name }}{% if row.account_number %} · {{ row.account_number }}{% endif %}</span>
                                 {% endif %}
-                            </td>
-                            <td>
-                                <div class="admin-table-actions">
-                                    <a class="admin-toolbar-button" href="{{ url_for('app.admin_payroll_payslip', staff_id=row.staff_id, payroll_month=filters.payroll_month) }}">
-                                        {{ icon('document') }}
-                                        <span>Payslip</span>
-                                    </a>
-                                    {% if row.status == 'Processed' %}
-                                    <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
-                                        <input type="hidden" name="action" value="set_status">
-                                        <input type="hidden" name="staff_id" value="{{ row.staff_id }}">
-                                        <input type="hidden" name="next_status" value="Hold">
-                                        <button class="admin-toolbar-button" type="submit">Hold</button>
-                                    </form>
-                                    {% elif row.status == 'Hold' %}
-                                    <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
-                                        <input type="hidden" name="action" value="set_status">
-                                        <input type="hidden" name="staff_id" value="{{ row.staff_id }}">
-                                        <input type="hidden" name="next_status" value="Processed">
-                                        <button class="admin-toolbar-button tone-primary" type="submit">Process</button>
-                                    </form>
-                                    {% else %}
-                                    <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
-                                        <input type="hidden" name="action" value="set_status">
-                                        <input type="hidden" name="staff_id" value="{{ row.staff_id }}">
-                                        <input type="hidden" name="next_status" value="Processed">
-                                        <button class="admin-toolbar-button tone-primary" type="submit">Process</button>
-                                    </form>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% else %}
-                        <tr>
-                            <td colspan="9">
-                                <div class="admin-empty">
-                                    <strong>No payroll employees match this view yet.</strong>
-                                    <p>Add salary details on staff records and attendance activity in the selected month to generate real payroll rows here.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                            </div>
+                        </td>
+                        <td>
+                            {{ status_badge(row.status, row.status_tone) }}
+                            {% if row.processed_at %}
+                            <div class="admin-table-secondary">{{ row.processed_at[:10] }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="admin-table-actions">
+                                <a class="admin-toolbar-button" href="{{ url_for('app.admin_payroll_payslip', staff_id=row.staff_id, payroll_month=filters.payroll_month) }}">
+                                    {{ icon('document') }}
+                                    <span>Payslip</span>
+                                </a>
+                                {% if row.status == 'Processed' %}
+                                <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
+                                    <input type="hidden" name="action" value="set_status">
+                                    <input type="hidden" name="staff_id" value="{{ row.staff_id }}">
+                                    <input type="hidden" name="next_status" value="Hold">
+                                    <button class="admin-toolbar-button" type="submit">Hold</button>
+                                </form>
+                                {% elif row.status == 'Hold' %}
+                                <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
+                                    <input type="hidden" name="action" value="set_status">
+                                    <input type="hidden" name="staff_id" value="{{ row.staff_id }}">
+                                    <input type="hidden" name="next_status" value="Processed">
+                                    <button class="admin-toolbar-button tone-primary" type="submit">Process</button>
+                                </form>
+                                {% else %}
+                                <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
+                                    <input type="hidden" name="action" value="set_status">
+                                    <input type="hidden" name="staff_id" value="{{ row.staff_id }}">
+                                    <input type="hidden" name="next_status" value="Processed">
+                                    <button class="admin-toolbar-button tone-primary" type="submit">Process</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="9">
+                            <div class="admin-empty">
+                                <strong>No payroll employees match this view yet.</strong>
+                                <p>Add salary details on staff records and attendance activity in the selected month to generate real payroll rows here.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        <div class="admin-table-footer">
+            <span>Showing {{ payroll_rows|length }} payroll row{% if payroll_rows|length != 1 %}s{% endif %} for {{ payroll_model.payroll_month_label }}</span>
+            <div class="admin-pagination">
+                <span class="admin-page-chip is-active">{{ payroll_rows|length }}</span>
+                <span class="admin-page-chip admin-page-size">Current view</span>
             </div>
-            <div class="admin-table-footer">
-                <span>Showing {{ payroll_rows|length }} payroll row{% if payroll_rows|length != 1 %}s{% endif %} for {{ payroll_model.payroll_month_label }}</span>
-                <div class="admin-pagination">
-                    <span class="admin-page-chip is-active">{{ payroll_rows|length }}</span>
-                    <span class="admin-page-chip admin-page-size">Current view</span>
-                </div>
-            </div>
-        </article>
-    </div>
-
-    <div class="admin-side-stack">
-        <article class="admin-side-card">
-            <div class="admin-card-head">{{ section_title('Quick Actions') }}</div>
-            <div class="admin-quick-links">
-                <a class="admin-quick-link" href="{{ url_for('app.admin_payroll_summary', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
-                    <span>Open Payroll Summary</span>{{ icon('chevron-right') }}
-                </a>
-                <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
-                    <input type="hidden" name="action" value="process_visible">
-                    <button class="admin-quick-link admin-quick-link-button" type="submit">
-                        <span>Process Visible Payroll</span>{{ icon('chevron-right') }}
-                    </button>
-                </form>
-                <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
-                    <input type="hidden" name="action" value="hold_visible">
-                    <button class="admin-quick-link admin-quick-link-button" type="submit">
-                        <span>Place Visible Rows On Hold</span>{{ icon('chevron-right') }}
-                    </button>
-                </form>
-                <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
-                    <input type="hidden" name="action" value="reset_visible">
-                    <button class="admin-quick-link admin-quick-link-button" type="submit">
-                        <span>Reset Visible Rows To Pending</span>{{ icon('chevron-right') }}
-                    </button>
-                </form>
-                <a class="admin-quick-link" href="{{ url_for('app.admin_staff') }}"><span>Open Staff Directory</span>{{ icon('chevron-right') }}</a>
-            </div>
-        </article>
-    </div>
+        </div>
+    </article>
 </section>
 {% endblock %}
