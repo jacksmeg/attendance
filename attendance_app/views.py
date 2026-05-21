@@ -326,11 +326,11 @@ def register_routes(app: Flask) -> None:
 
     @bp.route("/")
     def home():
+        if is_platform_admin():
+            return redirect(url_for("app.platform_organizations"))
         if session.get("staff_authenticated"):
             return redirect(url_for("app.staff_home"))
         if session.get("admin_authenticated"):
-            if is_platform_admin():
-                return redirect(url_for("app.platform_organizations"))
             return redirect(url_for("app.admin_dashboard"))
         if current_app.config["APP_SETTINGS"].fingerprint_backend == "disabled":
             return redirect(url_for("app.staff_login"))
@@ -338,6 +338,8 @@ def register_routes(app: Flask) -> None:
 
     @bp.route("/platform/login", methods=["GET", "POST"])
     def platform_login():
+        if is_platform_admin():
+            return redirect(url_for("app.platform_organizations"))
         settings = current_app.config["APP_SETTINGS"]
         if request.method == "POST":
             username = request.form.get("username", "").strip()
@@ -351,8 +353,9 @@ def register_routes(app: Flask) -> None:
 
         return render_template(
             "platform/login.html",
-            title="Platform Login",
+            title="Platform Control",
             next_url=request.args.get("next", ""),
+            body_class="platform-auth-body",
         )
 
     @bp.route("/portal/<slug>/admin/login")
@@ -767,6 +770,9 @@ self.addEventListener("fetch", (event) => {{
 
     @bp.route("/admin/login", methods=["GET", "POST"])
     def admin_login():
+        if is_platform_admin():
+            flash("Platform sessions use the standalone platform control room.", "warning")
+            return redirect(url_for("app.platform_organizations"))
         settings = current_app.config["APP_SETTINGS"]
         organization = get_current_organization()
         live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
@@ -805,6 +811,9 @@ self.addEventListener("fetch", (event) => {{
 
     @bp.route("/staff/login", methods=["GET", "POST"])
     def staff_login():
+        if is_platform_admin():
+            flash("Platform sessions use the standalone platform control room.", "warning")
+            return redirect(url_for("app.platform_organizations"))
         organization = get_current_organization()
         if request.method == "POST":
             staff_identifier = request.form.get("staff_identifier", "").strip()
@@ -925,7 +934,7 @@ self.addEventListener("fetch", (event) => {{
     def logout():
         was_staff = bool(session.get("staff_authenticated"))
         was_admin = bool(session.get("admin_authenticated"))
-        was_platform_admin = bool(session.get("is_platform_admin"))
+        was_platform_admin = is_platform_admin()
         organization_slug = str(
             session.get("portal_organization_slug")
             or session.get("organization_slug")
@@ -958,7 +967,10 @@ self.addEventListener("fetch", (event) => {{
 
     @bp.route("/platform/logout")
     def platform_logout():
-        return redirect(url_for("app.logout"))
+        if is_platform_admin():
+            clear_user_session()
+            flash("Platform session closed.", "success")
+        return redirect(url_for("app.platform_login"))
 
     @bp.route("/platform/organizations", methods=["GET", "POST"])
     @platform_admin_required

@@ -30,6 +30,9 @@ DEPARTMENT_SCOPED_ROLES = {DEPARTMENT_MANAGER, SUPERVISOR}
 def admin_required(view):
     @wraps(view)
     def wrapped_view(*args, **kwargs):
+        if is_platform_admin():
+            flash("Platform sessions use the standalone platform control room.", "warning")
+            return redirect(url_for("app.platform_organizations"))
         if not session.get("admin_authenticated"):
             flash("Sign in as an administrator to continue.", "warning")
             return redirect(url_for("app.admin_login", next=request.path))
@@ -84,8 +87,9 @@ def clear_user_session() -> None:
 
 def start_platform_admin_session(username: str) -> None:
     clear_user_session()
-    session["admin_authenticated"] = True
+    session["admin_authenticated"] = False
     session["staff_authenticated"] = False
+    session["platform_authenticated"] = True
     session["is_platform_admin"] = True
     session["admin_username"] = username
     session["display_name"] = username
@@ -102,6 +106,7 @@ def start_institution_admin_session(
     clear_user_session()
     session["admin_authenticated"] = True
     session["staff_authenticated"] = False
+    session["platform_authenticated"] = False
     session["is_platform_admin"] = False
     session["admin_username"] = username
     session["display_name"] = organization_name or "Admin User"
@@ -128,6 +133,7 @@ def start_staff_session(staff: dict[str, object], *, organization_slug: str = ""
     session["managed_department"] = str(staff.get("department", "")) if access_role in DEPARTMENT_SCOPED_ROLES else ""
     session["admin_authenticated"] = access_role in ADMIN_PANEL_ROLES
     session["admin_username"] = full_name if access_role in ADMIN_PANEL_ROLES else ""
+    session["platform_authenticated"] = False
     session["is_platform_admin"] = False
     session["organization_slug"] = organization_slug
     session["pending_organization_slug"] = organization_slug
@@ -157,7 +163,9 @@ def current_display_name() -> str:
 
 
 def is_platform_admin() -> bool:
-    return bool(session.get("is_platform_admin"))
+    return bool(session.get("is_platform_admin")) and bool(
+        session.get("platform_authenticated") or session.get("admin_authenticated")
+    )
 
 
 def is_staff_authenticated() -> bool:
@@ -175,6 +183,9 @@ def has_any_role(*roles: str) -> bool:
 def staff_required(view):
     @wraps(view)
     def wrapped_view(*args, **kwargs):
+        if is_platform_admin():
+            flash("Platform sessions use the standalone platform control room.", "warning")
+            return redirect(url_for("app.platform_organizations"))
         if not is_staff_authenticated():
             flash("Sign in as a staff member to continue.", "warning")
             return redirect(url_for("app.staff_login", next=request.path))
@@ -189,13 +200,16 @@ def roles_required(*roles: str):
     def decorator(view):
         @wraps(view)
         def wrapped_view(*args, **kwargs):
-            if not session.get("admin_authenticated") and not is_staff_authenticated():
+            if not session.get("admin_authenticated") and not is_staff_authenticated() and not is_platform_admin():
                 flash("Sign in to continue.", "warning")
                 login_endpoint = "app.admin_login" if request.path.startswith("/admin") else "app.staff_login"
                 return redirect(url_for(login_endpoint, next=request.path))
 
             if is_platform_admin():
-                return view(*args, **kwargs)
+                if (request.endpoint or "").startswith("app.platform_"):
+                    return view(*args, **kwargs)
+                flash("Platform sessions use the standalone platform control room.", "warning")
+                return redirect(url_for("app.platform_organizations"))
 
             current = current_access_role()
             if current not in allowed_roles:

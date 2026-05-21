@@ -565,6 +565,27 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn(b"Platform super admin", response.data)
         self.assertIn(b"Sign in as a platform super admin", response.data)
 
+    def test_platform_super_admin_stays_in_platform_portal(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        dashboard_response = self.client.get("/admin/dashboard", follow_redirects=True)
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertIn(b"Standalone Platform", dashboard_response.data)
+        self.assertIn(b"Platform sessions use the standalone platform control room", dashboard_response.data)
+        self.assertNotIn(b"Attendance Overview", dashboard_response.data)
+
+        home_response = self.client.get("/", follow_redirects=False)
+        self.assertEqual(home_response.status_code, 302)
+        self.assertIn("/platform/organizations", home_response.headers["Location"])
+
+        logout_response = self.client.get("/platform/logout", follow_redirects=True)
+        self.assertEqual(logout_response.status_code, 200)
+        self.assertIn(b"Platform sign in", logout_response.data)
+
     def test_enroll_page_renders_for_admin(self) -> None:
         self.client.post(
             "/admin/login",
