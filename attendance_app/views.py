@@ -9,6 +9,7 @@ import json
 import math
 from pathlib import Path
 import struct
+from time import monotonic
 from typing import Any, Mapping
 import sqlite3
 from uuid import uuid4
@@ -195,6 +196,8 @@ AUDIT_SELFIE_MIME_TYPES = {
     "image/webp": ".webp",
 }
 MAX_AUDIT_SELFIE_BYTES = 3 * 1024 * 1024
+ADMIN_NOTIFICATION_CACHE_TTL_SECONDS = 12.0
+_ADMIN_NOTIFICATION_CACHE: dict[tuple[str, int], tuple[float, list[dict[str, str]]]] = {}
 
 HOSPITAL_SHIFT_PRESETS = [
     {
@@ -3534,7 +3537,7 @@ def _admin_context(
     nav_secondary: str = "",
     body_class: str = "",
 ) -> dict[str, Any]:
-    notification_rows = _build_admin_notification_rows(limit=8)
+    notification_rows = _cached_admin_notification_rows(limit=8)
     return {
         "page_title": page_title,
         "nav_primary": nav_primary,
@@ -5957,6 +5960,30 @@ def _build_admin_notification_rows(limit: int = 12) -> list[dict[str, str]]:
         )
 
     return rows[:limit]
+
+
+def _cached_admin_notification_rows(limit: int = 12) -> list[dict[str, str]]:
+    organization = get_current_organization()
+    cache_key = (organization.slug, limit)
+    current_tick = monotonic()
+    cached = _ADMIN_NOTIFICATION_CACHE.get(cache_key)
+    if cached and current_tick - cached[0] < ADMIN_NOTIFICATION_CACHE_TTL_SECONDS:
+        return cached[1]
+
+    rows = _build_admin_notification_rows(limit=limit)
+    _ADMIN_NOTIFICATION_CACHE[cache_key] = (current_tick, rows)
+
+    if len(_ADMIN_NOTIFICATION_CACHE) > 64:
+        stale_before = current_tick - ADMIN_NOTIFICATION_CACHE_TTL_SECONDS
+        stale_keys = [
+            key
+            for key, (cached_tick, _) in _ADMIN_NOTIFICATION_CACHE.items()
+            if cached_tick < stale_before
+        ]
+        for key in stale_keys:
+            _ADMIN_NOTIFICATION_CACHE.pop(key, None)
+
+    return rows
 
 
 def _staff_display_rows(staff_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

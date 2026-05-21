@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 import hmac
 import sqlite3
+
+from flask import g, has_request_context
 
 from attendance_app.auth import hash_secret, secret_matches
 from attendance_app.db import get_db
@@ -41,16 +44,33 @@ ADMIN_USERNAME_KEY = "institution_admin_username"
 
 
 def get_app_settings(default_app_name: str = "") -> dict[str, Any]:
+    if has_request_context():
+        request_cache = getattr(g, "_app_settings_cache", None)
+        if request_cache is None:
+            request_cache = {}
+            g._app_settings_cache = request_cache
+        cache_key = default_app_name or ""
+        if cache_key in request_cache:
+            return request_cache[cache_key]
+
     db = get_db()
     try:
         rows = db.execute("SELECT key, value FROM app_settings").fetchall()
     except sqlite3.OperationalError:
         rows = []
-    return _deserialize_app_settings_rows(rows, default_app_name=default_app_name)
+    settings = _deserialize_app_settings_rows(rows, default_app_name=default_app_name)
+    if has_request_context():
+        g._app_settings_cache[default_app_name or ""] = settings
+    return settings
 
 
 def get_app_settings_for_database(database_path: Path, default_app_name: str = "") -> dict[str, Any]:
-    db = sqlite3.connect(Path(database_path).resolve())
+    return _cached_app_settings_for_database(str(Path(database_path).resolve()), default_app_name)
+
+
+@lru_cache(maxsize=256)
+def _cached_app_settings_for_database(database_path: str, default_app_name: str = "") -> dict[str, Any]:
+    db = sqlite3.connect(database_path)
     db.row_factory = sqlite3.Row
     try:
         try:
@@ -111,16 +131,34 @@ def save_app_settings(data: Mapping[str, Any], default_app_name: str = "") -> di
     for key, value in normalized.items():
         _upsert_setting(db, key, value, timestamp=timestamp)
     db.commit()
+    _clear_settings_caches()
     return get_app_settings(default_app_name=default_app_name)
 
 
 def get_admin_security(default_username: str = "") -> dict[str, Any]:
+    if has_request_context():
+        request_cache = getattr(g, "_admin_security_cache", None)
+        if request_cache is None:
+            request_cache = {}
+            g._admin_security_cache = request_cache
+        cache_key = default_username or ""
+        if cache_key in request_cache:
+            return request_cache[cache_key]
+
     db = get_db()
-    return _read_admin_security(db, default_username=default_username)
+    security = _read_admin_security(db, default_username=default_username)
+    if has_request_context():
+        g._admin_security_cache[default_username or ""] = security
+    return security
 
 
 def get_admin_security_for_database(database_path: Path, default_username: str = "") -> dict[str, Any]:
-    db = sqlite3.connect(Path(database_path).resolve())
+    return _cached_admin_security_for_database(str(Path(database_path).resolve()), default_username)
+
+
+@lru_cache(maxsize=256)
+def _cached_admin_security_for_database(database_path: str, default_username: str = "") -> dict[str, Any]:
+    db = sqlite3.connect(database_path)
     db.row_factory = sqlite3.Row
     try:
         return _read_admin_security(db, default_username=default_username)
@@ -172,6 +210,7 @@ def save_admin_password(new_password: str) -> dict[str, Any]:
         timestamp=datetime.now().isoformat(timespec="seconds"),
     )
     db.commit()
+    _clear_settings_caches()
     row = db.execute(
         "SELECT updated_at FROM app_settings WHERE key = ?",
         (ADMIN_PASSWORD_HASH_KEY,),
@@ -192,6 +231,7 @@ def save_admin_password_for_database(database_path: Path, new_password: str) -> 
             timestamp=datetime.now().isoformat(timespec="seconds"),
         )
         db.commit()
+        _clear_settings_caches()
     finally:
         db.close()
 
@@ -223,6 +263,7 @@ def save_admin_credentials_for_database(
                 timestamp=timestamp,
             )
         db.commit()
+        _clear_settings_caches()
     finally:
         db.close()
 
@@ -286,3 +327,11 @@ def _upsert_setting(
         """,
         (key, value, timestamp),
     )
+
+
+def _clear_settings_caches() -> None:
+    _cached_app_settings_for_database.cache_clear()
+    _cached_admin_security_for_database.cache_clear()
+    if has_request_context():
+        g.pop("_app_settings_cache", None)
+        g.pop("_admin_security_cache", None)

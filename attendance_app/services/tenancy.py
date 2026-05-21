@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable
 import re
@@ -125,6 +126,7 @@ def init_platform_registry(registry_path: Path) -> None:
         db.commit()
     finally:
         db.close()
+    _clear_organization_registry_caches()
 
 
 def ensure_default_organization(settings: AppConfig) -> OrganizationContext:
@@ -277,6 +279,7 @@ def provision_organization(
     finally:
         db.close()
 
+    _clear_organization_registry_caches()
     organization = get_organization_by_slug(settings, normalized_slug)
     if not organization:
         raise RuntimeError("Organization context could not be loaded.")
@@ -284,7 +287,12 @@ def provision_organization(
 
 
 def list_organizations(settings: AppConfig) -> list[OrganizationContext]:
-    db = sqlite3.connect(settings.platform_registry_path)
+    return list(_cached_list_organizations(str(settings.platform_registry_path)))
+
+
+@lru_cache(maxsize=32)
+def _cached_list_organizations(registry_path: str) -> tuple[OrganizationContext, ...]:
+    db = sqlite3.connect(registry_path)
     db.row_factory = sqlite3.Row
     try:
         rows = db.execute(
@@ -293,7 +301,7 @@ def list_organizations(settings: AppConfig) -> list[OrganizationContext]:
                 tail_clause="ORDER BY o.is_default DESC, o.display_name, o.slug",
             )
         ).fetchall()
-        return [_row_to_context(row) for row in rows]
+        return tuple(_row_to_context(row) for row in rows)
     finally:
         db.close()
 
@@ -320,7 +328,15 @@ def get_organization_by_slug(settings: AppConfig, slug: str) -> OrganizationCont
     normalized_slug = _normalize_slug(slug)
     if not normalized_slug:
         return None
-    db = sqlite3.connect(settings.platform_registry_path)
+    return _cached_organization_by_slug(str(settings.platform_registry_path), normalized_slug)
+
+
+@lru_cache(maxsize=256)
+def _cached_organization_by_slug(
+    registry_path: str,
+    normalized_slug: str,
+) -> OrganizationContext | None:
+    db = sqlite3.connect(registry_path)
     db.row_factory = sqlite3.Row
     try:
         row = db.execute(
@@ -449,6 +465,7 @@ def update_organization(
     finally:
         db.close()
 
+    _clear_organization_registry_caches()
     updated = get_organization_by_slug(settings, organization.slug)
     if not updated:
         raise RuntimeError("Organization could not be reloaded after update.")
@@ -459,7 +476,15 @@ def get_organization_by_host(settings: AppConfig, hostname: str) -> Organization
     normalized_host = _normalize_hostname(hostname)
     if not normalized_host:
         return None
-    db = sqlite3.connect(settings.platform_registry_path)
+    return _cached_organization_by_host(str(settings.platform_registry_path), normalized_host)
+
+
+@lru_cache(maxsize=256)
+def _cached_organization_by_host(
+    registry_path: str,
+    normalized_host: str,
+) -> OrganizationContext | None:
+    db = sqlite3.connect(registry_path)
     db.row_factory = sqlite3.Row
     try:
         row = db.execute(
@@ -511,7 +536,11 @@ def set_current_organization(organization: OrganizationContext) -> None:
 
 
 def get_current_organization_access_state() -> dict[str, Any]:
-    return get_organization_access_state(get_current_organization())
+    if "organization_access_state" in g:
+        return g.organization_access_state
+    access_state = get_organization_access_state(get_current_organization())
+    g.organization_access_state = access_state
+    return access_state
 
 
 def get_organization_access_state(organization: OrganizationContext) -> dict[str, Any]:
@@ -612,6 +641,12 @@ def _ensure_registry_column(
     if column_name in existing:
         return
     db.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+
+
+def _clear_organization_registry_caches() -> None:
+    _cached_list_organizations.cache_clear()
+    _cached_organization_by_slug.cache_clear()
+    _cached_organization_by_host.cache_clear()
 
 
 def _normalize_slug(value: str) -> str:
