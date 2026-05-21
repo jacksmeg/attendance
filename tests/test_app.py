@@ -125,6 +125,8 @@ class AttendanceAppTests(unittest.TestCase):
         )
         self.assertEqual(login_response.status_code, 200)
         self.assertIn(b"Attendance Overview", login_response.data)
+        self.assertNotIn(b"Quick Actions", login_response.data)
+        self.assertNotIn(b"Leave Summary", login_response.data)
 
         self.client.post(
             "/kiosk/scan",

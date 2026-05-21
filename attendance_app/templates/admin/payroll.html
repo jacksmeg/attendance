@@ -114,7 +114,7 @@
                         </td>
                         <td>
                             <strong>{{ row.gross_pay }}</strong>
-                            <div class="admin-table-secondary">Base {{ "$%.2f"|format(row.base_earned_amount) }} · OT {{ row.overtime_hours_label }}</div>
+                            <div class="admin-table-secondary">Base GH₵{{ "{:,.2f}".format(row.base_earned_amount) }} · OT {{ row.overtime_hours_label }}</div>
                         </td>
                         <td>
                             <strong>{{ row.deductions }}</strong>

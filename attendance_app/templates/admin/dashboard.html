@@ -159,43 +159,5 @@
                 </table>
             </div>
         </article>
-    </div>
-
-    <div class="admin-side-stack">
-        <article class="admin-side-card">
-            <div class="admin-card-head">
-                {{ section_title('Quick Actions') }}
-            </div>
-            <div class="admin-quick-links">
-                {% for action in dashboard_model.quick_actions %}
-                <a class="admin-quick-link" href="{{ url_for(action.href) }}">
-                    <span>{{ action.label }}</span>
-                    {{ icon('chevron-right') }}
-                </a>
-                {% endfor %}
-            </div>
-        </article>
-
-        <article class="admin-side-card">
-            <div class="admin-card-head">
-                {{ section_title('Leave Summary') }}
-                <a class="admin-toolbar-button" href="{{ url_for('app.admin_leave_management') }}">View All</a>
-            </div>
-            <div class="admin-summary-list">
-                {% for item in dashboard_model.leave_summary %}
-                <div class="admin-summary-row">
-                    <div class="admin-summary-item">
-                        <span class="admin-summary-item-icon tone-{{ item.tone }}">{{ icon('leave') }}</span>
-                        <div class="admin-summary-item-copy">
-                            <strong>{{ item.label }}</strong>
-                            <span>{{ item.suffix }}</span>
-                        </div>
-                    </div>
-                    <strong class="admin-summary-item-value">{{ item.value }}</strong>
-                </div>
-                {% endfor %}
-            </div>
-        </article>
-    </div>
 </section>
 {% endblock %}

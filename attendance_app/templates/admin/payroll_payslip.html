@@ -73,7 +73,7 @@
                 <div><span>EMPLOYEE NO.</span><strong>{{ payslip.staff_code }}</strong></div>
                 <div><span>NAME</span><strong>{{ payslip.first_name }} {{ payslip.last_name }}</strong></div>
                 <div><span>DEPARTMENT</span><strong>{{ payslip.department }}</strong></div>
-                <div><span>BASE RATE</span><strong>{{ "$%.2f"|format(payslip.base_salary_amount) }}</strong></div>
+                <div><span>BASE RATE</span><strong>GH₵{{ "{:,.2f}".format(payslip.base_salary_amount) }}</strong></div>
                 <div><span>WORKING DAYS</span><strong>{{ payslip.work_days }}</strong></div>
             </div>
             <div class="payroll-classic-detail-list">
@@ -99,9 +99,9 @@
             <div class="payroll-classic-box-title">EARNINGS / INCOME</div>
             <table class="payroll-classic-table">
                 <tbody>
-                    <tr><td>BASIC PAY</td><td>{{ "$%.2f"|format(payslip.base_salary_amount) }}</td></tr>
-                    <tr><td>BASE EARNED</td><td>{{ "$%.2f"|format(payslip.base_earned_amount) }}</td></tr>
-                    <tr><td>OVERTIME PAY</td><td>{{ "$%.2f"|format(payslip.overtime_pay_amount) }}</td></tr>
+                    <tr><td>BASIC PAY</td><td>GH₵{{ "{:,.2f}".format(payslip.base_salary_amount) }}</td></tr>
+                    <tr><td>BASE EARNED</td><td>GH₵{{ "{:,.2f}".format(payslip.base_earned_amount) }}</td></tr>
+                    <tr><td>OVERTIME PAY</td><td>GH₵{{ "{:,.2f}".format(payslip.overtime_pay_amount) }}</td></tr>
                     <tr><td>OVERTIME HOURS</td><td>{{ payslip.overtime_hours_label }}</td></tr>
                     <tr><td>ATTENDANCE DAYS</td><td>{{ payslip.work_days }}</td></tr>
                 </tbody>
@@ -115,10 +115,10 @@
             <div class="payroll-classic-box-title">DEDUCTION</div>
             <table class="payroll-classic-table">
                 <tbody>
-                    <tr><td>TAX</td><td>{{ "$%.2f"|format(payslip.tax_deduction_amount) }}</td></tr>
-                    <tr><td>PROVIDENT FUND</td><td>{{ "$%.2f"|format(payslip.provident_fund_amount) }}</td></tr>
-                    <tr><td>HEALTH INSURANCE</td><td>{{ "$%.2f"|format(payslip.health_insurance_amount) }}</td></tr>
-                    <tr><td>OTHER DEDUCTIONS</td><td>{{ "$%.2f"|format(payslip.other_deduction_amount) }}</td></tr>
+                    <tr><td>TAX</td><td>GH₵{{ "{:,.2f}".format(payslip.tax_deduction_amount) }}</td></tr>
+                    <tr><td>PROVIDENT FUND</td><td>GH₵{{ "{:,.2f}".format(payslip.provident_fund_amount) }}</td></tr>
+                    <tr><td>HEALTH INSURANCE</td><td>GH₵{{ "{:,.2f}".format(payslip.health_insurance_amount) }}</td></tr>
+                    <tr><td>OTHER DEDUCTIONS</td><td>GH₵{{ "{:,.2f}".format(payslip.other_deduction_amount) }}</td></tr>
                     <tr><td>LATE DAYS</td><td>{{ payslip.late_days }}</td></tr>
                 </tbody>
                 <tfoot>

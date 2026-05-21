@@ -5087,7 +5087,7 @@ def _scheduled_shift_minutes(shift_start: str, shift_end: str) -> int:
 
 
 def _format_currency(amount: float) -> str:
-    return f"${amount:,.2f}"
+    return f"GH₵{amount:,.2f}"
 
 
 def _format_payroll_day_value(value: float) -> str:
@@ -5383,7 +5383,7 @@ def _overtime_empty_model() -> dict[str, Any]:
     return {
         "stats": [
             {"icon": "overtime", "tone": "purple", "label": "Total Overtime Hrs", "value": "0h 00m", "sub": "This Month"},
-            {"icon": "payroll", "tone": "green", "label": "Total Overtime Pay", "value": "$0.00", "sub": "This Month"},
+            {"icon": "payroll", "tone": "green", "label": "Total Overtime Pay", "value": _format_currency(0), "sub": "This Month"},
             {"icon": "staff", "tone": "blue", "label": "Employees with OT", "value": "0", "sub": "This Month"},
             {"icon": "document", "tone": "orange", "label": "Approved Hours", "value": "0h 00m", "sub": "0.00%"},
             {"icon": "clock", "tone": "red", "label": "Pending Hours", "value": "0h 00m", "sub": "0.00%"},
@@ -5391,7 +5391,7 @@ def _overtime_empty_model() -> dict[str, Any]:
         "top_employees": [],
         "summary": [
             {"label": "Total Overtime Hours", "value": "0h 00m"},
-            {"label": "Total Overtime Pay", "value": "$0.00"},
+            {"label": "Total Overtime Pay", "value": _format_currency(0)},
             {"label": "Average OT Hours / Employee", "value": "0h 00m"},
         ],
     }
@@ -5401,27 +5401,27 @@ def _payroll_empty_model() -> dict[str, Any]:
     return {
         "stats": [
             {"icon": "payroll", "tone": "blue", "label": "Total Employees", "value": "0", "sub": "All Employees"},
-            {"icon": "payroll", "tone": "green", "label": "Gross Pay", "value": "$0.00", "sub": "This Month"},
-            {"icon": "payroll", "tone": "orange", "label": "Deductions", "value": "$0.00", "sub": "This Month"},
-            {"icon": "payroll", "tone": "purple", "label": "Net Pay", "value": "$0.00", "sub": "This Month"},
+            {"icon": "payroll", "tone": "green", "label": "Gross Pay", "value": _format_currency(0), "sub": "This Month"},
+            {"icon": "payroll", "tone": "orange", "label": "Deductions", "value": _format_currency(0), "sub": "This Month"},
+            {"icon": "payroll", "tone": "purple", "label": "Net Pay", "value": _format_currency(0), "sub": "This Month"},
             {"icon": "staff", "tone": "cyan", "label": "Processed", "value": "0", "sub": "0.00%"},
             {"icon": "clock", "tone": "red", "label": "Pending", "value": "0", "sub": "0.00%"},
         ],
         "summary": [
             {"label": "Total Employees", "value": "0"},
-            {"label": "Total Gross Pay", "value": "$0.00"},
-            {"label": "Total Deductions", "value": "$0.00"},
-            {"label": "Total Net Pay", "value": "$0.00"},
+            {"label": "Total Gross Pay", "value": _format_currency(0)},
+            {"label": "Total Deductions", "value": _format_currency(0)},
+            {"label": "Total Net Pay", "value": _format_currency(0)},
             {"label": "Processed Employees", "value": "0 (0.00%)"},
             {"label": "Pending Employees", "value": "0 (0.00%)"},
             {"label": "Hold Employees", "value": "0 (0.00%)"},
         ],
         "deductions": [
-            {"label": "Tax", "value": "$0.00"},
-            {"label": "Provident Fund", "value": "$0.00"},
-            {"label": "Health Insurance", "value": "$0.00"},
-            {"label": "Other Deductions", "value": "$0.00"},
-            {"label": "Total Deductions", "value": "$0.00"},
+            {"label": "Tax", "value": _format_currency(0)},
+            {"label": "Provident Fund", "value": _format_currency(0)},
+            {"label": "Health Insurance", "value": _format_currency(0)},
+            {"label": "Other Deductions", "value": _format_currency(0)},
+            {"label": "Total Deductions", "value": _format_currency(0)},
         ],
     }
 
@@ -5629,7 +5629,7 @@ def _overtime_reference_model() -> dict[str, Any]:
     return {
         "stats": [
             {"icon": "overtime", "tone": "purple", "label": "Total Overtime Hrs", "value": "186h 45m", "sub": "This Month"},
-            {"icon": "payroll", "tone": "green", "label": "Total Overtime Pay", "value": "$4,673.50", "sub": "This Month"},
+            {"icon": "payroll", "tone": "green", "label": "Total Overtime Pay", "value": _format_currency(4673.50), "sub": "This Month"},
             {"icon": "staff", "tone": "blue", "label": "Employees with OT", "value": "32", "sub": "This Month"},
             {"icon": "document", "tone": "orange", "label": "Approved Hours", "value": "162h 30m", "sub": "87.01%"},
             {"icon": "clock", "tone": "red", "label": "Pending Hours", "value": "24h 15m", "sub": "12.99%"},
@@ -5655,27 +5655,27 @@ def _payroll_reference_model() -> dict[str, Any]:
     return {
         "stats": [
             {"icon": "payroll", "tone": "blue", "label": "Total Employees", "value": "256", "sub": "All Employees"},
-            {"icon": "payroll", "tone": "green", "label": "Gross Pay", "value": "$98,764.50", "sub": "This Month"},
-            {"icon": "payroll", "tone": "orange", "label": "Deductions", "value": "$18,245.75", "sub": "This Month"},
-            {"icon": "payroll", "tone": "purple", "label": "Net Pay", "value": "$80,518.75", "sub": "This Month"},
+            {"icon": "payroll", "tone": "green", "label": "Gross Pay", "value": _format_currency(98764.50), "sub": "This Month"},
+            {"icon": "payroll", "tone": "orange", "label": "Deductions", "value": _format_currency(18245.75), "sub": "This Month"},
+            {"icon": "payroll", "tone": "purple", "label": "Net Pay", "value": _format_currency(80518.75), "sub": "This Month"},
             {"icon": "staff", "tone": "cyan", "label": "Processed", "value": "206", "sub": "80.47%"},
             {"icon": "clock", "tone": "red", "label": "Pending", "value": "50", "sub": "19.53%"},
         ],
         "summary": [
             {"label": "Total Employees", "value": "256", "tone": "blue"},
-            {"label": "Total Gross Pay", "value": "$98,764.50", "tone": "green"},
-            {"label": "Total Deductions", "value": "$18,245.75", "tone": "orange"},
-            {"label": "Total Net Pay", "value": "$80,518.75", "tone": "purple"},
+            {"label": "Total Gross Pay", "value": _format_currency(98764.50), "tone": "green"},
+            {"label": "Total Deductions", "value": _format_currency(18245.75), "tone": "orange"},
+            {"label": "Total Net Pay", "value": _format_currency(80518.75), "tone": "purple"},
             {"label": "Processed Employees", "value": "206 (80.47%)", "tone": "cyan"},
             {"label": "Pending Employees", "value": "50 (19.53%)", "tone": "orange"},
             {"label": "Hold Employees", "value": "2 (0.78%)", "tone": "red"},
         ],
         "deductions": [
-            {"label": "Tax", "value": "$7,856.40"},
-            {"label": "Provident Fund", "value": "$5,963.20"},
-            {"label": "Health Insurance", "value": "$2,145.50"},
-            {"label": "Other Deductions", "value": "$2,280.65"},
-            {"label": "Total Deductions", "value": "$18,245.75"},
+            {"label": "Tax", "value": _format_currency(7856.40)},
+            {"label": "Provident Fund", "value": _format_currency(5963.20)},
+            {"label": "Health Insurance", "value": _format_currency(2145.50)},
+            {"label": "Other Deductions", "value": _format_currency(2280.65)},
+            {"label": "Total Deductions", "value": _format_currency(18245.75)},
         ],
     }
 
@@ -5942,16 +5942,16 @@ def _overtime_display_rows() -> list[dict[str, Any]]:
 
 def _payroll_display_rows() -> list[dict[str, Any]]:
     return [
-        {"staff_code": "STF001", "first_name": "John", "last_name": "Doe", "department": "IT Department", "work_days": "23", "gross_pay": "$4,850.00", "deductions": "$842.50", "net_pay": "$4,007.50", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
-        {"staff_code": "STF002", "first_name": "Jane", "last_name": "Smith", "department": "HR Department", "work_days": "22", "gross_pay": "$4,120.00", "deductions": "$735.25", "net_pay": "$3,384.75", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
-        {"staff_code": "STF003", "first_name": "Michael", "last_name": "Brown", "department": "Finance Department", "work_days": "23", "gross_pay": "$5,200.00", "deductions": "$965.00", "net_pay": "$4,235.00", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
-        {"staff_code": "STF004", "first_name": "Emily", "last_name": "Davis", "department": "Marketing Department", "work_days": "22", "gross_pay": "$3,750.00", "deductions": "$620.30", "net_pay": "$3,129.70", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
-        {"staff_code": "STF005", "first_name": "David", "last_name": "Wilson", "department": "Operations Department", "work_days": "23", "gross_pay": "$4,600.00", "deductions": "$810.40", "net_pay": "$3,789.60", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
-        {"staff_code": "STF006", "first_name": "Sarah", "last_name": "Johnson", "department": "IT Department", "work_days": "21", "gross_pay": "$4,250.00", "deductions": "$745.60", "net_pay": "$3,504.40", "payment_method": "Bank Transfer", "status": "Pending", "status_tone": "orange", "action_label": "Process", "photo_url": ""},
-        {"staff_code": "STF007", "first_name": "Robert", "last_name": "Lee", "department": "Finance Department", "work_days": "23", "gross_pay": "$5,800.00", "deductions": "$1,020.80", "net_pay": "$4,779.20", "payment_method": "Bank Transfer", "status": "Pending", "status_tone": "orange", "action_label": "Process", "photo_url": ""},
-        {"staff_code": "STF008", "first_name": "Linda", "last_name": "Martinez", "department": "HR Department", "work_days": "22", "gross_pay": "$3,950.00", "deductions": "$690.15", "net_pay": "$3,259.85", "payment_method": "Bank Transfer", "status": "Pending", "status_tone": "orange", "action_label": "Process", "photo_url": ""},
-        {"staff_code": "STF009", "first_name": "James", "last_name": "Taylor", "department": "Operations Department", "work_days": "23", "gross_pay": "$4,400.00", "deductions": "$780.50", "net_pay": "$3,619.50", "payment_method": "Cash", "status": "Hold", "status_tone": "red", "action_label": "Review", "photo_url": ""},
-        {"staff_code": "STF010", "first_name": "Jessica", "last_name": "Anderson", "department": "Marketing Department", "work_days": "22", "gross_pay": "$3,600.00", "deductions": "$640.25", "net_pay": "$2,959.75", "payment_method": "Bank Transfer", "status": "Hold", "status_tone": "red", "action_label": "Review", "photo_url": ""},
+        {"staff_code": "STF001", "first_name": "John", "last_name": "Doe", "department": "IT Department", "work_days": "23", "gross_pay": "GH₵4,850.00", "deductions": "GH₵842.50", "net_pay": "GH₵4,007.50", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
+        {"staff_code": "STF002", "first_name": "Jane", "last_name": "Smith", "department": "HR Department", "work_days": "22", "gross_pay": "GH₵4,120.00", "deductions": "GH₵735.25", "net_pay": "GH₵3,384.75", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
+        {"staff_code": "STF003", "first_name": "Michael", "last_name": "Brown", "department": "Finance Department", "work_days": "23", "gross_pay": "GH₵5,200.00", "deductions": "GH₵965.00", "net_pay": "GH₵4,235.00", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
+        {"staff_code": "STF004", "first_name": "Emily", "last_name": "Davis", "department": "Marketing Department", "work_days": "22", "gross_pay": "GH₵3,750.00", "deductions": "GH₵620.30", "net_pay": "GH₵3,129.70", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
+        {"staff_code": "STF005", "first_name": "David", "last_name": "Wilson", "department": "Operations Department", "work_days": "23", "gross_pay": "GH₵4,600.00", "deductions": "GH₵810.40", "net_pay": "GH₵3,789.60", "payment_method": "Bank Transfer", "status": "Processed", "status_tone": "green", "action_label": "View Payslip", "photo_url": ""},
+        {"staff_code": "STF006", "first_name": "Sarah", "last_name": "Johnson", "department": "IT Department", "work_days": "21", "gross_pay": "GH₵4,250.00", "deductions": "GH₵745.60", "net_pay": "GH₵3,504.40", "payment_method": "Bank Transfer", "status": "Pending", "status_tone": "orange", "action_label": "Process", "photo_url": ""},
+        {"staff_code": "STF007", "first_name": "Robert", "last_name": "Lee", "department": "Finance Department", "work_days": "23", "gross_pay": "GH₵5,800.00", "deductions": "GH₵1,020.80", "net_pay": "GH₵4,779.20", "payment_method": "Bank Transfer", "status": "Pending", "status_tone": "orange", "action_label": "Process", "photo_url": ""},
+        {"staff_code": "STF008", "first_name": "Linda", "last_name": "Martinez", "department": "HR Department", "work_days": "22", "gross_pay": "GH₵3,950.00", "deductions": "GH₵690.15", "net_pay": "GH₵3,259.85", "payment_method": "Bank Transfer", "status": "Pending", "status_tone": "orange", "action_label": "Process", "photo_url": ""},
+        {"staff_code": "STF009", "first_name": "James", "last_name": "Taylor", "department": "Operations Department", "work_days": "23", "gross_pay": "GH₵4,400.00", "deductions": "GH₵780.50", "net_pay": "GH₵3,619.50", "payment_method": "Cash", "status": "Hold", "status_tone": "red", "action_label": "Review", "photo_url": ""},
+        {"staff_code": "STF010", "first_name": "Jessica", "last_name": "Anderson", "department": "Marketing Department", "work_days": "22", "gross_pay": "GH₵3,600.00", "deductions": "GH₵640.25", "net_pay": "GH₵2,959.75", "payment_method": "Bank Transfer", "status": "Hold", "status_tone": "red", "action_label": "Review", "photo_url": ""},
     ]
 
 
