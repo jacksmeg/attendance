@@ -272,6 +272,107 @@ def report_snapshot_to_csv(snapshot: dict[str, object]) -> str:
     return output.getvalue()
 
 
+def report_views_to_csv(
+    daily_rows: list[dict[str, object]],
+    department_rows: list[dict[str, object]],
+    staff_rows: list[dict[str, object]],
+    attendance_group_label: str,
+) -> str:
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(["Attendance Report"])
+    writer.writerow(["Attendance Group", attendance_group_label])
+    writer.writerow([])
+
+    writer.writerow(["Daily Summary"])
+    writer.writerow(
+        [
+            "Date",
+            "Total Staff",
+            "Present",
+            "Checked In",
+            "Checked Out",
+            "Late",
+            "Absent",
+        ]
+    )
+    for row in daily_rows:
+        writer.writerow(
+            [
+                row["attendance_date"],
+                row["total_staff"],
+                row["present"],
+                row["checked_in"],
+                row["checked_out"],
+                row["late"],
+                row["absent"],
+            ]
+        )
+
+    writer.writerow([])
+    writer.writerow(["Department Summary"])
+    writer.writerow(
+        [
+            "Department",
+            "Total Staff",
+            "Present",
+            "Checked In",
+            "Checked Out",
+            "Late",
+            "Absent",
+        ]
+    )
+    for row in department_rows:
+        writer.writerow(
+            [
+                row["department"],
+                row["total_staff"],
+                row["present"],
+                row["checked_in"],
+                row["checked_out"],
+                row["late"],
+                row["absent"],
+            ]
+        )
+
+    writer.writerow([])
+    writer.writerow(["Staff Summary"])
+    writer.writerow(
+        [
+            "Staff Code",
+            "Name",
+            "Department",
+            "Total Days",
+            "Present",
+            "Absent",
+            "Late",
+            "Half Day",
+            "Overtime",
+            "Average Work Hours",
+            "Grade",
+        ]
+    )
+    for row in staff_rows:
+        writer.writerow(
+            [
+                row["staff_code"],
+                f"{row['first_name']} {row['last_name']}",
+                row["department"],
+                row["total_days"],
+                row["present"],
+                row["absent"],
+                row["late"],
+                row["half_day"],
+                row["overtime"],
+                row["avg_hours"],
+                row["grade"],
+            ]
+        )
+
+    return output.getvalue()
+
+
 def _bump_status_counts(
     target: dict[str, object],
     status_label: str,

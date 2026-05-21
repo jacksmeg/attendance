@@ -1056,12 +1056,68 @@ class AttendanceAppTests(unittest.TestCase):
         daily_response = self.client.get("/admin/reports?report_kind=daily")
         self.assertEqual(daily_response.status_code, 200)
         self.assertIn(b"Daily Attendance Summary", daily_response.data)
-        self.assertIn(b"Staff Seen", daily_response.data)
+        self.assertIn(b"Checked In", daily_response.data)
+        self.assertIn(b"Checked Out", daily_response.data)
 
         department_response = self.client.get("/admin/reports?report_kind=department")
         self.assertEqual(department_response.status_code, 200)
         self.assertIn(b"Department Performance", department_response.data)
-        self.assertIn(b"Completed Shift", department_response.data)
+        self.assertIn(b"Total Staff", department_response.data)
+        self.assertIn(b"Absent", department_response.data)
+
+    def test_reports_page_filters_staff_by_attendance_group(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        with self.app.app_context():
+            late_staff_id = create_staff(
+                {
+                    "staff_code": "EMP-200",
+                    "first_name": "Late",
+                    "last_name": "Staff",
+                    "email": "late@example.com",
+                    "phone": "+233111111111",
+                    "date_of_birth": "1991-03-04",
+                    "department": "Finance",
+                    "role": "Officer",
+                    "access_role": "Staff",
+                    "portal_password": "Late@1234",
+                    "portal_pin": "9876",
+                    "shift_start": "09:00",
+                    "shift_end": "17:00",
+                    "grace_minutes": 10,
+                    "is_active": True,
+                }
+            )
+            late_staff = get_staff(late_staff_id)
+            today_value = date.today().isoformat()
+            record_attendance(
+                self.staff,
+                template_ref=self.staff["template_ref"],
+                confidence=100,
+                method="mock",
+                device_name="test",
+                event_type="check_in",
+                captured_at=datetime.fromisoformat(f"{today_value}T09:00:00"),
+            )
+            record_attendance(
+                late_staff,
+                template_ref="MANUAL-EMP-200",
+                confidence=96,
+                method="mobile_gps",
+                device_name="test",
+                event_type="check_in",
+                captured_at=datetime.fromisoformat(f"{today_value}T09:35:00"),
+            )
+
+        response = self.client.get("/admin/reports?attendance_group=late")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Attendance Details", response.data)
+        self.assertIn(b"EMP-200", response.data)
+        self.assertNotIn(b"EMP-100", response.data)
 
     def test_staff_login_mobile_clock_flow_with_breaks_and_gps(self) -> None:
         login_response = self.client.post(

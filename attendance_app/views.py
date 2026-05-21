@@ -82,7 +82,11 @@ from .services.enrollment_sessions import (
     start_enrollment_session,
 )
 from .services.qr_codes import build_qr_svg
-from .services.reporting import attendance_rows_to_csv, build_report_snapshot, report_snapshot_to_csv
+from .services.reporting import (
+    attendance_rows_to_csv,
+    build_report_snapshot,
+    report_views_to_csv,
+)
 from .services.seed import seed_demo_data
 from .services.selfie_audits import create_staff_selfie_audit, list_staff_selfie_audits
 from .services.settings import (
@@ -138,6 +142,13 @@ from .services.tenancy import (
 )
 
 STAFF_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+REPORT_ATTENDANCE_GROUPS = {
+    "all": "All Records",
+    "present": "Present",
+    "late": "Late",
+    "checked_in": "Checked In",
+    "checked_out": "Checked Out",
+}
 MAX_STAFF_PHOTO_BYTES = 4 * 1024 * 1024
 SYSTEM_LOGO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_SYSTEM_LOGO_BYTES = 3 * 1024 * 1024
@@ -1828,6 +1839,9 @@ self.addEventListener("fetch", (event) => {{
         department = _resolve_department_filter(request.args.get("department", "").strip(), department_scope)
         search = request.args.get("search", "").strip()
         report_kind = request.args.get("report_kind", "staff").strip().lower()
+        attendance_group = _normalize_report_attendance_group(
+            request.args.get("attendance_group", "").strip()
+        )
         if report_kind not in {"staff", "daily", "department", "exceptions"}:
             report_kind = "staff"
         active_staff_rows = list_staff(
@@ -1856,9 +1870,12 @@ self.addEventListener("fetch", (event) => {{
             staff_rows=active_staff_rows,
         )
         report_views = _report_views_model(
-            snapshot=snapshot,
+            activity_rows=activity_rows,
             detail_rows=detail_rows,
+            staff_rows=active_staff_rows,
             report_kind=report_kind,
+            attendance_group=attendance_group,
+            active_staff_total=active_staff_total,
         )
         return render_template(
             "admin/reports.html",
@@ -1880,6 +1897,7 @@ self.addEventListener("fetch", (event) => {{
                 "department": department,
                 "search": search,
                 "report_kind": report_kind,
+                "attendance_group": attendance_group,
             },
             report_views=report_views,
             app_settings=app_settings,
@@ -1909,11 +1927,36 @@ self.addEventListener("fetch", (event) => {{
             search=request.args.get("search", "").strip(),
             department_scope=department_scope,
         )
-        snapshot = build_report_snapshot(
-            rows=rows,
-            active_staff_total=count_active_staff(department_scope=department_scope),
+        attendance_group = _normalize_report_attendance_group(
+            request.args.get("attendance_group", "").strip()
         )
-        payload = report_snapshot_to_csv(snapshot)
+        active_staff_rows = list_staff(
+            search=request.args.get("search", "").strip(),
+            department=_resolve_department_filter(request.args.get("department", "").strip(), department_scope),
+            active_only=True,
+            department_scope=department_scope,
+        )
+        activity_rows = _attendance_activity_rows(rows)
+        detail_rows = _report_detail_rows_from_activity(
+            activity_rows,
+            date_from=date_from,
+            date_to=date_to,
+            staff_rows=active_staff_rows,
+        )
+        report_views = _report_views_model(
+            activity_rows=activity_rows,
+            detail_rows=detail_rows,
+            staff_rows=active_staff_rows,
+            report_kind=request.args.get("report_kind", "staff").strip().lower(),
+            attendance_group=attendance_group,
+            active_staff_total=len(active_staff_rows),
+        )
+        payload = report_views_to_csv(
+            daily_rows=report_views["daily_rows"],
+            department_rows=report_views["department_rows"],
+            staff_rows=report_views["staff_rows"],
+            attendance_group_label=report_views["attendance_group"]["label"],
+        )
         return Response(
             payload,
             mimetype="text/csv",
@@ -3781,6 +3824,8 @@ def _attendance_activity_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]
                 "staff_id": int(base["staff_id"]),
                 "attendance_date": str(base["attendance_date"]),
                 "latest_event_time": str(latest["event_time"]),
+                "latest_event_type": str(latest["event_type"]),
+                "latest_status_label": str(latest["status_label"]),
                 "staff_code": base["staff_code"],
                 "first_name": base["first_name"],
                 "last_name": base["last_name"],
@@ -3805,6 +3850,58 @@ def _attendance_activity_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]
         reverse=True,
     )
     return activity_rows
+
+
+def _normalize_report_attendance_group(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in REPORT_ATTENDANCE_GROUPS:
+        return "all"
+    return normalized
+
+
+def _report_attendance_group_label(attendance_group: str) -> str:
+    return REPORT_ATTENDANCE_GROUPS.get(attendance_group, REPORT_ATTENDANCE_GROUPS["all"])
+
+
+def _report_activity_matches_group(
+    row: dict[str, Any],
+    attendance_group: str,
+) -> bool:
+    if attendance_group == "all":
+        return True
+    if attendance_group == "present":
+        return row.get("clock_in") != "-"
+    if attendance_group == "late":
+        return row.get("status_text") == "Late"
+    if attendance_group == "checked_in":
+        return row.get("latest_event_type") in {"check_in", "break_start", "break_end"}
+    if attendance_group == "checked_out":
+        return row.get("latest_event_type") == "check_out"
+    return True
+
+
+def _filter_report_activity_rows(
+    activity_rows: list[dict[str, Any]],
+    attendance_group: str,
+) -> list[dict[str, Any]]:
+    return [
+        row for row in activity_rows
+        if _report_activity_matches_group(row, attendance_group)
+    ]
+
+
+def _filter_report_detail_rows(
+    detail_rows: list[dict[str, Any]],
+    activity_rows: list[dict[str, Any]],
+    attendance_group: str,
+) -> list[dict[str, Any]]:
+    if attendance_group == "all":
+        return detail_rows
+    matching_staff_ids = {int(row["staff_id"]) for row in activity_rows}
+    return [
+        row for row in detail_rows
+        if int(row["staff_id"]) in matching_staff_ids
+    ]
 
 
 def _daily_series_counts(
@@ -4082,15 +4179,157 @@ def _report_detail_rows_from_activity(
     return detail_rows
 
 
-def _report_views_model(
-    snapshot: dict[str, Any],
+def _daily_report_rows_from_activity(
+    activity_rows: list[dict[str, Any]],
+    active_staff_total: int,
+) -> list[dict[str, Any]]:
+    daily_map: dict[str, dict[str, Any]] = {}
+    for row in activity_rows:
+        attendance_date = str(row["attendance_date"])
+        entry = daily_map.setdefault(
+            attendance_date,
+            {
+                "attendance_date": attendance_date,
+                "total_staff": active_staff_total,
+                "present": 0,
+                "checked_in": 0,
+                "checked_out": 0,
+                "late": 0,
+                "absent": 0,
+            },
+        )
+        entry["present"] += 1
+        if _report_activity_matches_group(row, "checked_in"):
+            entry["checked_in"] += 1
+        if _report_activity_matches_group(row, "checked_out"):
+            entry["checked_out"] += 1
+        if _report_activity_matches_group(row, "late"):
+            entry["late"] += 1
+
+    daily_rows = list(daily_map.values())
+    for row in daily_rows:
+        row["absent"] = max(int(row["total_staff"]) - int(row["present"]), 0)
+    daily_rows.sort(key=lambda item: item["attendance_date"], reverse=True)
+    return daily_rows
+
+
+def _department_report_rows_from_activity(
+    activity_rows: list[dict[str, Any]],
     detail_rows: list[dict[str, Any]],
+    staff_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    department_staff_totals: defaultdict[str, int] = defaultdict(int)
+    for staff in staff_rows:
+        department_staff_totals[str(staff["department"])] += 1
+
+    department_map: dict[str, dict[str, Any]] = {
+        department_name: {
+            "department": department_name,
+            "total_staff": total_staff,
+            "present": 0,
+            "checked_in": 0,
+            "checked_out": 0,
+            "late": 0,
+            "absent": 0,
+        }
+        for department_name, total_staff in department_staff_totals.items()
+    }
+
+    for row in activity_rows:
+        department_name = str(row["department"])
+        entry = department_map.setdefault(
+            department_name,
+            {
+                "department": department_name,
+                "total_staff": 0,
+                "present": 0,
+                "checked_in": 0,
+                "checked_out": 0,
+                "late": 0,
+                "absent": 0,
+            },
+        )
+        entry["present"] += 1
+        if _report_activity_matches_group(row, "checked_in"):
+            entry["checked_in"] += 1
+        if _report_activity_matches_group(row, "checked_out"):
+            entry["checked_out"] += 1
+        if _report_activity_matches_group(row, "late"):
+            entry["late"] += 1
+
+    for row in detail_rows:
+        department_name = str(row["department"])
+        entry = department_map.setdefault(
+            department_name,
+            {
+                "department": department_name,
+                "total_staff": 0,
+                "present": 0,
+                "checked_in": 0,
+                "checked_out": 0,
+                "late": 0,
+                "absent": 0,
+            },
+        )
+        entry["absent"] += int(row.get("absent", 0))
+
+    department_rows = list(department_map.values())
+    department_rows.sort(
+        key=lambda item: (
+            -int(item["present"]),
+            -int(item["late"]),
+            str(item["department"]),
+        )
+    )
+    return department_rows
+
+
+def _report_group_metric(row: dict[str, Any], attendance_group: str) -> int:
+    if attendance_group == "present":
+        return int(row.get("present", 0))
+    if attendance_group == "late":
+        return int(row.get("late", 0))
+    if attendance_group == "checked_in":
+        return int(row.get("checked_in", 0))
+    if attendance_group == "checked_out":
+        return int(row.get("checked_out", 0))
+    return 1
+
+
+def _report_views_model(
+    activity_rows: list[dict[str, Any]],
+    detail_rows: list[dict[str, Any]],
+    staff_rows: list[dict[str, Any]],
     report_kind: str,
+    attendance_group: str,
+    active_staff_total: int,
 ) -> dict[str, Any]:
-    daily_rows = list(snapshot.get("daily_rows", []))
-    department_rows = list(snapshot.get("department_rows", []))
+    if report_kind not in {"staff", "daily", "department", "exceptions"}:
+        report_kind = "staff"
+
+    filtered_activity_rows = _filter_report_activity_rows(activity_rows, attendance_group)
+    filtered_staff_rows = _filter_report_detail_rows(
+        detail_rows,
+        filtered_activity_rows,
+        attendance_group,
+    )
+    daily_rows = _daily_report_rows_from_activity(activity_rows, active_staff_total)
+    department_rows = _department_report_rows_from_activity(
+        activity_rows,
+        detail_rows,
+        staff_rows,
+    )
+    if attendance_group != "all":
+        daily_rows = [
+            row for row in daily_rows
+            if _report_group_metric(row, attendance_group) > 0
+        ]
+        department_rows = [
+            row for row in department_rows
+            if _report_group_metric(row, attendance_group) > 0
+        ]
     exception_rows = [
-        row for row in detail_rows
+        row for row in filtered_staff_rows
         if int(row.get("late", 0)) > 0
         or int(row.get("absent", 0)) > 0
         or int(row.get("half_day", 0)) > 0
@@ -4106,37 +4345,39 @@ def _report_views_model(
     )
 
     tabs = [
-        {"key": "staff", "label": "Staff Summary", "count": len(detail_rows)},
+        {"key": "staff", "label": "Staff Summary", "count": len(filtered_staff_rows)},
         {"key": "daily", "label": "Daily Summary", "count": len(daily_rows)},
         {"key": "department", "label": "Department Summary", "count": len(department_rows)},
         {"key": "exceptions", "label": "Exceptions", "count": len(exception_rows)},
     ]
+    group_label = _report_attendance_group_label(attendance_group)
+    group_suffix = "" if attendance_group == "all" else f" Showing {group_label.lower()} records only."
 
     config_map: dict[str, dict[str, Any]] = {
         "staff": {
             "title": "Attendance Details",
-            "subtitle": "Per-staff summary across the selected report period.",
-            "empty_title": "No staff summary data yet.",
+            "subtitle": f"Per-staff summary across the selected report period.{group_suffix}",
+            "empty_title": f"No {group_label.lower()} staff summary data yet." if attendance_group != "all" else "No staff summary data yet.",
             "empty_text": "Run attendance activity in the selected date range to populate staff performance summaries.",
-            "row_count": len(detail_rows),
+            "row_count": len(filtered_staff_rows),
         },
         "daily": {
             "title": "Daily Attendance Summary",
-            "subtitle": "Daily operational totals for the selected report period.",
-            "empty_title": "No daily attendance summary yet.",
+            "subtitle": f"Daily totals grouped into present, checked in, checked out, late, and absent counts.{group_suffix}",
+            "empty_title": f"No daily {group_label.lower()} attendance summary yet." if attendance_group != "all" else "No daily attendance summary yet.",
             "empty_text": "There are no recorded attendance events inside the selected report period.",
             "row_count": len(daily_rows),
         },
         "department": {
             "title": "Department Performance",
-            "subtitle": "Department-level attendance performance for the selected report period.",
-            "empty_title": "No department summary yet.",
+            "subtitle": f"Department-level totals for present, checked in, checked out, late, and absent staff.{group_suffix}",
+            "empty_title": f"No department {group_label.lower()} summary yet." if attendance_group != "all" else "No department summary yet.",
             "empty_text": "No attendance events were recorded for the filtered departments in this date range.",
             "row_count": len(department_rows),
         },
         "exceptions": {
             "title": "Attendance Exceptions",
-            "subtitle": "Staff needing attention due to lateness, absence, or half-day patterns.",
+            "subtitle": f"Staff needing attention due to lateness, absence, or half-day patterns.{group_suffix}",
             "empty_title": "No attendance exceptions in this period.",
             "empty_text": "Everyone in the selected report set is currently within normal attendance patterns.",
             "row_count": len(exception_rows),
@@ -4150,9 +4391,21 @@ def _report_views_model(
 
     return {
         "active_kind": report_kind,
+        "attendance_group": {
+            "key": attendance_group,
+            "label": group_label,
+        },
+        "group_options": [
+            {
+                "key": key,
+                "label": label,
+                "is_active": key == attendance_group,
+            }
+            for key, label in REPORT_ATTENDANCE_GROUPS.items()
+        ],
         "tabs": tabs,
         "quick_reports": quick_reports,
-        "staff_rows": detail_rows,
+        "staff_rows": filtered_staff_rows,
         "daily_rows": daily_rows,
         "department_rows": department_rows,
         "exception_rows": exception_rows,
