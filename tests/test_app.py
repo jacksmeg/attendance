@@ -14,6 +14,7 @@ from attendance_app.db import init_db
 from attendance_app.services.attendance import get_staff_today_status, list_attendance_events, record_attendance
 from attendance_app.services.settings import save_admin_credentials_for_database, save_app_settings
 from attendance_app.services.settings import get_admin_security_for_database
+from attendance_app.services.shifts import get_shift, list_shifts
 from attendance_app.services.staff import count_active_staff, create_staff, get_staff, get_staff_by_code, upsert_fingerprint
 from attendance_app.services.tenancy import get_current_organization, get_organization_by_slug, provision_organization
 
@@ -1118,6 +1119,84 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn(b"Attendance Details", response.data)
         self.assertIn(b"EMP-200", response.data)
         self.assertNotIn(b"EMP-100", response.data)
+
+    def test_shift_management_creates_shift_and_assigns_staff(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        create_response = self.client.post(
+            "/admin/shift-management",
+            data={
+                "action": "create_shift",
+                "name": "Ward Evening Shift",
+                "code": "WEV",
+                "shift_start": "16:00",
+                "shift_end": "23:00",
+                "break_label": "07:00 PM - 07:30 PM",
+                "grace_minutes": "10",
+                "weekly_off": "Sunday",
+                "description": "Evening ward coverage",
+                "is_active": "1",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(create_response.status_code, 200)
+        self.assertIn(b"Shift created successfully.", create_response.data)
+        self.assertIn(b"Ward Evening Shift", create_response.data)
+
+        with self.app.app_context():
+            shift_rows = [row for row in list_shifts() if row["code"] == "WEV"]
+            self.assertEqual(len(shift_rows), 1)
+            shift_id = int(shift_rows[0]["id"])
+
+        assign_response = self.client.post(
+            "/admin/shift-management",
+            data={
+                "action": "assign_staff",
+                "shift_id": str(shift_id),
+                "staff_id": str(self.staff["id"]),
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(assign_response.status_code, 200)
+        self.assertIn(b"Staff assigned to shift successfully.", assign_response.data)
+        self.assertIn(b"EMP-100", assign_response.data)
+
+        with self.app.app_context():
+            updated_staff = get_staff(self.staff["id"])
+            self.assertEqual(updated_staff["shift_id"], shift_id)
+            self.assertEqual(updated_staff["shift_start"], "16:00")
+            self.assertEqual(updated_staff["shift_end"], "23:00")
+
+    def test_shift_management_can_toggle_shift_status(self) -> None:
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+        self.client.get("/admin/shift-management")
+
+        with self.app.app_context():
+            first_shift = list_shifts()[0]
+            shift_id = int(first_shift["id"])
+
+        deactivate_response = self.client.post(
+            "/admin/shift-management",
+            data={
+                "action": "toggle_shift",
+                "shift_id": str(shift_id),
+                "next_state": "0",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(deactivate_response.status_code, 200)
+        self.assertIn(b"Shift deactivated successfully.", deactivate_response.data)
+
+        with self.app.app_context():
+            self.assertEqual(int(get_shift(shift_id)["is_active"]), 0)
 
     def test_staff_login_mobile_clock_flow_with_breaks_and_gps(self) -> None:
         login_response = self.client.post(

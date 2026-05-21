@@ -1,18 +1,23 @@
 {% extends "admin_shell.html" %}
 {% from "_icons.html" import icon %}
-{% from "_admin_macros.html" import stat_card, status_badge, toolbar_button, table_icon_action, section_title %}
+{% from "_admin_macros.html" import stat_card, status_badge, section_title, avatar %}
 
 {% block toolbar_center %}
-<label class="admin-search-box">
-    {{ icon('search') }}
-    <input type="text" value="" placeholder="Search staff, department...">
-</label>
+<form class="admin-toolbar-form" method="get" action="{{ url_for('app.admin_shift_management') }}">
+    {% if shift_model.selected_shift_id %}
+    <input type="hidden" name="shift_id" value="{{ shift_model.selected_shift_id }}">
+    {% endif %}
+    <label class="admin-search-box">
+        {{ icon('search') }}
+        <input type="text" name="search" value="{{ shift_model.search }}" placeholder="Search shifts, codes, or descriptions...">
+    </label>
+</form>
 {% endblock %}
 
 {% block toolbar_actions %}
-<a class="admin-toolbar-button tone-primary" href="#">
+<a class="admin-toolbar-button tone-primary" href="#shift-editor-card">
     {{ icon('plus') }}
-    <span>Add New Shift</span>
+    <span>{{ 'Edit Selected Shift' if shift_model.detail else 'Create New Shift' }}</span>
 </a>
 {% endblock %}
 
@@ -23,24 +28,23 @@
     {% endfor %}
 </section>
 
-<section class="admin-content-grid">
+<section class="admin-content-grid wide-side">
     <div class="admin-main-stack">
         <article class="admin-table-card">
-            <div class="admin-tabs">
-                <a class="admin-tab is-active" href="#">Shift List</a>
-                <a class="admin-tab" href="#">Calendar View</a>
+            <div class="admin-card-head">
+                {{ section_title('Shift Directory', 'Create and manage institution work shifts, including overnight schedules.') }}
+                <span class="admin-page-chip is-active">{{ shift_model.shifts|length }} shifts</span>
             </div>
-            <div class="admin-table-wrap" style="margin-top:16px;">
+            <div class="admin-table-wrap">
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>Shift Name</th>
-                            <th>Shift Code</th>
-                            <th>Time</th>
+                            <th>Shift</th>
+                            <th>Code</th>
+                            <th>Time Window</th>
                             <th>Break</th>
-                            <th>Working Hours</th>
-                            <th>Grace Period</th>
-                            <th>Late After</th>
+                            <th>Grace</th>
+                            <th>Employees</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -49,23 +53,44 @@
                         {% if shift_model.shifts %}
                         {% for row in shift_model.shifts %}
                         <tr>
-                            <td><span class="admin-person-cell"><span class="admin-subnav-dot"></span><strong>{{ row.name }}</strong></span></td>
+                            <td>
+                                <div class="admin-table-meta">
+                                    <strong>{{ row.name }}</strong>
+                                    <span>{{ row.badge_label }} shift</span>
+                                </div>
+                            </td>
                             <td>{{ status_badge(row.code, row.dot if row.dot != 'green' else 'green') }}</td>
                             <td>{{ row.time }}</td>
                             <td>{{ row.break }}</td>
-                            <td>{{ row.hours }}</td>
                             <td>{{ row.grace }}</td>
-                            <td>{{ row.late_after }}</td>
+                            <td>{{ row.employees }}</td>
                             <td>{{ status_badge(row.status, 'green' if row.status == 'Active' else 'neutral') }}</td>
-                            <td><div class="admin-table-actions">{{ table_icon_action('edit', '#', 'Edit shift') }}{{ table_icon_action('more', '#', 'More actions') }}</div></td>
+                            <td>
+                                <div class="admin-table-actions">
+                                    <a class="admin-toolbar-button" href="{{ url_for('app.admin_shift_management', shift_id=row.id, search=shift_model.search) }}">
+                                        {{ icon('edit') }}
+                                        <span>{{ 'Selected' if row.is_selected else 'Open' }}</span>
+                                    </a>
+                                    <form method="post" style="display:inline-flex;">
+                                        <input type="hidden" name="action" value="toggle_shift">
+                                        <input type="hidden" name="shift_id" value="{{ row.id }}">
+                                        <input type="hidden" name="search" value="{{ shift_model.search }}">
+                                        <input type="hidden" name="next_state" value="{{ '0' if row.status == 'Active' else '1' }}">
+                                        <button class="admin-toolbar-button" type="submit">
+                                            {{ icon('clock') }}
+                                            <span>{{ 'Deactivate' if row.status == 'Active' else 'Activate' }}</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                         {% else %}
                         <tr>
-                            <td colspan="9">
+                            <td colspan="8">
                                 <div class="admin-empty">
-                                    <strong>No shifts created yet.</strong>
-                                    <p>Create your first work shift before assigning staff attendance schedules.</p>
+                                    <strong>No shifts found.</strong>
+                                    <p>Create your first institution shift to start assigning staff schedules.</p>
                                 </div>
                             </td>
                         </tr>
@@ -73,24 +98,21 @@
                     </tbody>
                 </table>
             </div>
-            <div class="admin-table-footer">
-                <span>Showing 1 to {{ shift_model.shifts|length }} of {{ shift_model.shifts|length }} entries</span>
-            </div>
         </article>
 
         <article class="admin-table-card">
             <div class="admin-card-head">
-                {{ section_title('Shift Assignments Today') }}
+                {{ section_title('Shift Coverage Summary', 'See how many staff are linked to each configured shift.') }}
             </div>
             <div class="admin-table-wrap">
                 <table class="admin-table">
                     <thead>
                         <tr>
                             <th>Shift Name</th>
-                            <th>Employees</th>
+                            <th>Assigned Staff</th>
                             <th>Departments</th>
-                            <th>Start Time</th>
-                            <th>End Time</th>
+                            <th>Start</th>
+                            <th>End</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -103,15 +125,83 @@
                             <td>{{ row.departments }}</td>
                             <td>{{ row.start }}</td>
                             <td>{{ row.end }}</td>
-                            <td><a class="admin-toolbar-button" href="#">View Employees {{ icon('chevron-right') }}</a></td>
+                            <td>
+                                <a class="admin-toolbar-button" href="{{ url_for('app.admin_shift_management', shift_id=row.id, search=shift_model.search) }}">
+                                    <span>{{ 'Viewing' if row.selected else 'View Staff' }}</span>
+                                    {{ icon('chevron-right') }}
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                         {% else %}
                         <tr>
                             <td colspan="6">
                                 <div class="admin-empty">
-                                    <strong>No shift assignments yet.</strong>
-                                    <p>Assignments will appear here after you create shifts and link staff to them.</p>
+                                    <strong>No shift coverage yet.</strong>
+                                    <p>Staff assignment totals will appear here after shifts are linked to employees.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Assigned Staff', 'Staff currently linked to the selected shift.') }}
+                {% if shift_model.detail %}
+                <span class="admin-page-chip is-active">{{ shift_model.selected_assignments|length }} on {{ shift_model.detail.name }}</span>
+                {% endif %}
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Department</th>
+                            <th>Role</th>
+                            <th>Current Window</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if shift_model.selected_assignments %}
+                        {% for row in shift_model.selected_assignments %}
+                        <tr>
+                            <td>
+                                <div class="admin-person-cell">
+                                    {{ avatar(row.first_name, row.last_name, row.photo_url if row.photo_url is defined else '') }}
+                                    <div class="admin-table-meta">
+                                        <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                        <span>{{ row.staff_code }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ row.department }}</td>
+                            <td>{{ row.role }}</td>
+                            <td>{{ row.shift_start }} - {{ row.shift_end }}</td>
+                            <td>
+                                <form method="post" style="display:inline-flex;">
+                                    <input type="hidden" name="action" value="remove_assignment">
+                                    <input type="hidden" name="shift_id" value="{{ shift_model.selected_shift_id or '' }}">
+                                    <input type="hidden" name="staff_id" value="{{ row.id }}">
+                                    <input type="hidden" name="search" value="{{ shift_model.search }}">
+                                    <button class="admin-toolbar-button" type="submit">
+                                        {{ icon('trash') }}
+                                        <span>Remove</span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="5">
+                                <div class="admin-empty">
+                                    <strong>No staff assigned yet.</strong>
+                                    <p>Select a shift and use the assignment panel to link active staff to it.</p>
                                 </div>
                             </td>
                         </tr>
@@ -141,7 +231,6 @@
                 <div class="admin-request-detail-row"><span>Early Leave Before</span><span>{{ shift_model.detail.early_leave }}</span></div>
                 <div class="admin-request-detail-row"><span>Overtime After</span><span>{{ shift_model.detail.overtime_after }}</span></div>
                 <div class="admin-request-detail-row"><span>Weekly Off</span><span>{{ shift_model.detail.weekly_off }}</span></div>
-                <div class="admin-request-detail-row"><span>Status</span><span>{{ shift_model.detail.status }}</span></div>
                 <div class="admin-request-detail-row"><span>Description</span><span>{{ shift_model.detail.description }}</span></div>
             </div>
             <div class="admin-summary-list">
@@ -150,11 +239,112 @@
                 <div class="admin-summary-muted">{{ rule }}</div>
                 {% endfor %}
             </div>
-            <a class="admin-side-action tone-reject" href="#">{{ icon('trash') }} Delete Shift</a>
+            <form method="post" style="display:flex;">
+                <input type="hidden" name="action" value="delete_shift">
+                <input type="hidden" name="shift_id" value="{{ shift_model.detail.id }}">
+                <input type="hidden" name="search" value="{{ shift_model.search }}">
+                <button class="admin-side-action tone-reject" type="submit">{{ icon('trash') }} Delete Shift</button>
+            </form>
             {% else %}
             <div class="admin-empty">
                 <strong>No shift selected.</strong>
-                <p>Once you create a shift, its rules and timing details will appear here.</p>
+                <p>Choose a shift from the table to view its details, assignments, and edit form.</p>
+            </div>
+            {% endif %}
+        </article>
+
+        <article class="admin-side-card" id="shift-editor-card">
+            <div class="admin-card-head">
+                {{ section_title('Shift Editor', 'Create a new shift or update the selected one.') }}
+            </div>
+            <form method="post">
+                <input type="hidden" name="action" value="{{ 'update_shift' if shift_model.detail else 'create_shift' }}">
+                <input type="hidden" name="shift_id" value="{{ shift_model.selected_shift_id or '' }}">
+                <input type="hidden" name="search" value="{{ shift_model.search }}">
+                <div class="admin-form-grid full">
+                    <label class="admin-field">
+                        <span>Shift Name</span>
+                        <input type="text" name="name" value="{{ shift_model.form_values.name }}" required>
+                    </label>
+                    <label class="admin-field">
+                        <span>Shift Code</span>
+                        <input type="text" name="code" maxlength="10" value="{{ shift_model.form_values.code }}" required>
+                    </label>
+                    <label class="admin-field">
+                        <span>Start Time</span>
+                        <input type="time" name="shift_start" value="{{ shift_model.form_values.shift_start }}" required>
+                    </label>
+                    <label class="admin-field">
+                        <span>End Time</span>
+                        <input type="time" name="shift_end" value="{{ shift_model.form_values.shift_end }}" required>
+                    </label>
+                    <label class="admin-field">
+                        <span>Break Label</span>
+                        <input type="text" name="break_label" value="{{ shift_model.form_values.break_label }}">
+                    </label>
+                    <label class="admin-field">
+                        <span>Grace Minutes</span>
+                        <input type="number" min="0" name="grace_minutes" value="{{ shift_model.form_values.grace_minutes }}" required>
+                    </label>
+                    <label class="admin-field">
+                        <span>Weekly Off</span>
+                        <input type="text" name="weekly_off" value="{{ shift_model.form_values.weekly_off }}">
+                    </label>
+                    <label class="admin-check-row">
+                        <input type="checkbox" name="is_active" value="1" {% if shift_model.form_values.is_active %}checked{% endif %}>
+                        <span>Keep shift active</span>
+                    </label>
+                    <label class="admin-field" style="grid-column: 1 / -1;">
+                        <span>Description</span>
+                        <textarea name="description" rows="3">{{ shift_model.form_values.description }}</textarea>
+                    </label>
+                </div>
+                <div class="admin-form-actions">
+                    <button class="admin-toolbar-button tone-primary" type="submit">
+                        {{ icon('check-circle') }}
+                        <span>{{ 'Save Shift Changes' if shift_model.detail else 'Create Shift' }}</span>
+                    </button>
+                    {% if shift_model.detail %}
+                    <a class="admin-toolbar-button" href="{{ url_for('app.admin_shift_management', search=shift_model.search) }}">
+                        {{ icon('close') }}
+                        <span>New Blank Form</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Assign Staff', 'Link active staff to the selected shift.') }}
+            </div>
+            {% if shift_model.detail %}
+            <form method="post">
+                <input type="hidden" name="action" value="assign_staff">
+                <input type="hidden" name="shift_id" value="{{ shift_model.selected_shift_id }}">
+                <input type="hidden" name="search" value="{{ shift_model.search }}">
+                <div class="admin-form-grid full">
+                    <label class="admin-field" style="grid-column: 1 / -1;">
+                        <span>Select Staff Member</span>
+                        <select name="staff_id" required>
+                            <option value="">Choose staff</option>
+                            {% for option in shift_model.available_staff_options %}
+                            <option value="{{ option.id }}">{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+                <div class="admin-form-actions">
+                    <button class="admin-toolbar-button tone-primary" type="submit">
+                        {{ icon('staff') }}
+                        <span>Assign To Shift</span>
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <div class="admin-empty">
+                <strong>Select a shift first.</strong>
+                <p>Choose a shift from the list before assigning staff to it.</p>
             </div>
             {% endif %}
         </article>

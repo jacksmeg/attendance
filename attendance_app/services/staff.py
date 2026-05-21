@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 from attendance_app.auth import STAFF, hash_secret, new_qr_token, normalize_access_role, secret_matches
 from attendance_app.db import get_db
+from attendance_app.services.shifts import find_shift_id_by_window
 
 
 def list_staff(
@@ -227,6 +228,10 @@ def reset_staff_credentials(
 def create_staff(data: Mapping[str, Any]) -> int:
     db = get_db()
     now = datetime.now().isoformat(timespec="seconds")
+    shift_start = str(data.get("shift_start", "09:00"))
+    shift_end = str(data.get("shift_end", "17:00"))
+    grace_minutes = int(data.get("grace_minutes", 15))
+    shift_id = find_shift_id_by_window(shift_start, shift_end, grace_minutes)
     cursor = db.execute(
         """
         INSERT INTO staff (
@@ -235,9 +240,9 @@ def create_staff(data: Mapping[str, Any]) -> int:
             department, role, access_role,
             password_hash, pin_hash, qr_token,
             allow_mobile_clock, allow_pin_clock, allow_qr_clock,
-            shift_start, shift_end, grace_minutes, is_active,
+            shift_id, shift_start, shift_end, grace_minutes, is_active,
             fingerprint_enabled, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             str(data["staff_code"]).strip().upper(),
@@ -262,9 +267,10 @@ def create_staff(data: Mapping[str, Any]) -> int:
             int(bool(data.get("allow_mobile_clock", True))),
             int(bool(data.get("allow_pin_clock", True))),
             int(bool(data.get("allow_qr_clock", True))),
-            data.get("shift_start", "09:00"),
-            data.get("shift_end", "17:00"),
-            int(data.get("grace_minutes", 15)),
+            shift_id,
+            shift_start,
+            shift_end,
+            grace_minutes,
             int(bool(data.get("is_active", True))),
             0,
             now,
@@ -277,6 +283,10 @@ def create_staff(data: Mapping[str, Any]) -> int:
 
 def update_staff(staff_id: int, data: Mapping[str, Any]) -> None:
     db = get_db()
+    shift_start = str(data.get("shift_start", "09:00"))
+    shift_end = str(data.get("shift_end", "17:00"))
+    grace_minutes = int(data.get("grace_minutes", 15))
+    shift_id = find_shift_id_by_window(shift_start, shift_end, grace_minutes)
     updates = [
         "staff_code = ?",
         "first_name = ?",
@@ -297,6 +307,7 @@ def update_staff(staff_id: int, data: Mapping[str, Any]) -> None:
         "allow_mobile_clock = ?",
         "allow_pin_clock = ?",
         "allow_qr_clock = ?",
+        "shift_id = ?",
         "shift_start = ?",
         "shift_end = ?",
         "grace_minutes = ?",
@@ -323,9 +334,10 @@ def update_staff(staff_id: int, data: Mapping[str, Any]) -> None:
         int(bool(data.get("allow_mobile_clock", True))),
         int(bool(data.get("allow_pin_clock", True))),
         int(bool(data.get("allow_qr_clock", True))),
-        data.get("shift_start", "09:00"),
-        data.get("shift_end", "17:00"),
-        int(data.get("grace_minutes", 15)),
+        shift_id,
+        shift_start,
+        shift_end,
+        grace_minutes,
         int(bool(data.get("is_active", True))),
         datetime.now().isoformat(timespec="seconds"),
     ]

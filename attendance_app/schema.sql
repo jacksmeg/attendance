@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS staff (
     allow_mobile_clock INTEGER NOT NULL DEFAULT 1,
     allow_pin_clock INTEGER NOT NULL DEFAULT 1,
     allow_qr_clock INTEGER NOT NULL DEFAULT 1,
+    shift_id INTEGER,
     shift_start TEXT NOT NULL DEFAULT '09:00',
     shift_end TEXT NOT NULL DEFAULT '17:00',
     grace_minutes INTEGER NOT NULL DEFAULT 15,
@@ -32,6 +33,24 @@ CREATE TABLE IF NOT EXISTS staff (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS work_shifts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    code TEXT NOT NULL UNIQUE,
+    shift_start TEXT NOT NULL,
+    shift_end TEXT NOT NULL,
+    break_label TEXT NOT NULL DEFAULT 'Flexible',
+    grace_minutes INTEGER NOT NULL DEFAULT 15,
+    weekly_off TEXT NOT NULL DEFAULT 'Configured per department',
+    description TEXT NOT NULL DEFAULT '',
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_work_shifts_active
+ON work_shifts(is_active, name);
 
 CREATE TABLE IF NOT EXISTS fingerprint_templates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

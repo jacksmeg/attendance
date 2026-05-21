@@ -100,6 +100,18 @@ from .services.settings import (
     save_admin_credentials_for_database,
     save_app_settings,
 )
+from .services.shifts import (
+    assign_shift_to_staff,
+    create_shift,
+    delete_shift,
+    ensure_default_shifts,
+    get_shift,
+    list_shift_assignments,
+    list_shifts,
+    set_shift_active,
+    unassign_shift_from_staff,
+    update_shift,
+)
 from .services.staff import (
     authenticate_staff,
     count_active_staff,
@@ -1655,14 +1667,73 @@ self.addEventListener("fetch", (event) => {{
             **_admin_context("Attendance", "attendance", ["Dashboard", "Attendance"]),
         )
 
-    @bp.route("/admin/shift-management")
+    @bp.route("/admin/shift-management", methods=["GET", "POST"])
     @roles_required(*REPORTING_ROLES)
     def admin_shift_management():
         department_scope = current_department_scope()
+        ensure_default_shifts()
+        search = request.values.get("search", "").strip()
+        selected_shift_id = request.values.get("shift_id", "").strip()
+        selected_shift_id_int = int(selected_shift_id) if selected_shift_id.isdigit() else None
+
+        if request.method == "POST":
+            action = request.form.get("action", "").strip()
+            try:
+                if action == "create_shift":
+                    shift_id = create_shift(_read_shift_form(request.form))
+                    flash("Shift created successfully.", "success")
+                    return redirect(
+                        url_for("app.admin_shift_management", shift_id=shift_id, search=search)
+                    )
+                if action == "update_shift" and selected_shift_id_int:
+                    update_shift(selected_shift_id_int, _read_shift_form(request.form))
+                    flash("Shift updated successfully.", "success")
+                    return redirect(
+                        url_for("app.admin_shift_management", shift_id=selected_shift_id_int, search=search)
+                    )
+                if action == "toggle_shift" and selected_shift_id_int:
+                    should_activate = request.form.get("next_state", "0").strip() == "1"
+                    set_shift_active(selected_shift_id_int, should_activate)
+                    flash(
+                        "Shift activated successfully." if should_activate else "Shift deactivated successfully.",
+                        "success",
+                    )
+                    return redirect(
+                        url_for("app.admin_shift_management", shift_id=selected_shift_id_int, search=search)
+                    )
+                if action == "delete_shift" and selected_shift_id_int:
+                    delete_shift(selected_shift_id_int)
+                    flash("Shift deleted successfully.", "success")
+                    return redirect(url_for("app.admin_shift_management", search=search))
+                if action == "assign_staff" and selected_shift_id_int:
+                    staff_id = int(request.form.get("staff_id", "0"))
+                    if assign_shift_to_staff(selected_shift_id_int, staff_id, department_scope=department_scope):
+                        flash("Staff assigned to shift successfully.", "success")
+                    else:
+                        flash("Could not assign that staff member to the selected shift.", "error")
+                    return redirect(
+                        url_for("app.admin_shift_management", shift_id=selected_shift_id_int, search=search)
+                    )
+                if action == "remove_assignment":
+                    staff_id = int(request.form.get("staff_id", "0"))
+                    if unassign_shift_from_staff(staff_id, department_scope=department_scope):
+                        flash("Staff removed from shift successfully.", "success")
+                    else:
+                        flash("Could not remove that staff member from the shift.", "error")
+                    return redirect(
+                        url_for("app.admin_shift_management", shift_id=selected_shift_id_int or "", search=search)
+                    )
+            except (ValueError, sqlite3.IntegrityError) as exc:
+                flash(str(exc), "error")
+
         return render_template(
             "admin/shift_management.html",
             title="Shift Management",
-            shift_model=_hospital_shift_management_model(department_scope=department_scope),
+            shift_model=_hospital_shift_management_model(
+                department_scope=department_scope,
+                search=search,
+                selected_shift_id=selected_shift_id_int,
+            ),
             **_admin_context("Shift Management", "shift", ["Dashboard", "Shift Management", "Shifts"], nav_secondary="shifts"),
         )
 
@@ -3547,95 +3618,199 @@ def _match_shift_preset_key(shift_start: str | None, shift_end: str | None) -> s
     return str(preset["key"]) if preset else ""
 
 
-def _hospital_shift_management_model(department_scope: str = "") -> dict[str, Any]:
-    staff_rows = list_staff(active_only=True, department_scope=department_scope)
-    presets = _hospital_shift_presets()
-    assignments = []
-    shift_rows = []
+def _read_shift_form(form: Mapping[str, Any]) -> dict[str, Any]:
+    values = {
+        "name": str(form.get("name", "")).strip(),
+        "code": str(form.get("code", "")).strip().upper(),
+        "shift_start": str(form.get("shift_start", "")).strip(),
+        "shift_end": str(form.get("shift_end", "")).strip(),
+        "break_label": str(form.get("break_label", "Flexible")).strip() or "Flexible",
+        "grace_minutes": int(str(form.get("grace_minutes", "15")).strip() or "15"),
+        "weekly_off": str(form.get("weekly_off", "Configured per department")).strip() or "Configured per department",
+        "description": str(form.get("description", "")).strip(),
+        "is_active": str(form.get("is_active", "1")).strip() in {"1", "on", "true", "yes"},
+    }
+    if not values["name"]:
+        raise ValueError("Shift name is required.")
+    if not values["code"]:
+        raise ValueError("Shift code is required.")
+    if not values["shift_start"] or not values["shift_end"]:
+        raise ValueError("Shift start and end times are required.")
+    try:
+        time.fromisoformat(values["shift_start"])
+        time.fromisoformat(values["shift_end"])
+    except ValueError as exc:
+        raise ValueError("Shift start and end must be valid times.") from exc
+    if values["shift_start"] == values["shift_end"]:
+        raise ValueError("Shift start and end cannot be the same time.")
+    if values["grace_minutes"] < 0:
+        raise ValueError("Grace minutes cannot be negative.")
+    return values
 
-    for index, preset in enumerate(presets):
-        matching_staff = [
-            row
-            for row in staff_rows
-            if str(row.get("shift_start", "")) == str(preset["shift_start"])
-            and str(row.get("shift_end", "")) == str(preset["shift_end"])
-        ]
+
+def _hospital_shift_management_model(
+    department_scope: str = "",
+    search: str = "",
+    selected_shift_id: int | None = None,
+) -> dict[str, Any]:
+    shift_records = list_shifts(search=search)
+    all_staff_rows = list_staff(active_only=True, department_scope=department_scope)
+    assignments_by_shift: defaultdict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in all_staff_rows:
+        shift_id = row.get("shift_id")
+        if shift_id:
+            assignments_by_shift[int(shift_id)].append(row)
+
+    selected_shift = get_shift(selected_shift_id) if selected_shift_id else None
+    if not selected_shift and shift_records:
+        selected_shift = shift_records[0]
+
+    shift_rows: list[dict[str, Any]] = []
+    assignment_rows: list[dict[str, Any]] = []
+    overnight_count = 0
+    assigned_total = 0
+    open_shift_count = 0
+
+    for shift in shift_records:
+        shift_id = int(shift["id"])
+        assigned_rows = assignments_by_shift.get(shift_id, [])
+        assigned_total += len(assigned_rows)
+        if not assigned_rows:
+            open_shift_count += 1
+        if shift_spans_overnight(str(shift["shift_start"]), str(shift["shift_end"])):
+            overnight_count += 1
+
         departments = sorted(
-            {str(row.get("department", "")).strip() for row in matching_staff if row.get("department")}
+            {
+                str(row.get("department", "")).strip()
+                for row in assigned_rows
+                if row.get("department")
+            }
+        )
+        badge_label, badge_tone = _shift_badge_from_window(
+            shift.get("shift_start"),
+            shift.get("shift_end"),
         )
         shift_rows.append(
             {
-                "name": preset["label"],
-                "code": f"H{index + 1:02d}",
-                "dot": preset["badge_tone"],
-                "time": preset["time_window"],
-                "break": "Flexible",
-                "hours": preset["working_hours_label"],
-                "grace": "15 mins",
-                "late_after": _format_clock_label(
-                    _minutes_after_clock(str(preset["shift_start"]), 15)
+                "id": shift_id,
+                "name": shift["name"],
+                "code": str(shift["code"]).strip().upper(),
+                "dot": badge_tone,
+                "time": f"{_format_clock_label(str(shift['shift_start']))} - {_format_clock_label(str(shift['shift_end']))}",
+                "break": shift.get("break_label") or "Flexible",
+                "hours": _format_minutes_as_hours(
+                    _shift_duration_minutes(str(shift["shift_start"]), str(shift["shift_end"]))
                 ),
-                "status": "Active",
-                "employees": len(matching_staff),
+                "grace": f"{int(shift['grace_minutes'])} mins",
+                "late_after": _format_clock_label(
+                    _minutes_after_clock(str(shift["shift_start"]), int(shift["grace_minutes"]))
+                ),
+                "status": "Active" if int(shift["is_active"]) else "Inactive",
+                "employees": len(assigned_rows),
                 "departments": departments,
+                "is_selected": bool(selected_shift and shift_id == int(selected_shift["id"])),
+                "badge_label": badge_label,
             }
         )
-        assignments.append(
+        assignment_rows.append(
             {
-                "name": preset["label"],
-                "employees": len(matching_staff),
+                "id": shift_id,
+                "name": shift["name"],
+                "employees": len(assigned_rows),
                 "departments": len(departments),
-                "start": _format_clock_label(str(preset["shift_start"])),
-                "end": _format_clock_label(str(preset["shift_end"])),
+                "start": _format_clock_label(str(shift["shift_start"])),
+                "end": _format_clock_label(str(shift["shift_end"])),
+                "selected": bool(selected_shift and shift_id == int(selected_shift["id"])),
             }
         )
 
-    detail_preset = presets[0] if presets else None
+    selected_assignments: list[dict[str, Any]] = []
+    available_staff_options: list[dict[str, Any]] = []
     detail = None
-    if detail_preset:
+    form_values = {
+        "name": "",
+        "code": "",
+        "shift_start": "08:00",
+        "shift_end": "16:00",
+        "break_label": "Flexible",
+        "grace_minutes": 15,
+        "weekly_off": "Configured per department",
+        "description": "",
+        "is_active": True,
+    }
+
+    if selected_shift:
+        selected_shift_id = int(selected_shift["id"])
+        selected_assignments = assignments_by_shift.get(selected_shift_id, [])
+        selected_assignments.sort(
+            key=lambda item: (str(item.get("department", "")), str(item.get("last_name", "")), str(item.get("first_name", "")))
+        )
+        form_values = {
+            "name": selected_shift["name"],
+            "code": str(selected_shift["code"]).strip().upper(),
+            "shift_start": str(selected_shift["shift_start"]),
+            "shift_end": str(selected_shift["shift_end"]),
+            "break_label": selected_shift.get("break_label") or "Flexible",
+            "grace_minutes": int(selected_shift["grace_minutes"]),
+            "weekly_off": selected_shift.get("weekly_off") or "Configured per department",
+            "description": selected_shift.get("description") or "",
+            "is_active": bool(int(selected_shift["is_active"])),
+        }
         detail = {
-            "name": detail_preset["label"],
-            "code": "H01",
-            "time": detail_preset["time_window"],
-            "break": "Flexible by unit",
-            "hours": detail_preset["working_hours_label"],
-            "grace": "15 minutes",
+            "id": selected_shift_id,
+            "name": selected_shift["name"],
+            "code": str(selected_shift["code"]).strip().upper(),
+            "time": f"{_format_clock_label(str(selected_shift['shift_start']))} - {_format_clock_label(str(selected_shift['shift_end']))}",
+            "break": selected_shift.get("break_label") or "Flexible",
+            "hours": _format_minutes_as_hours(
+                _shift_duration_minutes(str(selected_shift["shift_start"]), str(selected_shift["shift_end"]))
+            ),
+            "grace": f"{int(selected_shift['grace_minutes'])} minutes",
             "late_after": _format_clock_label(
-                _minutes_after_clock(str(detail_preset["shift_start"]), 15)
+                _minutes_after_clock(str(selected_shift["shift_start"]), int(selected_shift["grace_minutes"]))
             ),
             "early_leave": _format_clock_label(
-                _minutes_after_clock(str(detail_preset["shift_end"]), -15)
+                _minutes_after_clock(str(selected_shift["shift_end"]), -15)
             ),
-            "overtime_after": _format_clock_label(str(detail_preset["shift_end"])),
-            "weekly_off": "Configured per department",
-            "status": "Active",
-            "description": detail_preset["summary"],
+            "overtime_after": _format_clock_label(str(selected_shift["shift_end"])),
+            "weekly_off": selected_shift.get("weekly_off") or "Configured per department",
+            "status": "Active" if int(selected_shift["is_active"]) else "Inactive",
+            "description": selected_shift.get("description") or "No description added yet.",
             "rules": [
-                f"Late if clock-in is after {_format_clock_label(_minutes_after_clock(str(detail_preset['shift_start']), 15))}",
-                f"Half day if work is under 4h 00m",
-                f"Overtime begins after {_format_clock_label(str(detail_preset['shift_end']))}",
-                "Overnight shifts continue into the next calendar day automatically",
+                f"Late if clock-in is after {_format_clock_label(_minutes_after_clock(str(selected_shift['shift_start']), int(selected_shift['grace_minutes'])))}",
+                "Half day if work is under 4h 00m",
+                f"Overtime begins after {_format_clock_label(str(selected_shift['shift_end']))}",
+                "Overnight shifts continue into the next calendar day automatically"
+                if shift_spans_overnight(str(selected_shift["shift_start"]), str(selected_shift["shift_end"]))
+                else "Day shifts close on the same calendar day",
             ],
         }
 
-    assigned_total = sum(1 for row in staff_rows if _match_shift_preset(row.get("shift_start"), row.get("shift_end")))
-    open_shift_count = sum(1 for row in shift_rows if row["employees"] == 0)
-    overnight_count = sum(
-        1
-        for preset in presets
-        if shift_spans_overnight(str(preset["shift_start"]), str(preset["shift_end"]))
-    )
+    available_staff_options = [
+        {
+            "id": int(row["id"]),
+            "label": f"{row['staff_code']} - {row['first_name']} {row['last_name']} ({row['department']})",
+        }
+        for row in all_staff_rows
+        if not selected_shift or int(row.get("shift_id") or 0) != int(selected_shift["id"])
+    ]
 
     return {
         "stats": [
-            {"icon": "shift", "tone": "blue", "label": "Total Shifts", "value": str(len(shift_rows)), "sub": "Hospital presets"},
-            {"icon": "staff", "tone": "green", "label": "Assigned Today", "value": str(assigned_total), "sub": "Employees"},
+            {"icon": "shift", "tone": "blue", "label": "Total Shifts", "value": str(len(shift_rows)), "sub": "Configured schedules"},
+            {"icon": "staff", "tone": "green", "label": "Assigned Staff", "value": str(assigned_total), "sub": "Active employees linked"},
             {"icon": "clock", "tone": "orange", "label": "Open Shifts", "value": str(open_shift_count), "sub": "No staff assigned"},
             {"icon": "overtime", "tone": "purple", "label": "Night Patterns", "value": str(overnight_count), "sub": "Overnight coverage"},
         ],
+        "search": search,
+        "selected_shift_id": int(selected_shift["id"]) if selected_shift else None,
         "shifts": shift_rows,
-        "assignments": assignments,
+        "assignments": assignment_rows,
+        "selected_assignments": selected_assignments,
+        "available_staff_options": available_staff_options,
         "detail": detail,
+        "form_values": form_values,
     }
 
 
