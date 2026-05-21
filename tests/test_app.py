@@ -1326,6 +1326,12 @@ class AttendanceAppTests(unittest.TestCase):
         ):
             response = self.client.post("/staff/clock", data=payload, follow_redirects=True)
             self.assertEqual(response.status_code, 200)
+            if payload["action"] == "check_in":
+                self.assertIn(b"Attendance Recorded!", response.data)
+                self.assertIn(b"Checked In for Today", response.data)
+            if payload["action"] == "check_out":
+                self.assertIn(b"Attendance Complete!", response.data)
+                self.assertIn(b"Completed for Today", response.data)
 
         with self.app.app_context():
             rows = list_attendance_events(

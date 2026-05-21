@@ -2494,6 +2494,7 @@ self.addEventListener("fetch", (event) => {{
             staff=staff,
             today=date.today(),
             today_status=today_status,
+            last_attendance_result=session.pop("last_staff_attendance_result", None),
             quick_url=quick_url,
             mobile_qr_svg=build_qr_svg(quick_url),
             location_policy=location_policy,
@@ -2545,9 +2546,12 @@ self.addEventListener("fetch", (event) => {{
             longitude=longitude,
             gps_accuracy=gps_accuracy,
         )
-        flash(
-            f"{result['event_type'].replace('_', ' ').title()} recorded successfully.",
-            "success",
+        _store_last_staff_attendance_result(
+            result,
+            today_status=get_staff_today_status(staff["id"]),
+            location_policy=_location_policy_view_model(
+                get_app_settings(default_app_name=_tenant_default_app_name())
+            ),
         )
         return redirect(url_for("app.staff_home"))
 
@@ -2591,9 +2595,12 @@ self.addEventListener("fetch", (event) => {{
                 longitude=longitude,
                 gps_accuracy=gps_accuracy,
             )
-            flash(
-                f"{result['staff_name']} recorded a {result['event_type'].replace('_', ' ')} successfully.",
-                "success",
+            _store_last_staff_attendance_result(
+                result,
+                today_status=get_staff_today_status(staff["id"]),
+                location_policy=_location_policy_view_model(
+                    get_app_settings(default_app_name=_tenant_default_app_name())
+                ),
             )
             return redirect(url_for("app.staff_quick_access", qr_token=qr_token))
 
@@ -2603,6 +2610,7 @@ self.addEventListener("fetch", (event) => {{
             staff=staff,
             today_status=today_status,
             today=date.today(),
+            last_attendance_result=session.pop("last_staff_attendance_result", None),
             location_policy=location_policy,
             body_class="staff-mobile-app-body",
         )
@@ -2622,6 +2630,54 @@ def _store_last_kiosk_result(result: dict[str, Any]) -> None:
         "event_type": result["event_type"],
         "status_label": result["status_label"],
         "event_time": result["event_time"].strftime("%I:%M %p"),
+    }
+
+
+def _store_last_staff_attendance_result(
+    result: dict[str, Any],
+    *,
+    today_status: dict[str, Any],
+    location_policy: dict[str, Any],
+) -> None:
+    event_type = str(result.get("event_type", "") or "")
+    if event_type == "check_out":
+        headline = "Attendance Complete!"
+        message = "Your work session has been successfully recorded"
+        status_badge = "Completed for Today"
+        footer_title = "Great work today! Your attendance has been successfully recorded."
+    elif event_type == "check_in":
+        headline = "Attendance Recorded!"
+        message = "Your check-in has been successfully recorded"
+        status_badge = "Checked In for Today"
+        footer_title = "Your attendance has been recorded successfully."
+    elif event_type == "break_start":
+        headline = "Break Started!"
+        message = "Your break start has been successfully recorded"
+        status_badge = "Break in Progress"
+        footer_title = "Your break status has been updated successfully."
+    else:
+        headline = "Break Ended!"
+        message = "Your return from break has been successfully recorded"
+        status_badge = "Back to Work"
+        footer_title = "Your attendance has been updated successfully."
+
+    check_in_at = today_status.get("check_in_at")
+    check_out_at = today_status.get("check_out_at")
+    worked_minutes = int(today_status.get("worked_minutes") or 0)
+    location_line = location_policy.get("address") or location_policy.get("location_name") or "Main Work Location"
+
+    session["last_staff_attendance_result"] = {
+        "success_label": "Success",
+        "headline": headline,
+        "message": message,
+        "check_in_time": check_in_at.strftime("%I:%M %p") if check_in_at else "--",
+        "check_out_time": check_out_at.strftime("%I:%M %p") if check_out_at else "--",
+        "check_in_location": location_line,
+        "check_out_location": location_line,
+        "worked_hours": f"{worked_minutes / 60:.2f} hours",
+        "status_badge": status_badge,
+        "footer_title": footer_title,
+        "footer_note": "You can view your full attendance history in the reports section.",
     }
 
 

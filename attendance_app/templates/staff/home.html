@@ -59,6 +59,10 @@
         </div>
     </article>
 
+    {% if last_attendance_result %}
+        {% include "staff/_attendance_success.html" %}
+    {% endif %}
+
     <section class="staff-mobile-grid">
         <article class="staff-mobile-panel staff-mobile-panel-main">
             <div class="staff-mobile-panel-head">

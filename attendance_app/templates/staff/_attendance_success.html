@@ -1,0 +1,46 @@
+{% from "_icons.html" import icon %}
+
+<section class="staff-attendance-feedback">
+    <article class="staff-attendance-success-banner">
+        <span class="staff-attendance-success-banner-icon">{{ icon('check-circle') }}</span>
+        <span>{{ last_attendance_result.success_label }}</span>
+    </article>
+
+    <article class="staff-attendance-success-card">
+        <div class="staff-attendance-success-head">
+            <span class="staff-attendance-success-head-icon">{{ icon('check-circle') }}</span>
+            <div class="staff-attendance-success-head-copy">
+                <h3>{{ last_attendance_result.headline }}</h3>
+                <p>{{ last_attendance_result.message }}</p>
+            </div>
+        </div>
+
+        <div class="staff-attendance-success-grid">
+            <article class="staff-attendance-success-metric">
+                <small>Check-In Time</small>
+                <strong>{{ last_attendance_result.check_in_time }}</strong>
+                <span>{{ icon('pin') }} {{ last_attendance_result.check_in_location }}</span>
+            </article>
+            <article class="staff-attendance-success-metric">
+                <small>Check-Out Time</small>
+                <strong>{{ last_attendance_result.check_out_time }}</strong>
+                <span>{{ icon('pin') }} {{ last_attendance_result.check_out_location }}</span>
+            </article>
+            <article class="staff-attendance-success-metric">
+                <small>Work Hours</small>
+                <strong>{{ last_attendance_result.worked_hours }}</strong>
+                <span>Total recorded for today</span>
+            </article>
+            <article class="staff-attendance-success-metric">
+                <small>Status</small>
+                <strong class="staff-attendance-success-status">{{ last_attendance_result.status_badge }}</strong>
+                <span>Latest attendance outcome</span>
+            </article>
+        </div>
+
+        <div class="staff-attendance-success-foot">
+            <strong>{{ last_attendance_result.footer_title }}</strong>
+            <p>{{ last_attendance_result.footer_note }}</p>
+        </div>
+    </article>
+</section>
