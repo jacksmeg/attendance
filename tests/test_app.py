@@ -59,6 +59,16 @@ class AttendanceAppTests(unittest.TestCase):
                     "shift_start": "09:00",
                     "shift_end": "17:00",
                     "grace_minutes": 10,
+                    "base_salary": 3200,
+                    "overtime_hourly_rate": 18,
+                    "tax_deduction": 120,
+                    "provident_fund": 75,
+                    "health_insurance": 40,
+                    "other_deduction": 15,
+                    "payment_method": "Bank Transfer",
+                    "bank_name": "JHIMS Bank",
+                    "account_name": "Test User",
+                    "account_number": "0011223344",
                     "is_active": True,
                 }
             )
@@ -127,6 +137,71 @@ class AttendanceAppTests(unittest.TestCase):
         payload = csv_response.get_data(as_text=True)
         self.assertIn("Staff Code", payload)
         self.assertIn("EMP-100", payload)
+
+    def test_admin_payroll_page_processes_status_and_exports_csv(self) -> None:
+        payroll_month = date.today().strftime("%Y-%m")
+        check_in_at = datetime.now().replace(day=1, hour=9, minute=0, second=0, microsecond=0)
+        check_out_at = check_in_at.replace(hour=18)
+        with self.app.app_context():
+            fresh_staff = get_staff(self.staff["id"])
+            assert fresh_staff is not None
+            record_attendance(
+                fresh_staff,
+                template_ref=fresh_staff["template_ref"],
+                confidence=100,
+                method="manual",
+                device_name="web",
+                event_type="check_in",
+                captured_at=check_in_at,
+            )
+            record_attendance(
+                fresh_staff,
+                template_ref=fresh_staff["template_ref"],
+                confidence=100,
+                method="manual",
+                device_name="web",
+                event_type="check_out",
+                captured_at=check_out_at,
+            )
+
+        self.client.post(
+            "/admin/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        payroll_response = self.client.get(f"/admin/payroll?payroll_month={payroll_month}")
+        self.assertEqual(payroll_response.status_code, 200)
+        self.assertIn(b"Monthly Payroll", payroll_response.data)
+        self.assertIn(b"EMP-100", payroll_response.data)
+        self.assertIn(b"Pending", payroll_response.data)
+        self.assertIn(b"Bank Transfer", payroll_response.data)
+
+        process_response = self.client.post(
+            f"/admin/payroll?payroll_month={payroll_month}",
+            data={
+                "action": "set_status",
+                "staff_id": str(self.staff["id"]),
+                "next_status": "Processed",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(process_response.status_code, 200)
+        self.assertIn(b"Payroll status updated successfully.", process_response.data)
+        self.assertIn(b"Processed", process_response.data)
+
+        export_response = self.client.get(f"/admin/payroll/export.csv?payroll_month={payroll_month}")
+        self.assertEqual(export_response.status_code, 200)
+        export_payload = export_response.get_data(as_text=True)
+        self.assertIn("EMP-100", export_payload)
+        self.assertIn("Processed", export_payload)
+
+        payslip_response = self.client.get(
+            f"/admin/payroll/{self.staff['id']}/payslip?payroll_month={payroll_month}"
+        )
+        self.assertEqual(payslip_response.status_code, 200)
+        self.assertIn(b"Payslip", payslip_response.data)
+        self.assertIn(b"Test User", payslip_response.data)
 
     def test_admin_notifications_and_audit_groups_render_live_data(self) -> None:
         self.client.post(

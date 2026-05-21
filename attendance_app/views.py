@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections import defaultdict
 from base64 import b64decode
+import csv
 from datetime import date, datetime, time, timedelta
-from io import BytesIO
+from io import BytesIO, StringIO
 import json
 import math
 from pathlib import Path
@@ -80,6 +81,16 @@ from .services.enrollment_sessions import (
     get_enrollment_preview_path,
     read_enrollment_session,
     start_enrollment_session,
+)
+from .services.payroll import (
+    PAYROLL_STATUS_HOLD,
+    PAYROLL_STATUS_PENDING,
+    PAYROLL_STATUS_PROCESSED,
+    get_payroll_status_map,
+    normalize_payroll_month,
+    payroll_month_bounds,
+    set_payroll_status,
+    set_payroll_status_bulk,
 )
 from .services.qr_codes import build_qr_svg
 from .services.reporting import (
@@ -161,6 +172,18 @@ REPORT_ATTENDANCE_GROUPS = {
     "checked_in": "Checked In",
     "checked_out": "Checked Out",
 }
+PAYROLL_FILTER_STATUSES = {
+    "all": "All Employees",
+    "processed": "Processed",
+    "pending": "Pending",
+    "hold": "Hold",
+}
+PAYMENT_METHOD_CHOICES = [
+    "Bank Transfer",
+    "Mobile Money",
+    "Cash",
+    "Cheque",
+]
 MAX_STAFF_PHOTO_BYTES = 4 * 1024 * 1024
 SYSTEM_LOGO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_SYSTEM_LOGO_BYTES = 3 * 1024 * 1024
@@ -1270,6 +1293,7 @@ self.addEventListener("fetch", (event) => {{
             staff=None,
             form_action=url_for("app.admin_staff_new"),
             access_role_choices=ACCESS_ROLE_CHOICES,
+            payment_method_choices=PAYMENT_METHOD_CHOICES,
             shift_presets=_hospital_shift_presets(),
             **_admin_context("Staff", "staff", ["Dashboard", "Staff", "Add New Staff"]),
         )
@@ -1323,6 +1347,7 @@ self.addEventListener("fetch", (event) => {{
             staff=staff,
             form_action=url_for("app.admin_staff_edit", staff_id=staff_id),
             access_role_choices=ACCESS_ROLE_CHOICES,
+            payment_method_choices=PAYMENT_METHOD_CHOICES,
             shift_presets=_hospital_shift_presets(),
             **_admin_context("Staff", "staff", ["Dashboard", "Staff", "Edit Staff"]),
         )
@@ -1759,15 +1784,216 @@ self.addEventListener("fetch", (event) => {{
             **_admin_context("Overtime", "overtime", ["Dashboard", "Overtime"]),
         )
 
-    @bp.route("/admin/payroll")
+    @bp.route("/admin/payroll", methods=["GET", "POST"])
     @roles_required(*REPORTING_ROLES)
     def admin_payroll():
+        department_scope = current_department_scope()
+        app_settings = get_app_settings(default_app_name=_tenant_default_app_name())
+        payroll_month = normalize_payroll_month(request.values.get("payroll_month", ""))
+        date_from, date_to = payroll_month_bounds(payroll_month)
+        department = _resolve_department_filter(
+            request.values.get("department", "").strip(),
+            department_scope,
+        )
+        search = request.values.get("search", "").strip()
+        status_filter = _normalize_payroll_filter_status(
+            request.values.get("status", "").strip()
+        )
+
+        staff_rows = list_staff(
+            search=search,
+            department=department,
+            active_only=True,
+            department_scope=department_scope,
+        )
+        attendance_rows = list_attendance_events(
+            date_from=date_from,
+            date_to=date_to,
+            department=department,
+            search=search,
+            department_scope=department_scope,
+        )
+        activity_rows = _attendance_activity_rows(attendance_rows)
+        payroll_all_rows = _build_payroll_rows(
+            staff_rows=staff_rows,
+            activity_rows=activity_rows,
+            payroll_month=payroll_month,
+            working_days=app_settings["working_days"],
+        )
+
+        redirect_params = {
+            "payroll_month": payroll_month,
+            "department": department,
+            "search": search,
+            "status": status_filter,
+        }
+
+        if request.method == "POST":
+            action = request.form.get("action", "").strip()
+            visible_staff_ids = [int(row["staff_id"]) for row in payroll_all_rows]
+            try:
+                if action == "set_status":
+                    staff_id = int(request.form.get("staff_id", "0"))
+                    next_status = request.form.get("next_status", "").strip()
+                    notes = request.form.get("notes", "").strip()
+                    if not any(int(row["staff_id"]) == staff_id for row in payroll_all_rows):
+                        raise ValueError("Choose a valid payroll employee.")
+                    set_payroll_status(
+                        payroll_month,
+                        staff_id,
+                        next_status,
+                        notes=notes,
+                    )
+                    flash("Payroll status updated successfully.", "success")
+                elif action == "process_visible":
+                    if not visible_staff_ids:
+                        raise ValueError("There are no payroll employees in the current view.")
+                    set_payroll_status_bulk(
+                        payroll_month,
+                        visible_staff_ids,
+                        PAYROLL_STATUS_PROCESSED,
+                    )
+                    flash("Visible payroll rows were marked as processed.", "success")
+                elif action == "hold_visible":
+                    if not visible_staff_ids:
+                        raise ValueError("There are no payroll employees in the current view.")
+                    set_payroll_status_bulk(
+                        payroll_month,
+                        visible_staff_ids,
+                        PAYROLL_STATUS_HOLD,
+                    )
+                    flash("Visible payroll rows were placed on hold.", "success")
+                elif action == "reset_visible":
+                    if not visible_staff_ids:
+                        raise ValueError("There are no payroll employees in the current view.")
+                    set_payroll_status_bulk(
+                        payroll_month,
+                        visible_staff_ids,
+                        PAYROLL_STATUS_PENDING,
+                    )
+                    flash("Visible payroll rows were reset to pending.", "success")
+                else:
+                    flash("Choose a valid payroll action.", "error")
+            except ValueError as exc:
+                flash(str(exc), "error")
+            return redirect(url_for("app.admin_payroll", **redirect_params))
+
+        payroll_rows = _filter_payroll_rows(payroll_all_rows, status_filter)
+        payroll_model = _payroll_live_model(
+            payroll_rows=payroll_rows,
+            all_rows=payroll_all_rows,
+            payroll_month=payroll_month,
+        )
         return render_template(
             "admin/payroll.html",
             title="Payroll",
-            payroll_model=_payroll_empty_model(),
-            payroll_rows=[],
-            **_admin_context("Payroll", "payroll", ["Dashboard", "Payroll", "May 2024 Payroll"], nav_secondary="dashboard"),
+            payroll_model=payroll_model,
+            payroll_rows=payroll_rows,
+            departments=list_departments(department_scope=department_scope),
+            filters={
+                "payroll_month": payroll_month,
+                "department": department,
+                "search": search,
+                "status": status_filter,
+            },
+            **_admin_context(
+                "Payroll",
+                "payroll",
+                ["Dashboard", "Payroll", f"{_payroll_month_label(payroll_month)} Payroll"],
+                nav_secondary="dashboard",
+            ),
+        )
+
+    @bp.route("/admin/payroll/export.csv")
+    @roles_required(*REPORTING_ROLES)
+    def admin_payroll_export():
+        department_scope = current_department_scope()
+        app_settings = get_app_settings(default_app_name=_tenant_default_app_name())
+        payroll_month = normalize_payroll_month(request.args.get("payroll_month", ""))
+        date_from, date_to = payroll_month_bounds(payroll_month)
+        department = _resolve_department_filter(
+            request.args.get("department", "").strip(),
+            department_scope,
+        )
+        search = request.args.get("search", "").strip()
+        status_filter = _normalize_payroll_filter_status(
+            request.args.get("status", "").strip()
+        )
+        staff_rows = list_staff(
+            search=search,
+            department=department,
+            active_only=True,
+            department_scope=department_scope,
+        )
+        attendance_rows = list_attendance_events(
+            date_from=date_from,
+            date_to=date_to,
+            department=department,
+            search=search,
+            department_scope=department_scope,
+        )
+        activity_rows = _attendance_activity_rows(attendance_rows)
+        payroll_rows = _filter_payroll_rows(
+            _build_payroll_rows(
+                staff_rows=staff_rows,
+                activity_rows=activity_rows,
+                payroll_month=payroll_month,
+                working_days=app_settings["working_days"],
+            ),
+            status_filter,
+        )
+        return Response(
+            _payroll_rows_to_csv(payroll_rows),
+            mimetype="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=payroll-{payroll_month}.csv"
+            },
+        )
+
+    @bp.route("/admin/payroll/<int:staff_id>/payslip")
+    @roles_required(*REPORTING_ROLES)
+    def admin_payroll_payslip(staff_id: int):
+        department_scope = current_department_scope()
+        app_settings = get_app_settings(default_app_name=_tenant_default_app_name())
+        payroll_month = normalize_payroll_month(request.args.get("payroll_month", ""))
+        date_from, date_to = payroll_month_bounds(payroll_month)
+        staff = _get_manageable_staff(staff_id)
+        if not staff:
+            return redirect(url_for("app.admin_payroll", payroll_month=payroll_month))
+
+        activity_rows = _attendance_activity_rows(
+            [
+                row
+                for row in list_attendance_events(
+                    date_from=date_from,
+                    date_to=date_to,
+                    department_scope=department_scope,
+                )
+                if int(row["staff_id"]) == int(staff_id)
+            ]
+        )
+        payroll_rows = _build_payroll_rows(
+            staff_rows=[staff],
+            activity_rows=activity_rows,
+            payroll_month=payroll_month,
+            working_days=app_settings["working_days"],
+        )
+        if not payroll_rows:
+            flash("No payroll record is available for that staff member in the selected month.", "warning")
+            return redirect(url_for("app.admin_payroll", payroll_month=payroll_month))
+
+        payslip_row = payroll_rows[0]
+        return render_template(
+            "admin/payroll_payslip.html",
+            title="Payslip",
+            payslip=payslip_row,
+            payroll_month=payroll_month,
+            payroll_month_label=_payroll_month_label(payroll_month),
+            **_admin_context(
+                "Payroll",
+                "payroll",
+                ["Dashboard", "Payroll", "Payslip"],
+            ),
         )
 
     @bp.route("/admin/attendance-correction")
@@ -2367,6 +2593,16 @@ def _staff_form_defaults(staff: dict[str, Any] | None = None) -> dict[str, Any]:
             "allow_mobile_clock": bool(staff.get("allow_mobile_clock", 1)),
             "allow_pin_clock": bool(staff.get("allow_pin_clock", 1)),
             "allow_qr_clock": bool(staff.get("allow_qr_clock", 1)),
+            "base_salary": float(staff.get("base_salary", 0) or 0),
+            "overtime_hourly_rate": float(staff.get("overtime_hourly_rate", 0) or 0),
+            "tax_deduction": float(staff.get("tax_deduction", 0) or 0),
+            "provident_fund": float(staff.get("provident_fund", 0) or 0),
+            "health_insurance": float(staff.get("health_insurance", 0) or 0),
+            "other_deduction": float(staff.get("other_deduction", 0) or 0),
+            "payment_method": staff.get("payment_method") or "Bank Transfer",
+            "bank_name": staff.get("bank_name") or "",
+            "account_name": staff.get("account_name") or "",
+            "account_number": staff.get("account_number") or "",
             "portal_password": "",
             "portal_pin": "",
             "regenerate_qr": False,
@@ -2404,6 +2640,16 @@ def _staff_form_defaults(staff: dict[str, Any] | None = None) -> dict[str, Any]:
         "allow_mobile_clock": True,
         "allow_pin_clock": True,
         "allow_qr_clock": True,
+        "base_salary": 0.0,
+        "overtime_hourly_rate": 0.0,
+        "tax_deduction": 0.0,
+        "provident_fund": 0.0,
+        "health_insurance": 0.0,
+        "other_deduction": 0.0,
+        "payment_method": "Bank Transfer",
+        "bank_name": "",
+        "account_name": "",
+        "account_number": "",
         "portal_password": "",
         "portal_pin": "",
         "regenerate_qr": False,
@@ -2413,6 +2659,17 @@ def _staff_form_defaults(staff: dict[str, Any] | None = None) -> dict[str, Any]:
 
 def _read_staff_form(form) -> dict[str, Any]:
     grace_minutes = form.get("grace_minutes", "15").strip() or "15"
+    base_salary = form.get("base_salary", "0").strip() or "0"
+    overtime_hourly_rate = form.get("overtime_hourly_rate", "0").strip() or "0"
+    tax_deduction = form.get("tax_deduction", "0").strip() or "0"
+    provident_fund = form.get("provident_fund", "0").strip() or "0"
+    health_insurance = form.get("health_insurance", "0").strip() or "0"
+    other_deduction = form.get("other_deduction", "0").strip() or "0"
+    def _safe_float(value: str) -> float | str:
+        try:
+            return float(value)
+        except ValueError:
+            return value
     return {
         "staff_code": form.get("staff_code", "").strip().upper(),
         "first_name": form.get("first_name", "").strip(),
@@ -2437,6 +2694,16 @@ def _read_staff_form(form) -> dict[str, Any]:
         "allow_mobile_clock": form.get("allow_mobile_clock") == "on",
         "allow_pin_clock": form.get("allow_pin_clock") == "on",
         "allow_qr_clock": form.get("allow_qr_clock") == "on",
+        "base_salary": _safe_float(base_salary),
+        "overtime_hourly_rate": _safe_float(overtime_hourly_rate),
+        "tax_deduction": _safe_float(tax_deduction),
+        "provident_fund": _safe_float(provident_fund),
+        "health_insurance": _safe_float(health_insurance),
+        "other_deduction": _safe_float(other_deduction),
+        "payment_method": form.get("payment_method", "Bank Transfer").strip() or "Bank Transfer",
+        "bank_name": form.get("bank_name", "").strip(),
+        "account_name": form.get("account_name", "").strip(),
+        "account_number": form.get("account_number", "").strip(),
         "portal_password": form.get("portal_password", ""),
         "portal_pin": form.get("portal_pin", "").strip(),
         "regenerate_qr": form.get("regenerate_qr") == "on",
@@ -2532,6 +2799,24 @@ def _validate_staff_form(form_values: dict[str, Any], creating: bool) -> str | N
 
     if creating and not form_values.get("allow_qr_clock") and not form_values.get("portal_password") and not pin_value:
         return "Provide a password, PIN, or enable QR access so the staff member can use the system."
+
+    if form_values.get("payment_method") not in PAYMENT_METHOD_CHOICES:
+        return "Choose a valid payment method for payroll."
+
+    for key, label in (
+        ("base_salary", "Base salary"),
+        ("overtime_hourly_rate", "Overtime hourly rate"),
+        ("tax_deduction", "Tax deduction"),
+        ("provident_fund", "Provident fund"),
+        ("health_insurance", "Health insurance"),
+        ("other_deduction", "Other deduction"),
+    ):
+        try:
+            numeric_value = float(form_values.get(key, 0) or 0)
+        except (TypeError, ValueError):
+            return f"{label} must be a valid number."
+        if numeric_value < 0:
+            return f"{label} cannot be negative."
 
     return None
 
@@ -4007,6 +4292,8 @@ def _attendance_activity_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]
                 "department": base["department"],
                 "role": base["role"],
                 "photo_url": _photo_url_for_filename(base.get("photo_filename")),
+                "shift_start": base.get("shift_start") or "",
+                "shift_end": base.get("shift_end") or "",
                 "shift_label": shift_label,
                 "shift_tone": shift_tone,
                 "clock_in": check_in_at.strftime("%I:%M %p") if check_in_at else "-",
@@ -4680,6 +4967,314 @@ def _report_live_model(
             "segments": donut_segments,
         },
     }
+
+
+def _normalize_payroll_filter_status(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in PAYROLL_FILTER_STATUSES:
+        return "all"
+    return normalized
+
+
+def _payroll_month_label(payroll_month: str) -> str:
+    normalized = normalize_payroll_month(payroll_month)
+    return date.fromisoformat(f"{normalized}-01").strftime("%B %Y")
+
+
+def _weekday_key(value: date) -> str:
+    return WORKDAY_OPTIONS[value.weekday()]
+
+
+def _working_day_count(date_from: str, date_to: str, working_days: list[str]) -> int:
+    try:
+        start_date = date.fromisoformat(date_from)
+        end_date = date.fromisoformat(date_to)
+    except ValueError:
+        return 0
+    if end_date < start_date:
+        return 0
+    allowed_days = set(working_days or WORKDAY_OPTIONS[:5])
+    count = 0
+    current = start_date
+    while current <= end_date:
+        if _weekday_key(current) in allowed_days:
+            count += 1
+        current += timedelta(days=1)
+    return count
+
+
+def _scheduled_shift_minutes(shift_start: str, shift_end: str) -> int:
+    if not shift_start or not shift_end:
+        return 0
+    try:
+        start_dt, end_dt = shift_bounds_for_date(
+            date(2000, 1, 1),
+            shift_start,
+            shift_end,
+        )
+    except ValueError:
+        return 0
+    return max(int((end_dt - start_dt).total_seconds() // 60), 0)
+
+
+def _format_currency(amount: float) -> str:
+    return f"${amount:,.2f}"
+
+
+def _format_payroll_day_value(value: float) -> str:
+    if float(value).is_integer():
+        return str(int(value))
+    return f"{value:.1f}".rstrip("0").rstrip(".")
+
+
+def _payroll_status_tone(status: str) -> str:
+    normalized = status.strip().title()
+    if normalized == PAYROLL_STATUS_PROCESSED:
+        return "green"
+    if normalized == PAYROLL_STATUS_HOLD:
+        return "red"
+    return "orange"
+
+
+def _build_payroll_rows(
+    *,
+    staff_rows: list[dict[str, Any]],
+    activity_rows: list[dict[str, Any]],
+    payroll_month: str,
+    working_days: list[str],
+) -> list[dict[str, Any]]:
+    normalized_month = normalize_payroll_month(payroll_month)
+    date_from, date_to = payroll_month_bounds(normalized_month)
+    scheduled_work_days = _working_day_count(date_from, date_to, working_days)
+    status_map = get_payroll_status_map(normalized_month)
+    activity_map: defaultdict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in activity_rows:
+        activity_map[int(row["staff_id"])].append(row)
+
+    payroll_rows: list[dict[str, Any]] = []
+    for staff in staff_rows:
+        staff_id = int(staff["id"])
+        staff_activity = activity_map.get(staff_id, [])
+        present_days = sum(1 for row in staff_activity if row.get("clock_in") != "-")
+        late_days = sum(1 for row in staff_activity if row.get("status_text") == "Late")
+        half_days = sum(1 for row in staff_activity if row.get("status_text") == "Half Day")
+        checked_out_days = sum(1 for row in staff_activity if row.get("latest_event_type") == "check_out")
+        overtime_minutes = 0
+        for row in staff_activity:
+            worked_minutes = int(row.get("work_minutes") or 0)
+            scheduled_minutes = _scheduled_shift_minutes(
+                str(row.get("shift_start") or ""),
+                str(row.get("shift_end") or ""),
+            )
+            if worked_minutes > 0 and scheduled_minutes > 0:
+                overtime_minutes += max(worked_minutes - scheduled_minutes, 0)
+
+        payable_days = max(float(present_days) - (float(half_days) * 0.5), 0.0)
+        absent_days = max(scheduled_work_days - payable_days, 0.0)
+        base_salary = float(staff.get("base_salary") or 0)
+        overtime_rate = float(staff.get("overtime_hourly_rate") or 0)
+        tax_deduction = float(staff.get("tax_deduction") or 0)
+        provident_fund = float(staff.get("provident_fund") or 0)
+        health_insurance = float(staff.get("health_insurance") or 0)
+        other_deduction = float(staff.get("other_deduction") or 0)
+
+        if scheduled_work_days > 0:
+            base_earned = round(base_salary * min(payable_days, float(scheduled_work_days)) / float(scheduled_work_days), 2)
+        else:
+            base_earned = round(base_salary, 2)
+        overtime_hours = round(overtime_minutes / 60, 2)
+        overtime_pay = round(overtime_hours * overtime_rate, 2)
+        gross_pay = round(base_earned + overtime_pay, 2)
+        total_deductions = round(
+            tax_deduction + provident_fund + health_insurance + other_deduction,
+            2,
+        )
+        net_pay = round(max(gross_pay - total_deductions, 0), 2)
+
+        status_data = status_map.get(staff_id, {})
+        status = str(status_data.get("status") or PAYROLL_STATUS_PENDING)
+        payroll_rows.append(
+            {
+                "staff_id": staff_id,
+                "staff_code": staff["staff_code"],
+                "first_name": staff["first_name"],
+                "last_name": staff["last_name"],
+                "department": staff["department"],
+                "role": staff["role"],
+                "photo_url": staff.get("photo_url") or _photo_url_for_filename(staff.get("photo_filename")),
+                "payroll_month_label": _payroll_month_label(normalized_month),
+                "scheduled_work_days": scheduled_work_days,
+                "present_days": present_days,
+                "late_days": late_days,
+                "half_days": half_days,
+                "checked_out_days": checked_out_days,
+                "payable_days": payable_days,
+                "absent_days": absent_days,
+                "work_days": _format_payroll_day_value(payable_days),
+                "days_summary": f"{_format_payroll_day_value(payable_days)} / {scheduled_work_days or 0} days",
+                "base_salary_amount": base_salary,
+                "base_earned_amount": base_earned,
+                "overtime_hourly_rate": overtime_rate,
+                "overtime_minutes": overtime_minutes,
+                "overtime_hours": overtime_hours,
+                "overtime_hours_label": _format_work_duration(overtime_minutes) if overtime_minutes > 0 else "0h 00m",
+                "overtime_pay_amount": overtime_pay,
+                "tax_deduction_amount": tax_deduction,
+                "provident_fund_amount": provident_fund,
+                "health_insurance_amount": health_insurance,
+                "other_deduction_amount": other_deduction,
+                "gross_pay_amount": gross_pay,
+                "total_deductions_amount": total_deductions,
+                "net_pay_amount": net_pay,
+                "gross_pay": _format_currency(gross_pay),
+                "deductions": _format_currency(total_deductions),
+                "net_pay": _format_currency(net_pay),
+                "payment_method": staff.get("payment_method") or "Bank Transfer",
+                "bank_name": staff.get("bank_name") or "",
+                "account_name": staff.get("account_name") or "",
+                "account_number": staff.get("account_number") or "",
+                "status": status,
+                "status_tone": _payroll_status_tone(status),
+                "notes": str(status_data.get("notes") or ""),
+                "processed_at": str(status_data.get("processed_at") or ""),
+            }
+        )
+
+    payroll_rows.sort(
+        key=lambda item: (
+            str(item["department"]),
+            str(item["last_name"]),
+            str(item["first_name"]),
+        )
+    )
+    return payroll_rows
+
+
+def _filter_payroll_rows(
+    payroll_rows: list[dict[str, Any]],
+    status_filter: str,
+) -> list[dict[str, Any]]:
+    if status_filter == "all":
+        return payroll_rows
+    expected_status = PAYROLL_FILTER_STATUSES[status_filter]
+    return [
+        row for row in payroll_rows
+        if row.get("status") == expected_status
+    ]
+
+
+def _payroll_live_model(
+    *,
+    payroll_rows: list[dict[str, Any]],
+    all_rows: list[dict[str, Any]],
+    payroll_month: str,
+) -> dict[str, Any]:
+    gross_total = round(sum(float(row["gross_pay_amount"]) for row in all_rows), 2)
+    deductions_total = round(sum(float(row["total_deductions_amount"]) for row in all_rows), 2)
+    net_total = round(sum(float(row["net_pay_amount"]) for row in all_rows), 2)
+    processed_count = sum(1 for row in all_rows if row["status"] == PAYROLL_STATUS_PROCESSED)
+    pending_count = sum(1 for row in all_rows if row["status"] == PAYROLL_STATUS_PENDING)
+    hold_count = sum(1 for row in all_rows if row["status"] == PAYROLL_STATUS_HOLD)
+    tax_total = round(sum(float(row["tax_deduction_amount"]) for row in all_rows), 2)
+    provident_total = round(sum(float(row["provident_fund_amount"]) for row in all_rows), 2)
+    health_total = round(sum(float(row["health_insurance_amount"]) for row in all_rows), 2)
+    other_total = round(sum(float(row["other_deduction_amount"]) for row in all_rows), 2)
+
+    tabs = [
+        {"key": "all", "label": "Payroll Employees", "count": len(all_rows)},
+        {"key": "processed", "label": "Processed", "count": processed_count},
+        {"key": "pending", "label": "Pending", "count": pending_count},
+        {"key": "hold", "label": "Hold", "count": hold_count},
+    ]
+
+    return {
+        "payroll_month_label": _payroll_month_label(payroll_month),
+        "stats": [
+            {"icon": "payroll", "tone": "blue", "label": "Total Employees", "value": str(len(all_rows)), "sub": "Payroll-ready staff"},
+            {"icon": "payroll", "tone": "green", "label": "Gross Pay", "value": _format_currency(gross_total), "sub": _payroll_month_label(payroll_month)},
+            {"icon": "payroll", "tone": "orange", "label": "Deductions", "value": _format_currency(deductions_total), "sub": _payroll_month_label(payroll_month)},
+            {"icon": "payroll", "tone": "purple", "label": "Net Pay", "value": _format_currency(net_total), "sub": _payroll_month_label(payroll_month)},
+            {"icon": "staff", "tone": "cyan", "label": "Processed", "value": str(processed_count), "sub": _percent_text(processed_count, len(all_rows))},
+            {"icon": "clock", "tone": "red", "label": "Pending", "value": str(pending_count), "sub": _percent_text(pending_count, len(all_rows))},
+        ],
+        "summary": [
+            {"label": "Selected Rows", "value": str(len(payroll_rows))},
+            {"label": "Payroll Employees", "value": str(len(all_rows))},
+            {"label": "Total Gross Pay", "value": _format_currency(gross_total)},
+            {"label": "Total Deductions", "value": _format_currency(deductions_total)},
+            {"label": "Total Net Pay", "value": _format_currency(net_total)},
+            {"label": "Processed Employees", "value": f"{processed_count} ({_percent_text(processed_count, len(all_rows))})"},
+            {"label": "Pending Employees", "value": f"{pending_count} ({_percent_text(pending_count, len(all_rows))})"},
+            {"label": "Hold Employees", "value": f"{hold_count} ({_percent_text(hold_count, len(all_rows))})"},
+        ],
+        "deductions": [
+            {"label": "Tax", "value": _format_currency(tax_total)},
+            {"label": "Provident Fund", "value": _format_currency(provident_total)},
+            {"label": "Health Insurance", "value": _format_currency(health_total)},
+            {"label": "Other Deductions", "value": _format_currency(other_total)},
+            {"label": "Total Deductions", "value": _format_currency(deductions_total)},
+        ],
+        "tabs": tabs,
+    }
+
+
+def _payroll_rows_to_csv(payroll_rows: list[dict[str, Any]]) -> str:
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "Payroll Month",
+            "Staff Code",
+            "Name",
+            "Department",
+            "Role",
+            "Work Days",
+            "Scheduled Work Days",
+            "Late Days",
+            "Half Days",
+            "Checked Out Days",
+            "Base Earned",
+            "Overtime Hours",
+            "Overtime Pay",
+            "Gross Pay",
+            "Tax",
+            "Provident Fund",
+            "Health Insurance",
+            "Other Deductions",
+            "Total Deductions",
+            "Net Pay",
+            "Payment Method",
+            "Status",
+        ]
+    )
+    for row in payroll_rows:
+        writer.writerow(
+            [
+                row.get("payroll_month_label", ""),
+                row["staff_code"],
+                f"{row['first_name']} {row['last_name']}",
+                row["department"],
+                row["role"],
+                row["work_days"],
+                row["scheduled_work_days"],
+                row["late_days"],
+                row["half_days"],
+                row["checked_out_days"],
+                row["base_earned_amount"],
+                row["overtime_hours_label"],
+                row["overtime_pay_amount"],
+                row["gross_pay_amount"],
+                row["tax_deduction_amount"],
+                row["provident_fund_amount"],
+                row["health_insurance_amount"],
+                row["other_deduction_amount"],
+                row["total_deductions_amount"],
+                row["net_pay_amount"],
+                row["payment_method"],
+                row["status"],
+            ]
+        )
+    return output.getvalue()
 
 
 def _shift_empty_model() -> dict[str, Any]:

@@ -1184,6 +1184,17 @@ body.admin-ui {
     gap: 10px;
 }
 
+.admin-quick-link-button {
+    width: 100%;
+    appearance: none;
+    cursor: pointer;
+    text-align: left;
+}
+
+.admin-inline-action-form {
+    margin: 0;
+}
+
 .admin-balance-list,
 .admin-summary-list,
 .admin-top-users-list,

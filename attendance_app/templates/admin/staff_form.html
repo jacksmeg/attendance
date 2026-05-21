@@ -226,6 +226,58 @@
                 </button>
             </div>
         </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Payroll Profile', 'Salary, deductions, and payment settings for monthly payroll') }}
+            </div>
+            <div class="admin-form-grid">
+                <label class="admin-field">
+                    <span>Base Monthly Salary</span>
+                    <input type="number" min="0" step="0.01" name="base_salary" value="{{ form_values.base_salary }}">
+                </label>
+                <label class="admin-field">
+                    <span>Overtime Hourly Rate</span>
+                    <input type="number" min="0" step="0.01" name="overtime_hourly_rate" value="{{ form_values.overtime_hourly_rate }}">
+                </label>
+                <label class="admin-field">
+                    <span>Tax Deduction</span>
+                    <input type="number" min="0" step="0.01" name="tax_deduction" value="{{ form_values.tax_deduction }}">
+                </label>
+                <label class="admin-field">
+                    <span>Provident Fund</span>
+                    <input type="number" min="0" step="0.01" name="provident_fund" value="{{ form_values.provident_fund }}">
+                </label>
+                <label class="admin-field">
+                    <span>Health Insurance</span>
+                    <input type="number" min="0" step="0.01" name="health_insurance" value="{{ form_values.health_insurance }}">
+                </label>
+                <label class="admin-field">
+                    <span>Other Deduction</span>
+                    <input type="number" min="0" step="0.01" name="other_deduction" value="{{ form_values.other_deduction }}">
+                </label>
+                <label class="admin-field">
+                    <span>Payment Method</span>
+                    <select name="payment_method">
+                        {% for method in payment_method_choices %}
+                        <option value="{{ method }}" {% if method == form_values.payment_method %}selected{% endif %}>{{ method }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="admin-field">
+                    <span>Bank Name</span>
+                    <input type="text" name="bank_name" value="{{ form_values.bank_name }}">
+                </label>
+                <label class="admin-field">
+                    <span>Account Name</span>
+                    <input type="text" name="account_name" value="{{ form_values.account_name }}">
+                </label>
+                <label class="admin-field">
+                    <span>Account Number</span>
+                    <input type="text" name="account_number" value="{{ form_values.account_number }}">
+                </label>
+            </div>
+        </article>
     </div>
 
     <div class="admin-side-stack">
@@ -274,6 +326,8 @@
                 <div class="admin-summary-row"><span>Shift Window</span><strong>{{ shift_range }}</strong></div>
                 <div class="admin-summary-row"><span>Grace Period</span><strong>{{ form_values.grace_minutes }} mins</strong></div>
                 <div class="admin-summary-row"><span>Portal Access</span><strong>{{ form_values.access_role or 'Staff' }}</strong></div>
+                <div class="admin-summary-row"><span>Base Salary</span><strong>{{ '%.2f'|format(form_values.base_salary|float) }}</strong></div>
+                <div class="admin-summary-row"><span>Payment Method</span><strong>{{ form_values.payment_method }}</strong></div>
                 <div class="admin-summary-row"><span>Ghana Card</span><strong>{{ form_values.ghana_card_number or 'Not added' }}</strong></div>
                 {% if staff %}
                 <div class="admin-summary-row"><span>QR Token</span><strong class="admin-clip-value">{{ form_values.qr_token }}</strong></div>

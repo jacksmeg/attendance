@@ -64,11 +64,25 @@ def _apply_schema(db: sqlite3.Connection, schema_path: Path) -> None:
     _ensure_column(db, "staff", "allow_pin_clock", "INTEGER NOT NULL DEFAULT 1")
     _ensure_column(db, "staff", "allow_qr_clock", "INTEGER NOT NULL DEFAULT 1")
     _ensure_column(db, "staff", "shift_id", "INTEGER")
+    _ensure_column(db, "staff", "base_salary", "REAL NOT NULL DEFAULT 0")
+    _ensure_column(db, "staff", "overtime_hourly_rate", "REAL NOT NULL DEFAULT 0")
+    _ensure_column(db, "staff", "tax_deduction", "REAL NOT NULL DEFAULT 0")
+    _ensure_column(db, "staff", "provident_fund", "REAL NOT NULL DEFAULT 0")
+    _ensure_column(db, "staff", "health_insurance", "REAL NOT NULL DEFAULT 0")
+    _ensure_column(db, "staff", "other_deduction", "REAL NOT NULL DEFAULT 0")
+    _ensure_column(db, "staff", "payment_method", "TEXT NOT NULL DEFAULT 'Bank Transfer'")
+    _ensure_column(db, "staff", "bank_name", "TEXT")
+    _ensure_column(db, "staff", "account_name", "TEXT")
+    _ensure_column(db, "staff", "account_number", "TEXT")
     _ensure_column(db, "attendance_events", "latitude", "REAL")
     _ensure_column(db, "attendance_events", "longitude", "REAL")
     _ensure_column(db, "attendance_events", "gps_accuracy", "REAL")
     db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_staff_qr_token ON staff(qr_token)")
     db.execute("CREATE INDEX IF NOT EXISTS idx_staff_shift_id ON staff(shift_id)")
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_payroll_entries_month_status "
+        "ON payroll_entries(payroll_month, status)"
+    )
     db.execute(
         "CREATE INDEX IF NOT EXISTS idx_staff_selfie_audits_staff_created "
         "ON staff_selfie_audits(staff_id, created_at DESC)"

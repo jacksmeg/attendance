@@ -28,6 +28,16 @@ CREATE TABLE IF NOT EXISTS staff (
     shift_start TEXT NOT NULL DEFAULT '09:00',
     shift_end TEXT NOT NULL DEFAULT '17:00',
     grace_minutes INTEGER NOT NULL DEFAULT 15,
+    base_salary REAL NOT NULL DEFAULT 0,
+    overtime_hourly_rate REAL NOT NULL DEFAULT 0,
+    tax_deduction REAL NOT NULL DEFAULT 0,
+    provident_fund REAL NOT NULL DEFAULT 0,
+    health_insurance REAL NOT NULL DEFAULT 0,
+    other_deduction REAL NOT NULL DEFAULT 0,
+    payment_method TEXT NOT NULL DEFAULT 'Bank Transfer',
+    bank_name TEXT,
+    account_name TEXT,
+    account_number TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     fingerprint_enabled INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
@@ -90,6 +100,21 @@ ON attendance_events(staff_id, attendance_date, event_time DESC);
 
 CREATE INDEX IF NOT EXISTS idx_attendance_events_date
 ON attendance_events(attendance_date, event_time DESC);
+
+CREATE TABLE IF NOT EXISTS payroll_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    payroll_month TEXT NOT NULL,
+    staff_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    notes TEXT,
+    processed_at TEXT,
+    updated_at TEXT NOT NULL,
+    UNIQUE(payroll_month, staff_id),
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_entries_month_status
+ON payroll_entries(payroll_month, status);
 
 CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,
