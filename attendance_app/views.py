@@ -1950,6 +1950,73 @@ self.addEventListener("fetch", (event) => {{
             },
         )
 
+    @bp.route("/admin/payroll/summary")
+    @roles_required(*REPORTING_ROLES)
+    def admin_payroll_summary():
+        department_scope = current_department_scope()
+        app_settings = get_app_settings(default_app_name=_tenant_default_app_name())
+        payroll_month = normalize_payroll_month(request.args.get("payroll_month", ""))
+        date_from, date_to = payroll_month_bounds(payroll_month)
+        department = _resolve_department_filter(
+            request.args.get("department", "").strip(),
+            department_scope,
+        )
+        search = request.args.get("search", "").strip()
+        status_filter = _normalize_payroll_filter_status(
+            request.args.get("status", "").strip()
+        )
+        staff_rows = list_staff(
+            search=search,
+            department=department,
+            active_only=True,
+            department_scope=department_scope,
+        )
+        attendance_rows = list_attendance_events(
+            date_from=date_from,
+            date_to=date_to,
+            department=department,
+            search=search,
+            department_scope=department_scope,
+        )
+        activity_rows = _attendance_activity_rows(attendance_rows)
+        payroll_all_rows = _build_payroll_rows(
+            staff_rows=staff_rows,
+            activity_rows=activity_rows,
+            payroll_month=payroll_month,
+            working_days=app_settings["working_days"],
+        )
+        payroll_rows = _filter_payroll_rows(payroll_all_rows, status_filter)
+        payroll_model = _payroll_live_model(
+            payroll_rows=payroll_rows,
+            all_rows=payroll_all_rows,
+            payroll_month=payroll_month,
+        )
+        top_earners = sorted(
+            payroll_rows,
+            key=lambda row: float(row["net_pay_amount"]),
+            reverse=True,
+        )[:6]
+        return render_template(
+            "admin/payroll_summary.html",
+            title="Payroll Summary",
+            payroll_model=payroll_model,
+            payroll_rows=payroll_rows,
+            top_earners=top_earners,
+            filters={
+                "payroll_month": payroll_month,
+                "department": department,
+                "search": search,
+                "status": status_filter,
+            },
+            **_admin_context(
+                "Payroll Summary",
+                "payroll",
+                ["Dashboard", "Payroll", "Summary"],
+                nav_secondary="dashboard",
+                body_class="payroll-summary-page",
+            ),
+        )
+
     @bp.route("/admin/payroll/<int:staff_id>/payslip")
     @roles_required(*REPORTING_ROLES)
     def admin_payroll_payslip(staff_id: int):
@@ -1987,12 +2054,14 @@ self.addEventListener("fetch", (event) => {{
             "admin/payroll_payslip.html",
             title="Payslip",
             payslip=payslip_row,
+            institution_settings=app_settings,
             payroll_month=payroll_month,
             payroll_month_label=_payroll_month_label(payroll_month),
             **_admin_context(
                 "Payroll",
                 "payroll",
                 ["Dashboard", "Payroll", "Payslip"],
+                body_class="payroll-print-page",
             ),
         )
 

@@ -196,12 +196,20 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertIn("EMP-100", export_payload)
         self.assertIn("Processed", export_payload)
 
+        summary_response = self.client.get(
+            f"/admin/payroll/summary?payroll_month={payroll_month}"
+        )
+        self.assertEqual(summary_response.status_code, 200)
+        self.assertIn(b"Payroll Summary", summary_response.data)
+        self.assertIn(b"Top Net Pay", summary_response.data)
+
         payslip_response = self.client.get(
             f"/admin/payroll/{self.staff['id']}/payslip?payroll_month={payroll_month}"
         )
         self.assertEqual(payslip_response.status_code, 200)
         self.assertIn(b"Payslip", payslip_response.data)
         self.assertIn(b"Test User", payslip_response.data)
+        self.assertIn(b"Print Payslip", payslip_response.data)
 
     def test_admin_notifications_and_audit_groups_render_live_data(self) -> None:
         self.client.post(

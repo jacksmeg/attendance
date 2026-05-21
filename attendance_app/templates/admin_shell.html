@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='admin_styles.css') }}">
     <script src="{{ url_for('static', filename='pwa.js') }}" defer></script>
     <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="admin-ui {{ body_class|default('') }}">
     {% set nav_primary = nav_primary|default('dashboard') %}

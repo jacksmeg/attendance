@@ -17,6 +17,7 @@
     </button>
 </form>
 {{ toolbar_button('export', 'Export CSV', href=url_for('app.admin_payroll_export', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status)) }}
+{{ toolbar_button('reports', 'Payroll Summary', href=url_for('app.admin_payroll_summary', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status)) }}
 {% if payroll_rows %}
 {{ toolbar_button('document', 'Open Payslip', 'primary', href=url_for('app.admin_payroll_payslip', staff_id=payroll_rows[0].staff_id, payroll_month=filters.payroll_month)) }}
 {% endif %}
@@ -192,29 +193,11 @@
 
     <div class="admin-side-stack">
         <article class="admin-side-card">
-            <div class="admin-card-head">{{ section_title('Payroll Summary') }}</div>
-            <div class="admin-summary-list">
-                {% for item in payroll_model.summary %}
-                <div class="admin-summary-row"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
-                {% endfor %}
-            </div>
-        </article>
-
-        <article class="admin-side-card">
-            <div class="admin-card-head">
-                {{ section_title('Deductions Summary') }}
-                <span class="admin-page-chip">{{ payroll_model.payroll_month_label }}</span>
-            </div>
-            <div class="admin-summary-list">
-                {% for item in payroll_model.deductions %}
-                <div class="admin-summary-row"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
-                {% endfor %}
-            </div>
-        </article>
-
-        <article class="admin-side-card">
             <div class="admin-card-head">{{ section_title('Quick Actions') }}</div>
             <div class="admin-quick-links">
+                <a class="admin-quick-link" href="{{ url_for('app.admin_payroll_summary', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
+                    <span>Open Payroll Summary</span>{{ icon('chevron-right') }}
+                </a>
                 <form class="admin-inline-action-form" method="post" action="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
                     <input type="hidden" name="action" value="process_visible">
                     <button class="admin-quick-link admin-quick-link-button" type="submit">

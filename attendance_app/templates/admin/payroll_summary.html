@@ -1,0 +1,143 @@
+{% extends "admin_shell.html" %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card, section_title %}
+
+{% block extra_head %}
+<style>
+@media print {
+    body.payroll-summary-page .admin-sidebar,
+    body.payroll-summary-page .admin-topbar,
+    body.payroll-summary-page .admin-flash-stack,
+    body.payroll-summary-page .pwa-install-fab,
+    body.payroll-summary-page .pwa-ios-sheet {
+        display: none !important;
+    }
+
+    body.payroll-summary-page .admin-app-shell,
+    body.payroll-summary-page .admin-workspace,
+    body.payroll-summary-page .admin-page-shell,
+    body.payroll-summary-page .admin-page-content {
+        display: block;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+        background: #ffffff;
+    }
+}
+</style>
+{% endblock %}
+
+{% block toolbar_actions %}
+<a class="admin-toolbar-button" href="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
+    {{ icon('chevron-right') }}
+    <span>Back to Payroll</span>
+</a>
+<button class="admin-toolbar-button tone-primary" type="button" onclick="window.print()">
+    {{ icon('document') }}
+    <span>Print Summary</span>
+</button>
+{% endblock %}
+
+{% block content %}
+<section class="admin-stats-grid cols-6">
+    {% for stat in payroll_model.stats %}
+        {{ stat_card(stat.icon, stat.tone, stat.label, stat.value, stat.sub) }}
+    {% endfor %}
+</section>
+
+<section class="admin-content-grid">
+    <div class="admin-main-stack">
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title(payroll_model.payroll_month_label ~ ' Payroll Summary', 'Institution-wide payroll totals and the currently filtered payout overview.') }}
+                <span class="admin-page-chip is-active">{{ payroll_rows|length }} visible rows</span>
+            </div>
+            <div class="admin-summary-list">
+                {% for item in payroll_model.summary %}
+                <div class="admin-summary-row">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Top Net Pay', 'Highest take-home payroll rows in the current filtered view.') }}
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Gross Pay</th>
+                            <th>Deductions</th>
+                            <th>Net Pay</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if top_earners %}
+                        {% for row in top_earners %}
+                        <tr>
+                            <td>
+                                <div class="admin-table-meta">
+                                    <strong>{{ row.first_name }} {{ row.last_name }}</strong>
+                                    <span>{{ row.staff_code }} · {{ row.role }}</span>
+                                </div>
+                            </td>
+                            <td>{{ row.department }}</td>
+                            <td>{{ row.gross_pay }}</td>
+                            <td>{{ row.deductions }}</td>
+                            <td style="color:#16a34a; font-weight:700;">{{ row.net_pay }}</td>
+                            <td><span class="admin-page-chip is-active">{{ row.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="6">
+                                <div class="admin-empty">
+                                    <strong>No payroll rows are available for this summary yet.</strong>
+                                    <p>Choose a month with staff salary data and attendance records to generate a summary.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-side-stack">
+        <article class="admin-side-card">
+            <div class="admin-card-head">
+                {{ section_title('Deductions Breakdown') }}
+                <span class="admin-page-chip">{{ payroll_model.payroll_month_label }}</span>
+            </div>
+            <div class="admin-summary-list">
+                {% for item in payroll_model.deductions %}
+                <div class="admin-summary-row">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Actions') }}</div>
+            <div class="admin-quick-links">
+                <a class="admin-quick-link" href="{{ url_for('app.admin_payroll_export', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
+                    <span>Export This Summary</span>{{ icon('chevron-right') }}
+                </a>
+                <a class="admin-quick-link" href="{{ url_for('app.admin_payroll', payroll_month=filters.payroll_month, department=filters.department, search=filters.search, status=filters.status) }}">
+                    <span>Return to Payroll Table</span>{{ icon('chevron-right') }}
+                </a>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}
