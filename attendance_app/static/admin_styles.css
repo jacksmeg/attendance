@@ -2728,7 +2728,143 @@ body.admin-ui {
 .platform-license-health-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.platform-license-cockpit {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    gap: 16px;
+    padding: 26px 28px;
+    border-radius: 28px;
+    border: 1px solid rgba(59, 130, 246, 0.12);
+    background:
+        radial-gradient(circle at top right, rgba(52, 211, 153, 0.2), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.2), transparent 28%),
+        linear-gradient(135deg, rgba(10, 75, 192, 0.98), rgba(35, 123, 255, 0.94) 42%, rgba(12, 163, 151, 0.94) 100%);
+    box-shadow: 0 26px 56px rgba(31, 54, 120, 0.2);
+}
+
+.platform-license-cockpit-copy {
+    position: relative;
+    z-index: 1;
+    display: grid;
     gap: 12px;
+    max-width: 640px;
+}
+
+.platform-license-kicker {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    backdrop-filter: blur(16px);
+}
+
+.platform-license-cockpit-copy h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.7rem;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+}
+
+.platform-license-cockpit-copy p {
+    margin: 0;
+    color: rgba(241, 245, 249, 0.9);
+    max-width: 52ch;
+    font-size: 0.95rem;
+    line-height: 1.65;
+}
+
+.platform-license-hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.platform-license-hero-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(12px);
+}
+
+.platform-license-hero-chip.tone-surface {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.platform-license-hero-chip.tone-green {
+    background: rgba(34, 197, 94, 0.18);
+}
+
+.platform-license-hero-chip.tone-purple {
+    background: rgba(139, 92, 246, 0.2);
+}
+
+.platform-license-hero-chip.tone-orange {
+    background: rgba(249, 115, 22, 0.22);
+}
+
+.platform-license-hero-chip.tone-cyan {
+    background: rgba(6, 182, 212, 0.22);
+}
+
+.platform-license-hero-chip.tone-red {
+    background: rgba(239, 68, 68, 0.22);
+}
+
+.platform-license-cockpit-glow {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(6px);
+    opacity: 0.9;
+    pointer-events: none;
+    animation: platformLicenseFloat 7s ease-in-out infinite;
+}
+
+.platform-license-cockpit-glow-one {
+    top: -28px;
+    right: 28px;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+}
+
+.platform-license-cockpit-glow-two {
+    bottom: -54px;
+    right: 120px;
+    width: 190px;
+    height: 190px;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.34), rgba(6, 182, 212, 0));
+    animation-delay: -2.6s;
+}
+
+@keyframes platformLicenseFloat {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(0, -8px, 0) scale(1.04);
+    }
 }
 
 .platform-license-health-card,
@@ -2736,11 +2872,46 @@ body.admin-ui {
 .platform-license-history {
     display: grid;
     gap: 10px;
-    padding: 18px;
-    border-radius: 20px;
+    padding: 20px;
+    border-radius: 24px;
     border: 1px solid rgba(148, 163, 184, 0.18);
-    background: linear-gradient(180deg, rgba(246, 250, 255, 0.98), rgba(255, 255, 255, 0.98));
-    box-shadow: 0 16px 32px rgba(31, 54, 120, 0.05);
+    background: linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(255, 255, 255, 0.98));
+    box-shadow: 0 18px 34px rgba(31, 54, 120, 0.06);
+    position: relative;
+    overflow: hidden;
+}
+
+.platform-license-health-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    border-radius: 99px;
+    background: linear-gradient(180deg, #3b82f6, #38bdf8);
+}
+
+.platform-license-health-card.accent-blue::before {
+    background: linear-gradient(180deg, #2563eb, #38bdf8);
+}
+
+.platform-license-health-card.accent-green::before {
+    background: linear-gradient(180deg, #22c55e, #14b8a6);
+}
+
+.platform-license-health-card.accent-orange::before {
+    background: linear-gradient(180deg, #f59e0b, #fb7185);
+}
+
+.platform-license-health-card.accent-purple::before {
+    background: linear-gradient(180deg, #8b5cf6, #6366f1);
+}
+
+.platform-license-health-card.accent-cyan::before {
+    background: linear-gradient(180deg, #06b6d4, #3b82f6);
+}
+
+.platform-license-health-card.accent-rose::before {
+    background: linear-gradient(180deg, #ec4899, #f97316);
 }
 
 .platform-license-health-card > span {
@@ -2753,7 +2924,7 @@ body.admin-ui {
 
 .platform-license-health-card > strong {
     color: var(--admin-text);
-    font-size: 1.1rem;
+    font-size: 1.18rem;
     line-height: 1.25;
 }
 
@@ -2771,6 +2942,13 @@ body.admin-ui {
     gap: 6px;
 }
 
+.platform-license-action-panel {
+    padding: 22px;
+    background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 28%),
+        linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(255, 255, 255, 0.98));
+}
+
 .platform-license-action-head strong,
 .platform-license-history-copy strong {
     color: var(--admin-text);
@@ -2778,13 +2956,57 @@ body.admin-ui {
 
 .platform-license-action-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
 }
 
-.platform-license-action-grid .admin-toolbar-button {
+.platform-license-quick-button {
     width: 100%;
+    min-height: 66px;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    gap: 10px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 18px;
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    box-shadow: 0 18px 28px rgba(31, 54, 120, 0.14);
+    transform: translateY(0);
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.platform-license-quick-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 34px rgba(31, 54, 120, 0.18);
+    filter: saturate(1.05);
+}
+
+.platform-license-quick-button:active {
+    transform: translateY(0);
+}
+
+.platform-license-quick-button.tone-trial {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.platform-license-quick-button.tone-activate {
+    background: linear-gradient(135deg, #16a34a, #0ea5a4);
+}
+
+.platform-license-quick-button.tone-renew {
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+}
+
+.platform-license-quick-button.tone-suspend {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+}
+
+.platform-license-quick-button.tone-expire {
+    background: linear-gradient(135deg, #ef4444, #ec4899);
 }
 
 .platform-license-history-list {
@@ -2796,9 +3018,15 @@ body.admin-ui {
     display: grid;
     gap: 8px;
     padding: 14px 16px;
-    border-radius: 18px;
+    border-radius: 20px;
     border: 1px solid rgba(148, 163, 184, 0.18);
     background: rgba(248, 251, 255, 0.92);
+    transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.platform-license-history-row:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 24px rgba(31, 54, 120, 0.08);
 }
 
 .platform-license-history-copy {
@@ -2812,6 +3040,69 @@ body.admin-ui {
     justify-content: space-between;
     gap: 10px;
     flex-wrap: wrap;
+}
+
+.platform-license-editor {
+    display: grid;
+    gap: 16px;
+}
+
+.platform-license-editor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.platform-license-editor-card {
+    display: grid;
+    gap: 16px;
+    padding: 22px;
+    border-radius: 24px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background:
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.06), transparent 24%),
+        linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(255, 255, 255, 0.98));
+    box-shadow: 0 16px 32px rgba(31, 54, 120, 0.05);
+}
+
+.platform-license-editor-head {
+    display: grid;
+    gap: 6px;
+}
+
+.platform-license-editor-head strong {
+    color: var(--admin-text);
+    font-size: 1rem;
+}
+
+.platform-license-editor-head span {
+    color: var(--admin-muted);
+    font-size: 0.84rem;
+    line-height: 1.55;
+}
+
+.platform-license-save-button {
+    width: 100%;
+    min-height: 58px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #2563eb, #06b6d4 70%, #14b8a6);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 20px 38px rgba(37, 99, 235, 0.24);
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.platform-license-save-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 42px rgba(37, 99, 235, 0.28);
+    filter: saturate(1.06);
 }
 
 .platform-modal-backdrop {
@@ -2886,6 +3177,10 @@ body.platform-modal-open {
 
     .platform-license-health-grid,
     .platform-license-action-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .platform-license-editor-grid {
         grid-template-columns: 1fr;
     }
 
@@ -3042,6 +3337,7 @@ html[data-theme="dark"] .platform-access-card,
 html[data-theme="dark"] .platform-license-health-card,
 html[data-theme="dark"] .platform-license-action-panel,
 html[data-theme="dark"] .platform-license-history,
+html[data-theme="dark"] .platform-license-editor-card,
 html[data-theme="dark"] .platform-backup-section,
 html[data-theme="dark"] .platform-backup-row {
     background: linear-gradient(180deg, #0c1729 0%, #0f1d33 100%);
@@ -3052,6 +3348,14 @@ html[data-theme="dark"] .platform-backup-row {
 html[data-theme="dark"] .platform-license-history-row {
     background: rgba(10, 21, 38, 0.9);
     border-color: var(--admin-line);
+}
+
+html[data-theme="dark"] .platform-license-cockpit {
+    background:
+        radial-gradient(circle at top right, rgba(45, 212, 191, 0.18), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.18), transparent 28%),
+        linear-gradient(135deg, rgba(12, 23, 41, 0.98), rgba(20, 46, 110, 0.95) 46%, rgba(7, 89, 133, 0.95) 100%);
+    border-color: rgba(56, 189, 248, 0.18);
 }
 
 html[data-theme="dark"] .platform-access-panel {

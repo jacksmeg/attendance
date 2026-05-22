@@ -286,6 +286,11 @@
         const licenseGraceHint = document.getElementById("platformLicenseGraceHint");
         const licenseContactValue = document.getElementById("platformLicenseContactValue");
         const licenseContactHint = document.getElementById("platformLicenseContactHint");
+        const licenseHeroTitle = document.getElementById("platformLicenseHeroTitle");
+        const licenseHeroReason = document.getElementById("platformLicenseHeroReason");
+        const licenseHeroStatusChip = document.getElementById("platformLicenseHeroStatusChip");
+        const licenseHeroPlanChip = document.getElementById("platformLicenseHeroPlanChip");
+        const licenseHeroGraceChip = document.getElementById("platformLicenseHeroGraceChip");
 
         if (licenseStateValue) licenseStateValue.textContent = organization.license_health.state_label;
         if (licenseStateHint) licenseStateHint.textContent = organization.access_summary.reason;
@@ -299,6 +304,18 @@
         if (licenseGraceHint) licenseGraceHint.textContent = organization.access_state.state === "grace" ? "Access is currently running on grace time." : "Fallback access after the expiry date.";
         if (licenseContactValue) licenseContactValue.textContent = organization.billing_contact_name || organization.billing_email || organization.billing_phone || "Not assigned";
         if (licenseContactHint) licenseContactHint.textContent = organization.billing_email || organization.billing_phone || "Add a billing contact for renewal follow-up.";
+        if (licenseHeroTitle) licenseHeroTitle.textContent = `${organization.display_name} license overview`;
+        if (licenseHeroReason) licenseHeroReason.textContent = organization.access_summary.reason;
+        if (licenseHeroStatusChip) {
+            licenseHeroStatusChip.textContent = organization.access_summary.state_label;
+            licenseHeroStatusChip.className = `platform-license-hero-chip tone-${organization.access_summary.tone || "surface"}`;
+        }
+        if (licenseHeroPlanChip) {
+            licenseHeroPlanChip.textContent = organization.plan_name || "Standard";
+        }
+        if (licenseHeroGraceChip) {
+            licenseHeroGraceChip.textContent = organization.license_health.grace_label;
+        }
 
         renderBackups(organization);
         renderLicenseHistory(organization);
