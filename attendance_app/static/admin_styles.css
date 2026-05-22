@@ -2410,6 +2410,68 @@ body.admin-ui {
     resize: vertical;
 }
 
+.platform-access-panel {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid var(--admin-line);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(245, 249, 255, 0.98));
+}
+
+.platform-access-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.platform-access-card {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid var(--admin-line);
+    background: var(--admin-surface);
+}
+
+.platform-access-card > span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+}
+
+.platform-access-card > strong {
+    color: var(--admin-text);
+    font-size: 0.94rem;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+.platform-access-card > small,
+.platform-access-fallback-list a {
+    color: var(--admin-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.platform-access-actions,
+.platform-access-fallback-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.platform-access-actions .admin-toolbar-button {
+    min-width: 0;
+}
+
+.platform-access-fallback-list a {
+    color: var(--admin-blue);
+    text-decoration: none;
+}
+
 .platform-backup-section {
     display: grid;
     gap: 16px;
@@ -2478,7 +2540,8 @@ body.admin-ui {
 
 @media (max-width: 1100px) {
     .platform-org-meta-grid,
-    .platform-org-license-grid {
+    .platform-org-license-grid,
+    .platform-access-grid {
         grid-template-columns: 1fr;
     }
 
@@ -2612,11 +2675,17 @@ html[data-theme="dark"] .admin-toolbar-button.tone-primary {
 html[data-theme="dark"] .platform-org-card,
 html[data-theme="dark"] .platform-org-meta,
 html[data-theme="dark"] .platform-org-license-card,
+html[data-theme="dark"] .platform-access-card,
 html[data-theme="dark"] .platform-backup-section,
 html[data-theme="dark"] .platform-backup-row {
     background: linear-gradient(180deg, #0c1729 0%, #0f1d33 100%);
     border-color: var(--admin-line);
     color: var(--admin-text);
+}
+
+html[data-theme="dark"] .platform-access-panel {
+    background: linear-gradient(180deg, rgba(12, 23, 41, 0.98), rgba(15, 29, 51, 0.98));
+    border-color: var(--admin-line);
 }
 
 .platform-shell-body {

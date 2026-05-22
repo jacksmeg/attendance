@@ -3834,6 +3834,10 @@ def _platform_organization_rows(
         primary_url = ""
         if hostnames:
             primary_url = f"https://{hostnames[0]}"
+        platform_admin_login_url = url_for("app.portal_admin_login", slug=organization.slug, _external=True)
+        platform_staff_login_url = url_for("app.portal_staff_login", slug=organization.slug, _external=True)
+        hostname_admin_login_url = f"{primary_url}/admin/login" if primary_url else ""
+        hostname_staff_login_url = f"{primary_url}/staff/login" if primary_url else ""
         access_state = get_organization_access_state(organization)
         backups = list_organization_backups(organization, limit=6)
         rows.append(
@@ -3845,9 +3849,12 @@ def _platform_organization_rows(
                 "instance_dir": str(organization.instance_dir),
                 "hostnames": hostnames,
                 "primary_url": primary_url,
-                "login_url": f"{primary_url}/admin/login" if primary_url else "",
-                "platform_login_url": url_for("app.portal_admin_login", slug=organization.slug),
-                "platform_staff_login_url": url_for("app.portal_staff_login", slug=organization.slug),
+                "login_url": hostname_admin_login_url,
+                "staff_login_url": hostname_staff_login_url,
+                "platform_login_url": platform_admin_login_url,
+                "platform_staff_login_url": platform_staff_login_url,
+                "preferred_admin_login_url": hostname_admin_login_url or platform_admin_login_url,
+                "preferred_staff_login_url": hostname_staff_login_url or platform_staff_login_url,
                 "admin_username": admin_security["admin_username"],
                 "form": form,
                 "plan_name": organization.plan_name,

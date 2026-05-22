@@ -266,6 +266,9 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(create_response.status_code, 200)
         self.assertIn(b"Mercy Hospital was provisioned successfully", create_response.data)
         self.assertIn(b"attendance.mercy.example", create_response.data)
+        self.assertIn(b"Copy Admin Link", create_response.data)
+        self.assertIn(b"Copy Staff Link", create_response.data)
+        self.assertIn(b"/portal/mercy-hospital/staff/login", create_response.data)
         self.assertIn(b"mercyadmin", create_response.data)
         self.assertIn(b"/portal/mercy-hospital/admin/login", create_response.data)
 

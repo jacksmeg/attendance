@@ -146,18 +146,20 @@
 
                     <div class="platform-org-meta-grid">
                         <div class="platform-org-meta">
-                            <span>Main Login</span>
-                            {% if organization.platform_login_url %}
-                            <a href="{{ organization.platform_login_url }}" target="_blank" rel="noreferrer">{{ organization.platform_login_url }}</a>
-                            {% elif organization.login_url %}
-                            <a href="{{ organization.login_url }}" target="_blank" rel="noreferrer">{{ organization.login_url }}</a>
+                            <span>Institution Admin Username</span>
+                            <strong>{{ organization.admin_username }}</strong>
+                        </div>
+                        <div class="platform-org-meta">
+                            <span>Main Domain</span>
+                            {% if organization.primary_url %}
+                            <a href="{{ organization.primary_url }}" target="_blank" rel="noreferrer">{{ organization.primary_url }}</a>
                             {% else %}
                             <strong>No domain assigned yet</strong>
                             {% endif %}
                         </div>
                         <div class="platform-org-meta">
-                            <span>Institution Admin</span>
-                            <strong>{{ organization.admin_username }}</strong>
+                            <span>Preferred Admin Login</span>
+                            <a href="{{ organization.preferred_admin_login_url }}" target="_blank" rel="noreferrer">{{ organization.preferred_admin_login_url }}</a>
                         </div>
                         <div class="platform-org-meta">
                             <span>Database</span>
@@ -168,6 +170,64 @@
                             <strong>{{ organization.instance_dir }}</strong>
                         </div>
                     </div>
+
+                    <section class="platform-access-panel">
+                        <div class="admin-card-head">
+                            {{ section_title('Institution Access', 'Use these exact links and credentials when handing the system over to the customer') }}
+                        </div>
+                        <div class="platform-access-grid">
+                            <div class="platform-access-card">
+                                <span>Admin Portal</span>
+                                <strong>{{ organization.preferred_admin_login_url }}</strong>
+                                <small>Institution admin signs in here with the username shown above.</small>
+                                <div class="platform-access-actions">
+                                    <a class="admin-toolbar-button tone-primary" href="{{ organization.preferred_admin_login_url }}" target="_blank" rel="noreferrer">
+                                        {{ icon('arrow-right') }}
+                                        <span>Open Admin Portal</span>
+                                    </a>
+                                    <button class="admin-toolbar-button" type="button" data-copy-text="{{ organization.preferred_admin_login_url }}">
+                                        {{ icon('document') }}
+                                        <span>Copy Admin Link</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="platform-access-card">
+                                <span>Staff App Login</span>
+                                <strong>{{ organization.preferred_staff_login_url }}</strong>
+                                <small>Staff install and sign in from this link for this institution only.</small>
+                                <div class="platform-access-actions">
+                                    <a class="admin-toolbar-button tone-primary" href="{{ organization.preferred_staff_login_url }}" target="_blank" rel="noreferrer">
+                                        {{ icon('arrow-right') }}
+                                        <span>Open Staff Login</span>
+                                    </a>
+                                    <button class="admin-toolbar-button" type="button" data-copy-text="{{ organization.preferred_staff_login_url }}">
+                                        {{ icon('document') }}
+                                        <span>Copy Staff Link</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="platform-access-card">
+                                <span>Username</span>
+                                <strong>{{ organization.admin_username }}</strong>
+                                <small>Share this with the institution admin together with their password.</small>
+                                <div class="platform-access-actions">
+                                    <button class="admin-toolbar-button" type="button" data-copy-text="{{ organization.admin_username }}">
+                                        {{ icon('document') }}
+                                        <span>Copy Username</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="platform-access-card">
+                                <span>Fallback Portal Links</span>
+                                <strong>{{ organization.platform_login_url }}</strong>
+                                <small>Use the built-in portal links if the customer domain is not ready yet.</small>
+                                <div class="platform-access-fallback-list">
+                                    <a href="{{ organization.platform_login_url }}" target="_blank" rel="noreferrer">Admin fallback</a>
+                                    <a href="{{ organization.platform_staff_login_url }}" target="_blank" rel="noreferrer">Staff fallback</a>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
                     <div class="platform-org-license-grid">
                         <div class="platform-org-license-card">
@@ -371,15 +431,10 @@
                                 {{ icon('settings') }}
                                 <span>Save Institution</span>
                             </button>
-                            {% if organization.platform_login_url %}
-                            <a class="admin-toolbar-button" href="{{ organization.platform_login_url }}" target="_blank" rel="noreferrer">
+                            {% if organization.preferred_admin_login_url %}
+                            <a class="admin-toolbar-button" href="{{ organization.preferred_admin_login_url }}" target="_blank" rel="noreferrer">
                                 {{ icon('arrow-right') }}
                                 <span>Open Institution Portal</span>
-                            </a>
-                            {% elif organization.login_url %}
-                            <a class="admin-toolbar-button" href="{{ organization.login_url }}" target="_blank" rel="noreferrer">
-                                {{ icon('arrow-right') }}
-                                <span>Open Institution</span>
                             </a>
                             {% endif %}
                         </div>
@@ -454,4 +509,38 @@
         </article>
     </div>
 </section>
+<script>
+    (() => {
+        const copyButtons = document.querySelectorAll("[data-copy-text]");
+        if (!copyButtons.length || !navigator.clipboard) {
+            return;
+        }
+
+        copyButtons.forEach((button) => {
+            const label = button.querySelector("span");
+            const original = label ? label.textContent : "";
+
+            button.addEventListener("click", async () => {
+                const text = button.getAttribute("data-copy-text") || "";
+                if (!text) return;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    if (label) {
+                        label.textContent = "Copied";
+                        window.setTimeout(() => {
+                            label.textContent = original;
+                        }, 1600);
+                    }
+                } catch (error) {
+                    if (label) {
+                        label.textContent = "Copy failed";
+                        window.setTimeout(() => {
+                            label.textContent = original;
+                        }, 1600);
+                    }
+                }
+            });
+        });
+    })();
+</script>
 {% endblock %}
