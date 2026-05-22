@@ -37,6 +37,10 @@ DEFAULT_SETTINGS = {
     "allowed_location_latitude": "",
     "allowed_location_longitude": "",
     "allowed_location_radius_meters": "150",
+    "notification_attendance_enabled": "1",
+    "notification_security_enabled": "1",
+    "notification_payroll_enabled": "1",
+    "notification_system_enabled": "1",
 }
 
 ADMIN_PASSWORD_HASH_KEY = "platform_admin_password_hash"
@@ -105,6 +109,10 @@ def _deserialize_app_settings_rows(rows, *, default_app_name: str = "") -> dict[
             25,
             _to_int(merged.get("allowed_location_radius_meters"), 150),
         ),
+        "notification_attendance_enabled": _to_bool(merged.get("notification_attendance_enabled")),
+        "notification_security_enabled": _to_bool(merged.get("notification_security_enabled")),
+        "notification_payroll_enabled": _to_bool(merged.get("notification_payroll_enabled")),
+        "notification_system_enabled": _to_bool(merged.get("notification_system_enabled")),
     }
 
 
@@ -126,6 +134,10 @@ def save_app_settings(data: Mapping[str, Any], default_app_name: str = "") -> di
         "allowed_location_radius_meters": str(
             max(25, _to_int(data.get("allowed_location_radius_meters"), 150))
         ),
+        "notification_attendance_enabled": "1" if _to_bool(data.get("notification_attendance_enabled")) else "0",
+        "notification_security_enabled": "1" if _to_bool(data.get("notification_security_enabled")) else "0",
+        "notification_payroll_enabled": "1" if _to_bool(data.get("notification_payroll_enabled")) else "0",
+        "notification_system_enabled": "1" if _to_bool(data.get("notification_system_enabled")) else "0",
     }
     timestamp = datetime.now().isoformat(timespec="seconds")
     for key, value in normalized.items():

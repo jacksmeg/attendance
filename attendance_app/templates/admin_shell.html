@@ -45,7 +45,7 @@
                 {"key": "payroll", "label": "Payroll", "icon": "payroll", "endpoint": "app.admin_payroll"},
                 {"key": "correction", "label": "Attendance Correction", "icon": "correction", "endpoint": "app.admin_attendance_correction"},
                 {"key": "holidays", "label": "Holidays", "icon": "holiday", "endpoint": "app.admin_holidays"},
-                {"key": "notifications", "label": "Notifications", "icon": "bell", "endpoint": "app.admin_notifications", "badge": 5},
+                {"key": "notifications", "label": "Notifications", "icon": "bell", "endpoint": "app.admin_notifications", "badge": admin_notification_count},
             ]
         },
         {
@@ -126,7 +126,7 @@
                     <a class="admin-side-link {% if is_active %}is-active{% endif %}" href="{{ url_for(item["endpoint"]) }}">
                         <span class="admin-side-link-icon">{{ icon(item["icon"]) }}</span>
                         <span>{{ item["label"] }}</span>
-                        {% if item["badge"] is defined %}
+                        {% if item["badge"] is defined and item["badge"] %}
                         <span class="admin-link-badge">{{ item["badge"] }}</span>
                         {% endif %}
                     </a>

@@ -1,49 +1,163 @@
 {% extends "admin_shell.html" %}
-{% from "_admin_macros.html" import section_title %}
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import section_title, stat_card, status_badge %}
+
+{% block toolbar_actions %}
+<form method="get" class="admin-toolbar-form">
+    <input type="hidden" name="scope" value="{{ filters.scope }}">
+    {% if filters.category %}
+    <input type="hidden" name="category" value="{{ filters.category }}">
+    {% endif %}
+    <button class="admin-toolbar-button" type="submit">
+        {{ icon('filter') }}
+        <span>Refresh</span>
+    </button>
+</form>
+{% if notification_counts.unread %}
+<form method="post" class="admin-toolbar-form">
+    <input type="hidden" name="action" value="mark_all_read">
+    <input type="hidden" name="scope" value="{{ filters.scope }}">
+    {% if filters.category %}
+    <input type="hidden" name="category" value="{{ filters.category }}">
+    {% endif %}
+    <button class="admin-toolbar-button tone-primary" type="submit">
+        {{ icon('check-circle') }}
+        <span>Mark All Read</span>
+    </button>
+</form>
+{% endif %}
+{% endblock %}
 
 {% block content %}
+<section class="admin-stats-grid cols-4">
+    {{ stat_card('bell', 'blue', 'All Alerts', notification_counts.total, 'Institution notifications') }}
+    {{ stat_card('check-circle', 'green', 'Unread', notification_counts.unread, 'Waiting for review') }}
+    {{ stat_card('attendance', 'orange', 'Attendance', notification_counts.by_category.get('attendance', 0), 'Clock activity alerts') }}
+    {{ stat_card('settings', 'purple', 'System', notification_counts.by_category.get('system', 0), 'Backups, settings, and restores') }}
+</section>
+
 <section class="admin-content-grid">
     <div class="admin-main-stack">
         <article class="admin-table-card">
-            <div class="admin-card-head">{{ section_title('Notifications', 'Live reminders, security prompts, and recent activity for this institution') }}</div>
+            <div class="admin-card-head">
+                {{ section_title('Notifications', 'Live alerts for attendance, security, payroll, and system activity inside this institution') }}
+            </div>
+
+            <div class="admin-table-toolbar">
+                <div class="admin-tab-strip">
+                    <a class="admin-tab-link {% if filters.scope == 'all' %}is-active{% endif %}" href="{{ url_for('app.admin_notifications', category=filters.category) }}">
+                        <span>All</span>
+                        <small>{{ notification_counts.total }}</small>
+                    </a>
+                    <a class="admin-tab-link {% if filters.scope == 'unread' %}is-active{% endif %}" href="{{ url_for('app.admin_notifications', category=filters.category, scope='unread') }}">
+                        <span>Unread</span>
+                        <small>{{ notification_counts.unread }}</small>
+                    </a>
+                </div>
+
+                <form method="get" class="admin-filter-actions">
+                    {% if filters.scope == 'unread' %}
+                    <input type="hidden" name="scope" value="unread">
+                    {% endif %}
+                    <label class="admin-field admin-field-compact">
+                        <span>Category</span>
+                        <select name="category">
+                            <option value="">All categories</option>
+                            {% for item in notification_categories %}
+                            <option value="{{ item.key }}" {% if filters.category == item.key %}selected{% endif %}>{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <button class="admin-toolbar-button tone-primary" type="submit">
+                        {{ icon('filter') }}
+                        <span>Apply</span>
+                    </button>
+                </form>
+            </div>
+
             <div class="admin-notification-list">
                 {% if notification_rows %}
-                {% for item in notification_rows %}
-                <div class="admin-notification-row tone-{{ item.tone|default('neutral') }}">
-                    <strong>{{ item.title }}</strong>
-                    <span>{{ item.meta }}</span>
-                </div>
-                {% endfor %}
+                    {% for item in notification_rows %}
+                    <article class="admin-notification-row tone-{{ item.tone|default('neutral') }} {% if not item.is_read %}is-unread{% endif %}">
+                        <div class="admin-notification-header">
+                            <div class="admin-notification-header-copy">
+                                <div class="admin-notification-title-row">
+                                    <strong>{{ item.title }}</strong>
+                                    {% if not item.is_read %}{{ status_badge('Unread', 'blue') }}{% endif %}
+                                    {{ status_badge(item.category_label, item.tone if item.tone in ['green', 'red', 'orange', 'purple', 'blue', 'cyan', 'neutral'] else 'neutral') }}
+                                </div>
+                                <span>{{ item.created_label }}</span>
+                            </div>
+                            <div class="admin-notification-actions">
+                                {% if item.action_url %}
+                                <a class="admin-toolbar-button" href="{{ item.action_url }}">
+                                    {{ icon('document') }}
+                                    <span>Open</span>
+                                </a>
+                                {% endif %}
+                                {% if not item.is_read %}
+                                <form method="post">
+                                    <input type="hidden" name="action" value="mark_read">
+                                    <input type="hidden" name="notification_id" value="{{ item.id }}">
+                                    <input type="hidden" name="scope" value="{{ filters.scope }}">
+                                    {% if filters.category %}
+                                    <input type="hidden" name="category" value="{{ filters.category }}">
+                                    {% endif %}
+                                    <button class="admin-toolbar-button tone-primary" type="submit">
+                                        {{ icon('check-circle') }}
+                                        <span>Mark Read</span>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="admin-notification-message">{{ item.message }}</p>
+                    </article>
+                    {% endfor %}
                 {% else %}
                 <div class="admin-empty">
                     <strong>No notifications yet.</strong>
-                    <p>System alerts and approval reminders will show up here during live use.</p>
+                    <p>New alerts will appear here as staff clock in, security actions happen, payroll updates are made, and platform restore or backup events reach this institution.</p>
                 </div>
                 {% endif %}
             </div>
         </article>
     </div>
+
     <div class="admin-side-stack">
         <article class="admin-side-card">
             <div class="admin-card-head">{{ section_title('Preferences') }}</div>
             <div class="admin-summary-list">
-                <div class="admin-summary-row"><span>Attendance alerts</span><strong>Enabled</strong></div>
-                <div class="admin-summary-row"><span>Leave approvals</span><strong>Enabled</strong></div>
-                <div class="admin-summary-row"><span>Payroll reminders</span><strong>Enabled</strong></div>
-                <div class="admin-summary-row"><span>System warnings</span><strong>Enabled</strong></div>
+                <div class="admin-summary-row"><span>Attendance alerts</span><strong>{{ 'Enabled' if notification_preferences.notification_attendance_enabled else 'Off' }}</strong></div>
+                <div class="admin-summary-row"><span>Security alerts</span><strong>{{ 'Enabled' if notification_preferences.notification_security_enabled else 'Off' }}</strong></div>
+                <div class="admin-summary-row"><span>Payroll alerts</span><strong>{{ 'Enabled' if notification_preferences.notification_payroll_enabled else 'Off' }}</strong></div>
+                <div class="admin-summary-row"><span>System alerts</span><strong>{{ 'Enabled' if notification_preferences.notification_system_enabled else 'Off' }}</strong></div>
             </div>
         </article>
+
+        <article class="admin-side-card">
+            <div class="admin-card-head">{{ section_title('Category Totals') }}</div>
+            <div class="admin-summary-list">
+                {% for item in notification_categories %}
+                <div class="admin-summary-row">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ notification_counts.by_category.get(item.key, 0) }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
         <article class="admin-side-card">
             <div class="admin-card-head">{{ section_title('Quick Links') }}</div>
             <div class="admin-quick-links">
                 <a class="admin-quick-link" href="{{ url_for('app.admin_audit_logs') }}">
                     <span>Open Audit Logs</span>
                 </a>
-                <a class="admin-quick-link" href="{{ url_for('app.admin_settings') }}#admin-password-card">
-                    <span>Change Password</span>
-                </a>
                 <a class="admin-quick-link" href="{{ url_for('app.admin_settings') }}">
-                    <span>Open Settings</span>
+                    <span>Notification Settings</span>
+                </a>
+                <a class="admin-quick-link" href="{{ url_for('app.admin_attendance') }}">
+                    <span>Attendance Monitor</span>
                 </a>
             </div>
         </article>

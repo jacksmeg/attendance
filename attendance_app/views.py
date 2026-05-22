@@ -9,7 +9,6 @@ import json
 import math
 from pathlib import Path
 import struct
-from time import monotonic
 from typing import Any, Mapping
 import sqlite3
 from uuid import uuid4
@@ -82,6 +81,16 @@ from .services.enrollment_sessions import (
     get_enrollment_preview_path,
     read_enrollment_session,
     start_enrollment_session,
+)
+from .services.notifications import (
+    count_unread_notifications,
+    create_notification,
+    create_notification_for_database,
+    format_notification_rows,
+    list_notifications,
+    mark_all_notifications_read,
+    mark_notification_read,
+    notification_category_options,
 )
 from .services.payroll import (
     PAYROLL_STATUS_HOLD,
@@ -196,9 +205,6 @@ AUDIT_SELFIE_MIME_TYPES = {
     "image/webp": ".webp",
 }
 MAX_AUDIT_SELFIE_BYTES = 3 * 1024 * 1024
-ADMIN_NOTIFICATION_CACHE_TTL_SECONDS = 12.0
-_ADMIN_NOTIFICATION_CACHE: dict[tuple[str, int], tuple[float, list[dict[str, str]]]] = {}
-
 HOSPITAL_SHIFT_PRESETS = [
     {
         "key": "hospital_morning_8_2",
@@ -716,6 +722,7 @@ self.addEventListener("fetch", (event) => {{
             return redirect(url_for("app.kiosk"))
 
         _store_last_kiosk_result(result)
+        _notify_attendance_result(result, action_url=url_for("app.admin_attendance"))
         flash(
             f"{result['staff_name']} recorded a {result['event_type'].replace('_', ' ')} successfully.",
             "success",
@@ -765,6 +772,7 @@ self.addEventListener("fetch", (event) => {{
             notes="Quick access kiosk event",
         )
         _store_last_kiosk_result(result)
+        _notify_attendance_result(result, action_url=url_for("app.admin_attendance"))
         flash(
             f"{result['staff_name']} recorded a {result['event_type'].replace('_', ' ')} successfully.",
             "success",
@@ -801,6 +809,16 @@ self.addEventListener("fetch", (event) => {{
                     details="Institution administrator signed in successfully.",
                     ip_address=_request_ip_address(),
                     device_name=_request_device_name(),
+                )
+                _notify_admin(
+                    title="Institution administrator signed in",
+                    message=(
+                        f"{live_settings['organization_name'] or username} started an admin session "
+                        f"from {_request_device_name()}."
+                    ),
+                    category="security",
+                    tone="neutral",
+                    action_url=url_for("app.admin_audit_logs"),
                 )
                 flash("Administrator session started.", "success")
                 return redirect(next_url)
@@ -922,6 +940,14 @@ self.addEventListener("fetch", (event) => {{
                         details="Staff completed a self-service credential reset after identity verification.",
                         ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "")[:255],
                         device_name=_request_device_name(),
+                    )
+                    _notify_admin(
+                        title=f"{full_name} reset {reset_target}",
+                        message="Self-service credential recovery completed after identity verification.",
+                        category="security",
+                        tone="warning",
+                        action_url=url_for("app.admin_audit_logs"),
+                        target_staff_id=int(staff["id"]),
                     )
                     flash("Your access details were reset successfully. Sign in with your new password or PIN.", "success")
                     return redirect(url_for("app.staff_login"))
@@ -1100,6 +1126,14 @@ self.addEventListener("fetch", (event) => {{
                         reason="manual",
                         note="Created from the platform super admin portal.",
                     )
+                    _notify_admin_for_database(
+                        target_organization.database_path,
+                        title="Manual backup created",
+                        message=f"A platform backup snapshot was created: {backup_path.name}.",
+                        category="system",
+                        tone="info",
+                        action_url=url_for("app.admin_notifications"),
+                    )
                     flash(
                         f"Backup created for {target_organization.display_name}: {backup_path.name}",
                         "success",
@@ -1125,6 +1159,17 @@ self.addEventListener("fetch", (event) => {{
                     except ValueError as exc:
                         flash(str(exc), "error")
                     else:
+                        _notify_admin_for_database(
+                            target_organization.database_path,
+                            title="Institution restored from backup",
+                            message=(
+                                f"The platform restored this institution from {backup_name}. "
+                                f"A safety snapshot was saved as {pre_restore_backup.name}."
+                            ),
+                            category="system",
+                            tone="warning",
+                            action_url=url_for("app.admin_notifications"),
+                        )
                         flash(
                             f"{target_organization.display_name} was restored from {backup_name}. "
                             f"A safety snapshot was saved as {pre_restore_backup.name}.",
@@ -1851,13 +1896,26 @@ self.addEventListener("fetch", (event) => {{
                     staff_id = int(request.form.get("staff_id", "0"))
                     next_status = request.form.get("next_status", "").strip()
                     notes = request.form.get("notes", "").strip()
-                    if not any(int(row["staff_id"]) == staff_id for row in payroll_all_rows):
+                    target_row = next((row for row in payroll_all_rows if int(row["staff_id"]) == staff_id), None)
+                    if not target_row:
                         raise ValueError("Choose a valid payroll employee.")
                     set_payroll_status(
                         payroll_month,
                         staff_id,
                         next_status,
                         notes=notes,
+                    )
+                    target_name = f"{target_row['first_name']} {target_row['last_name']}".strip()
+                    _notify_admin(
+                        title=f"Payroll status updated for {target_name}",
+                        message=(
+                            f"{_payroll_month_label(payroll_month)} payroll moved to "
+                            f"{next_status.title()}{' with notes.' if notes else '.'}"
+                        ),
+                        category="payroll",
+                        tone="activity" if next_status.lower() == PAYROLL_STATUS_PROCESSED.lower() else "warning",
+                        action_url=url_for("app.admin_payroll", payroll_month=payroll_month),
+                        target_staff_id=staff_id,
                     )
                     flash("Payroll status updated successfully.", "success")
                 elif action == "process_visible":
@@ -1868,6 +1926,16 @@ self.addEventListener("fetch", (event) => {{
                         visible_staff_ids,
                         PAYROLL_STATUS_PROCESSED,
                     )
+                    _notify_admin(
+                        title="Payroll batch processed",
+                        message=(
+                            f"{len(visible_staff_ids)} payroll row(s) were marked processed for "
+                            f"{_payroll_month_label(payroll_month)}."
+                        ),
+                        category="payroll",
+                        tone="activity",
+                        action_url=url_for("app.admin_payroll", payroll_month=payroll_month),
+                    )
                     flash("Visible payroll rows were marked as processed.", "success")
                 elif action == "hold_visible":
                     if not visible_staff_ids:
@@ -1877,6 +1945,16 @@ self.addEventListener("fetch", (event) => {{
                         visible_staff_ids,
                         PAYROLL_STATUS_HOLD,
                     )
+                    _notify_admin(
+                        title="Payroll batch placed on hold",
+                        message=(
+                            f"{len(visible_staff_ids)} payroll row(s) were placed on hold for "
+                            f"{_payroll_month_label(payroll_month)}."
+                        ),
+                        category="payroll",
+                        tone="warning",
+                        action_url=url_for("app.admin_payroll", payroll_month=payroll_month),
+                    )
                     flash("Visible payroll rows were placed on hold.", "success")
                 elif action == "reset_visible":
                     if not visible_staff_ids:
@@ -1885,6 +1963,16 @@ self.addEventListener("fetch", (event) => {{
                         payroll_month,
                         visible_staff_ids,
                         PAYROLL_STATUS_PENDING,
+                    )
+                    _notify_admin(
+                        title="Payroll batch reset to pending",
+                        message=(
+                            f"{len(visible_staff_ids)} payroll row(s) were reset to pending for "
+                            f"{_payroll_month_label(payroll_month)}."
+                        ),
+                        category="payroll",
+                        tone="neutral",
+                        action_url=url_for("app.admin_payroll", payroll_month=payroll_month),
                     )
                     flash("Visible payroll rows were reset to pending.", "success")
                 else:
@@ -2101,14 +2189,77 @@ self.addEventListener("fetch", (event) => {{
             **_admin_context("Holidays", "holidays", ["Dashboard", "Holidays"]),
         )
 
-    @bp.route("/admin/notifications")
+    @bp.route("/admin/notifications", methods=["GET", "POST"])
     @roles_required(*REPORTING_ROLES)
     def admin_notifications():
-        notification_rows = _build_admin_notification_rows(limit=20)
+        category_options = notification_category_options()
+        valid_categories = {item["key"] for item in category_options}
+        category = request.values.get("category", "").strip().lower()
+        if category not in valid_categories:
+            category = ""
+        scope = request.values.get("scope", "all").strip().lower()
+        unread_only = scope == "unread"
+
+        if request.method == "POST":
+            action = request.form.get("action", "").strip()
+            redirect_args: dict[str, str] = {}
+            if category:
+                redirect_args["category"] = category
+            if unread_only:
+                redirect_args["scope"] = "unread"
+
+            if action == "mark_read":
+                try:
+                    notification_id = int(request.form.get("notification_id", "0"))
+                except ValueError:
+                    flash("Choose a valid notification to mark as read.", "error")
+                else:
+                    if mark_notification_read(notification_id, audience="admin"):
+                        flash("Notification marked as read.", "success")
+                    else:
+                        flash("That notification could not be updated.", "error")
+            elif action == "mark_all_read":
+                changed = mark_all_notifications_read(audience="admin")
+                if changed:
+                    flash(f"{changed} notification(s) were marked as read.", "success")
+                else:
+                    flash("There were no unread notifications to update.", "info")
+            else:
+                flash("Choose a valid notification action.", "error")
+            return redirect(url_for("app.admin_notifications", **redirect_args))
+
+        raw_rows = list_notifications(
+            limit=40,
+            audience="admin",
+            unread_only=unread_only,
+            category=category,
+        )
+        notification_rows = format_notification_rows(raw_rows)
+        all_rows = list_notifications(limit=200, audience="admin")
+        category_counts = defaultdict(int)
+        unread_counts = defaultdict(int)
+        for row in all_rows:
+            row_category = str(row.get("category") or "system")
+            category_counts[row_category] += 1
+            if not row.get("is_read"):
+                unread_counts[row_category] += 1
+        preference_settings = get_app_settings(default_app_name=_tenant_default_app_name())
         return render_template(
             "admin/notifications.html",
             title="Notifications",
             notification_rows=notification_rows,
+            filters={
+                "category": category,
+                "scope": "unread" if unread_only else "all",
+            },
+            notification_categories=category_options,
+            notification_counts={
+                "total": len(all_rows),
+                "unread": count_unread_notifications(audience="admin"),
+                "by_category": dict(category_counts),
+                "unread_by_category": dict(unread_counts),
+            },
+            notification_preferences=preference_settings,
             **_admin_context("Notifications", "notifications", ["Dashboard", "Notifications"]),
         )
 
@@ -2404,6 +2555,13 @@ self.addEventListener("fetch", (event) => {{
                         ip_address=_request_ip_address(),
                         device_name=_request_device_name(),
                     )
+                    _notify_admin(
+                        title="Institution admin password changed",
+                        message="The institution administrator password was updated from Settings.",
+                        category="security",
+                        tone="warning",
+                        action_url=url_for("app.admin_settings") + "#admin-password-card",
+                    )
                     password_form = {
                         "current_password": "",
                         "new_password": "",
@@ -2448,6 +2606,13 @@ self.addEventListener("fetch", (event) => {{
                             details="Organization settings, branding, or location policy were updated.",
                             ip_address=_request_ip_address(),
                             device_name=_request_device_name(),
+                        )
+                        _notify_admin(
+                            title="Institution settings updated",
+                            message="Branding, attendance rules, location policy, or notification preferences were updated.",
+                            category="system",
+                            tone="info",
+                            action_url=url_for("app.admin_settings"),
                         )
                         flash("Attendance settings saved successfully.", "success")
 
@@ -2556,6 +2721,7 @@ self.addEventListener("fetch", (event) => {{
                 get_app_settings(default_app_name=_tenant_default_app_name())
             ),
         )
+        _notify_attendance_result(result, action_url=url_for("app.admin_attendance"))
         return redirect(url_for("app.staff_home"))
 
     @bp.route("/staff/quick/<qr_token>", methods=["GET", "POST"])
@@ -2605,6 +2771,7 @@ self.addEventListener("fetch", (event) => {{
                     get_app_settings(default_app_name=_tenant_default_app_name())
                 ),
             )
+            _notify_attendance_result(result, action_url=url_for("app.admin_attendance"))
             return redirect(url_for("app.staff_quick_access", qr_token=qr_token))
 
         return render_template(
@@ -3082,6 +3249,67 @@ def _portal_aware_login_url(login_kind: str, organization_slug: str = "") -> str
     return url_for("app.staff_login")
 
 
+def _clear_admin_notification_cache() -> None:
+    g.pop("_notification_cache", None)
+
+
+def _notify_admin(
+    *,
+    title: str,
+    message: str,
+    category: str = "system",
+    tone: str = "neutral",
+    action_url: str = "",
+    target_staff_id: int | None = None,
+) -> None:
+    create_notification(
+        title=title,
+        message=message,
+        category=category,
+        audience="admin",
+        tone=tone,
+        action_url=action_url,
+        target_staff_id=target_staff_id,
+    )
+    _clear_admin_notification_cache()
+
+
+def _notify_admin_for_database(
+    database_path: Path,
+    *,
+    title: str,
+    message: str,
+    category: str = "system",
+    tone: str = "neutral",
+    action_url: str = "",
+    target_staff_id: int | None = None,
+) -> None:
+    create_notification_for_database(
+        database_path,
+        title=title,
+        message=message,
+        category=category,
+        audience="admin",
+        tone=tone,
+        action_url=action_url,
+        target_staff_id=target_staff_id,
+    )
+
+
+def _notify_attendance_result(result: Mapping[str, Any], *, action_url: str) -> None:
+    staff_name = str(result.get("staff_name") or "Staff member")
+    event_type = str(result.get("event_type") or "attendance").replace("_", " ").title()
+    event_time = str(result.get("captured_at_label") or result.get("occurred_at_label") or "just now")
+    _notify_admin(
+        title=f"{staff_name} recorded {event_type}",
+        message=f"{staff_name} completed a {event_type.lower()} event at {event_time}.",
+        category="attendance",
+        tone="activity",
+        action_url=action_url,
+        target_staff_id=int(result.get("staff_id") or 0) or None,
+    )
+
+
 def _delete_staff_photo(filename: str | None) -> None:
     if not filename:
         return
@@ -3124,6 +3352,10 @@ def _read_settings_form(form) -> dict[str, Any]:
         "allowed_location_latitude": form.get("allowed_location_latitude", "").strip(),
         "allowed_location_longitude": form.get("allowed_location_longitude", "").strip(),
         "allowed_location_radius_meters": form.get("allowed_location_radius_meters", "150").strip() or "150",
+        "notification_attendance_enabled": form.get("notification_attendance_enabled") == "on",
+        "notification_security_enabled": form.get("notification_security_enabled") == "on",
+        "notification_payroll_enabled": form.get("notification_payroll_enabled") == "on",
+        "notification_system_enabled": form.get("notification_system_enabled") == "on",
     }
 
 
@@ -3538,13 +3770,14 @@ def _admin_context(
     body_class: str = "",
 ) -> dict[str, Any]:
     notification_rows = _cached_admin_notification_rows(limit=8)
+    unread_count = count_unread_notifications(audience="admin")
     return {
         "page_title": page_title,
         "nav_primary": nav_primary,
         "nav_secondary": nav_secondary,
         "breadcrumbs": breadcrumbs,
         "body_class": body_class,
-        "admin_notification_count": len(notification_rows),
+        "admin_notification_count": unread_count,
         "admin_notification_rows": notification_rows,
         "admin_now_iso": datetime.now().isoformat(timespec="seconds"),
     }
@@ -5907,83 +6140,11 @@ def _admin_activity_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _build_admin_notification_rows(limit: int = 12) -> list[dict[str, str]]:
-    app_defaults = get_app_settings(default_app_name=_tenant_default_app_name())
-    admin_security = get_admin_security(
-        default_username=current_app.config["APP_SETTINGS"].admin_username
-    )
-    rows: list[dict[str, str]] = []
-
-    active_staff_total = count_active_staff(department_scope=current_department_scope())
-    if active_staff_total == 0:
-        rows.append(
-            {
-                "title": "Add your first staff records",
-                "meta": "No active staff accounts exist yet. Open Staff and create your institution team.",
-                "tone": "warning",
-            }
-        )
-
-    if not admin_security.get("password_is_custom"):
-        rows.append(
-            {
-                "title": "Institution admin password still uses the default source",
-                "meta": "Open Settings and set a custom admin password for this institution.",
-                "tone": "warning",
-            }
-        )
-
-    if not app_defaults.get("location_enforcement_enabled"):
-        rows.append(
-            {
-                "title": "Work location restriction is disabled",
-                "meta": "Staff can currently clock in online from any location until GPS restriction is enabled.",
-                "tone": "info",
-            }
-        )
-
-    for audit_row in _selfie_audit_rows(list_staff_selfie_audits(limit=4)):
-        rows.append(
-            {
-                "title": f"{audit_row['actor']} signed in with selfie audit",
-                "meta": f"{audit_row['time']} · {audit_row['auth_method']} · {audit_row['department'] or 'Unassigned department'}",
-                "tone": "activity",
-            }
-        )
-
-    for activity_row in _admin_activity_rows(list_admin_activity_logs(limit=4)):
-        rows.append(
-            {
-                "title": f"{activity_row['actor']} - {activity_row['event']}",
-                "meta": f"{activity_row['time']} · {activity_row['details']}",
-                "tone": "neutral",
-            }
-        )
-
-    return rows[:limit]
+    return format_notification_rows(list_notifications(limit=limit, audience="admin"))
 
 
 def _cached_admin_notification_rows(limit: int = 12) -> list[dict[str, str]]:
-    organization = get_current_organization()
-    cache_key = (organization.slug, limit)
-    current_tick = monotonic()
-    cached = _ADMIN_NOTIFICATION_CACHE.get(cache_key)
-    if cached and current_tick - cached[0] < ADMIN_NOTIFICATION_CACHE_TTL_SECONDS:
-        return cached[1]
-
-    rows = _build_admin_notification_rows(limit=limit)
-    _ADMIN_NOTIFICATION_CACHE[cache_key] = (current_tick, rows)
-
-    if len(_ADMIN_NOTIFICATION_CACHE) > 64:
-        stale_before = current_tick - ADMIN_NOTIFICATION_CACHE_TTL_SECONDS
-        stale_keys = [
-            key
-            for key, (cached_tick, _) in _ADMIN_NOTIFICATION_CACHE.items()
-            if cached_tick < stale_before
-        ]
-        for key in stale_keys:
-            _ADMIN_NOTIFICATION_CACHE.pop(key, None)
-
-    return rows
+    return _build_admin_notification_rows(limit=limit)
 
 
 def _staff_display_rows(staff_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

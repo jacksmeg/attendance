@@ -155,3 +155,24 @@ CREATE TABLE IF NOT EXISTS admin_activity_logs (
 
 CREATE INDEX IF NOT EXISTS idx_admin_activity_logs_created
 ON admin_activity_logs(created_at DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS notification_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    audience TEXT NOT NULL DEFAULT 'admin',
+    category TEXT NOT NULL DEFAULT 'system',
+    tone TEXT NOT NULL DEFAULT 'neutral',
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    action_url TEXT,
+    target_staff_id INTEGER,
+    is_read INTEGER NOT NULL DEFAULT 0,
+    read_at TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (target_staff_id) REFERENCES staff(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_events_audience_read_created
+ON notification_events(audience, is_read, created_at DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_notification_events_target_staff_created
+ON notification_events(target_staff_id, created_at DESC, id DESC);

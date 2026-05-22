@@ -171,6 +171,42 @@
                 </button>
             </div>
         </article>
+
+        <article class="admin-table-card">
+            <div class="admin-card-head">
+                {{ section_title('Notification Preferences', 'Control which live alerts this institution records and shows in the notification center') }}
+            </div>
+            <div class="admin-check-grid admin-check-grid-compact">
+                <label class="admin-check-card admin-check-card-inline">
+                    <input form="attendance-settings-form" type="checkbox" name="notification_attendance_enabled" {% if form_values.notification_attendance_enabled %}checked{% endif %}>
+                    <div>
+                        <strong>Attendance alerts</strong>
+                        <span>Staff check-in, check-out, QR, kiosk, and mobile attendance events.</span>
+                    </div>
+                </label>
+                <label class="admin-check-card admin-check-card-inline">
+                    <input form="attendance-settings-form" type="checkbox" name="notification_security_enabled" {% if form_values.notification_security_enabled %}checked{% endif %}>
+                    <div>
+                        <strong>Security alerts</strong>
+                        <span>Admin sign-ins, password changes, selfie audit resets, and account protection events.</span>
+                    </div>
+                </label>
+                <label class="admin-check-card admin-check-card-inline">
+                    <input form="attendance-settings-form" type="checkbox" name="notification_payroll_enabled" {% if form_values.notification_payroll_enabled %}checked{% endif %}>
+                    <div>
+                        <strong>Payroll alerts</strong>
+                        <span>Payroll processing, holds, resets, and payslip preparation reminders.</span>
+                    </div>
+                </label>
+                <label class="admin-check-card admin-check-card-inline">
+                    <input form="attendance-settings-form" type="checkbox" name="notification_system_enabled" {% if form_values.notification_system_enabled %}checked{% endif %}>
+                    <div>
+                        <strong>System alerts</strong>
+                        <span>Settings updates, backup notices, restore warnings, and institution-level system events.</span>
+                    </div>
+                </label>
+            </div>
+        </article>
     </div>
 
     <div class="admin-side-stack">
@@ -189,6 +225,10 @@
                 <div class="admin-summary-row"><span>Allowed location</span><strong>{{ location_policy.location_name }}</strong></div>
                 <div class="admin-summary-row"><span>Detected address</span><strong>{{ location_policy.address if location_policy.address else 'Not captured yet' }}</strong></div>
                 <div class="admin-summary-row"><span>Radius</span><strong>{{ form_values.allowed_location_radius_meters }} m</strong></div>
+                <div class="admin-summary-row"><span>Attendance alerts</span><strong>{{ 'Enabled' if form_values.notification_attendance_enabled else 'Off' }}</strong></div>
+                <div class="admin-summary-row"><span>Security alerts</span><strong>{{ 'Enabled' if form_values.notification_security_enabled else 'Off' }}</strong></div>
+                <div class="admin-summary-row"><span>Payroll alerts</span><strong>{{ 'Enabled' if form_values.notification_payroll_enabled else 'Off' }}</strong></div>
+                <div class="admin-summary-row"><span>System alerts</span><strong>{{ 'Enabled' if form_values.notification_system_enabled else 'Off' }}</strong></div>
             </div>
         </article>
 

@@ -1287,6 +1287,50 @@ body.admin-ui {
     font-size: 0.74rem;
 }
 
+.admin-notification-row.is-unread {
+    box-shadow: 0 14px 28px rgba(47, 107, 255, 0.08);
+}
+
+.admin-notification-header,
+.admin-notification-title-row,
+.admin-notification-actions {
+    display: flex;
+    align-items: center;
+}
+
+.admin-notification-header {
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.admin-notification-header-copy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.admin-notification-title-row {
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.admin-notification-actions {
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.admin-notification-actions form {
+    margin: 0;
+}
+
+.admin-notification-message {
+    margin: 0;
+    color: var(--admin-text);
+    font-size: 0.84rem;
+    line-height: 1.6;
+}
+
 .admin-info-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

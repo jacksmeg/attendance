@@ -222,8 +222,16 @@ class AttendanceAppTests(unittest.TestCase):
 
         notifications_response = self.client.get("/admin/notifications")
         self.assertEqual(notifications_response.status_code, 200)
-        self.assertIn(b"Work location restriction is disabled", notifications_response.data)
-        self.assertIn(b"default source", notifications_response.data)
+        self.assertIn(b"Institution administrator signed in", notifications_response.data)
+        self.assertIn(b"Security", notifications_response.data)
+
+        mark_all_response = self.client.post(
+            "/admin/notifications",
+            data={"action": "mark_all_read"},
+            follow_redirects=True,
+        )
+        self.assertEqual(mark_all_response.status_code, 200)
+        self.assertIn(b"marked as read", mark_all_response.data)
 
         audit_response = self.client.get("/admin/audit-logs?group=users")
         self.assertEqual(audit_response.status_code, 200)
