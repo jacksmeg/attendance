@@ -2,42 +2,127 @@
 {% from "_icons.html" import icon %}
 {% from "_admin_macros.html" import stat_card %}
 
+{% set directory_sections = ['organizations', 'licenses', 'backups'] %}
+{% if selected_organization_slug %}
+    {% set organizations_url = url_for('app.platform_organizations', section='organizations', organization=selected_organization_slug) %}
+    {% set licenses_url = url_for('app.platform_organizations', section='licenses', organization=selected_organization_slug) %}
+    {% set backups_url = url_for('app.platform_organizations', section='backups', organization=selected_organization_slug) %}
+{% else %}
+    {% set organizations_url = url_for('app.platform_organizations', section='organizations') %}
+    {% set licenses_url = url_for('app.platform_organizations', section='licenses') %}
+    {% set backups_url = url_for('app.platform_organizations', section='backups') %}
+{% endif %}
+{% set create_url = url_for('app.platform_organizations', section='create') %}
+
 {% block toolbar_center %}
-<label class="platform-toolbar-search">
-    {{ icon('search') }}
-    <input id="platformOrganizationSearch" type="search" placeholder="Search institution, slug, admin, or domain">
-</label>
+    {% if platform_section in directory_sections %}
+    <label class="platform-toolbar-search">
+        {{ icon('search') }}
+        <input id="platformOrganizationSearch" type="search" placeholder="Search institution, slug, admin, or domain">
+    </label>
+    {% elif platform_section == 'dashboard' %}
+    <div class="platform-toolbar-pill">
+        <span class="platform-toolbar-pill-label">Live Monitor</span>
+        <strong>{{ platform_stats.organizations }} institutions</strong>
+    </div>
+    {% else %}
+    <div class="platform-toolbar-pill">
+        <span class="platform-toolbar-pill-label">{{ platform_section_meta.kicker }}</span>
+        <strong>{{ platform_section_meta.page_title }}</strong>
+    </div>
+    {% endif %}
 {% endblock %}
 
 {% block toolbar_actions %}
-<button class="admin-toolbar-button tone-primary" type="button" data-open-platform-modal>
-    {{ icon('plus') }}
-    <span>Add Institution</span>
-</button>
+    {% if platform_section == 'create' %}
+    <a class="admin-toolbar-button" href="{{ organizations_url }}">
+        {{ icon('arrow-right') }}
+        <span>Open Directory</span>
+    </a>
+    {% else %}
+    <a class="admin-toolbar-button tone-primary" href="{{ create_url }}">
+        {{ icon('plus') }}
+        <span>Add Organization</span>
+    </a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
-<section class="admin-stats-grid cols-6">
-    {{ stat_card('dashboard', 'blue', 'Institutions', platform_stats.organizations, 'Provisioned customers') }}
-    {{ stat_card('check-circle', 'green', 'Active', platform_stats.active, 'Live customer workspaces') }}
-    {{ stat_card('clock', 'purple', 'Trial', platform_stats.trial, 'Institutions still onboarding') }}
-    {{ stat_card('clock', 'orange', 'Expiring Soon', platform_stats.expiring_soon, 'Due within 14 days') }}
-    {{ stat_card('shield-check', 'cyan', 'Grace Active', platform_stats.grace_active, 'Temporarily allowed past expiry') }}
-    {{ stat_card('close', 'red', 'Blocked', platform_stats.blocked, 'Expired or suspended access') }}
-</section>
+{% if platform_section == 'dashboard' %}
+    {% include "platform/_dashboard_workspace.html" %}
+{% elif platform_section == 'create' %}
+    {% include "platform/_create_workspace.html" %}
+{% else %}
+    <section class="platform-section-hero platform-section-hero-{{ platform_section }}">
+        <div class="platform-section-hero-copy">
+            <span class="platform-section-kicker">{{ platform_section_meta.kicker }}</span>
+            <h2>{{ platform_section_meta.hero_title }}</h2>
+            <p>{{ platform_section_meta.hero_copy }}</p>
+            <div class="platform-section-actions">
+                <a class="platform-section-button tone-blue" href="{{ organizations_url }}">
+                    {{ icon('users') }}
+                    <span>Organizations</span>
+                </a>
+                <a class="platform-section-button tone-purple" href="{{ licenses_url }}">
+                    {{ icon('shield-check') }}
+                    <span>Licenses</span>
+                </a>
+                <a class="platform-section-button tone-cyan" href="{{ backups_url }}">
+                    {{ icon('document') }}
+                    <span>Backups</span>
+                </a>
+            </div>
+        </div>
+        <div class="platform-section-hero-side">
+            <article class="platform-metric-card accent-blue">
+                <span>Monthly Value</span>
+                <strong>{{ platform_stats.monthly_revenue_label }}</strong>
+                <small>Current active + trial subscriptions</small>
+            </article>
+            <article class="platform-metric-card accent-green">
+                <span>Backup Coverage</span>
+                <strong>{{ platform_stats.backup_coverage }}%</strong>
+                <small>{{ platform_stats.customers_with_backups }} of {{ platform_stats.organizations }} institutions protected</small>
+            </article>
+            <article class="platform-metric-card accent-orange">
+                <span>Default Workspace</span>
+                <strong>{{ platform_stats.default_name }}</strong>
+                <small>{{ platform_stats.default_slug }}</small>
+            </article>
+        </div>
+    </section>
 
-<section class="platform-control-grid" data-selected-organization="{{ selected_organization_slug }}">
-    <div class="admin-main-stack">
-        {% include "platform/_organization_directory.html" %}
-    </div>
+    <section class="admin-stats-grid cols-6 platform-section-stats">
+        {{ stat_card('dashboard', 'blue', 'Institutions', platform_stats.organizations, 'Provisioned customers') }}
+        {{ stat_card('check-circle', 'green', 'Active', platform_stats.active, 'Healthy licensed workspaces') }}
+        {{ stat_card('clock', 'purple', 'Trial', platform_stats.trial, 'Still onboarding') }}
+        {{ stat_card('clock', 'orange', 'Expiring Soon', platform_stats.expiring_soon, 'Due within 14 days') }}
+        {{ stat_card('shield-check', 'cyan', 'Grace Active', platform_stats.grace_active, 'Past expiry but still allowed') }}
+        {{ stat_card('document', 'red', 'Backup Snapshots', platform_stats.backups, 'Stored recovery points') }}
+    </section>
 
-    <aside class="admin-side-stack platform-detail-stack">
-        {% include "platform/_organization_detail_panel.html" %}
-    </aside>
-</section>
+    {% if platform_section == 'organizations' %}
+        {% set directory_title = 'Institution Directory' %}
+        {% set directory_subtitle = 'Create customers, open access links, and keep every institution workspace tidy and easy to scan.' %}
+    {% elif platform_section == 'licenses' %}
+        {% set directory_title = 'License Portfolio' %}
+        {% set directory_subtitle = 'Review subscription health, expiring customers, and commercial status without leaving the directory.' %}
+    {% else %}
+        {% set directory_title = 'Backup Coverage' %}
+        {% set directory_subtitle = 'Choose an institution to create snapshots, download archives, or restore from a previous backup.' %}
+    {% endif %}
 
-{% include "platform/_organization_create_modal.html" %}
+    <section class="platform-control-grid" data-selected-organization="{{ selected_organization_slug }}">
+        <div class="admin-main-stack">
+            {% include "platform/_organization_directory.html" %}
+        </div>
 
-<script id="platformOrganizationsData" type="application/json">{{ organizations|tojson }}</script>
-{% include "platform/_organization_script.html" %}
+        <aside class="admin-side-stack platform-detail-stack">
+            {% include "platform/_organization_detail_panel.html" %}
+        </aside>
+    </section>
+
+    <script id="platformOrganizationsData" type="application/json">{{ organizations|tojson }}</script>
+    {% include "platform/_organization_script.html" %}
+{% endif %}
 {% endblock %}

@@ -9,9 +9,6 @@
     const rows = Array.from(document.querySelectorAll("[data-organization-row]"));
     const searchInput = document.getElementById("platformOrganizationSearch");
     const filterButtons = Array.from(document.querySelectorAll("[data-license-filter]"));
-    const openModalButtons = Array.from(document.querySelectorAll("[data-open-platform-modal]"));
-    const closeModalButtons = Array.from(document.querySelectorAll("[data-close-platform-modal]"));
-    const modal = document.getElementById("platformCreateModal");
     const detailEmpty = document.querySelector("[data-platform-empty]");
     const detailBody = document.querySelector("[data-platform-detail]");
     const detailTitle = document.getElementById("platformDetailTitle");
@@ -19,6 +16,7 @@
     const detailBadge = document.getElementById("platformDetailBadge");
     const tabButtons = Array.from(document.querySelectorAll("[data-platform-tab]"));
     const tabPanels = Array.from(document.querySelectorAll("[data-platform-panel]"));
+    const initialTab = document.querySelector("[data-platform-initial-tab]")?.getAttribute("data-platform-initial-tab") || "overview";
     let currentFilter = "all";
 
     const toneMap = {
@@ -67,42 +65,6 @@
             button.dataset.originalLabel = label.textContent || "";
         }
         button.addEventListener("click", () => copyWithFeedback(button));
-    });
-
-    const openModal = () => {
-        if (!modal) return;
-        modal.classList.add("is-visible");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.classList.add("platform-modal-open");
-    };
-
-    const closeModal = () => {
-        if (!modal) return;
-        modal.classList.remove("is-visible");
-        modal.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("platform-modal-open");
-    };
-
-    openModalButtons.forEach((button) => {
-        button.addEventListener("click", openModal);
-    });
-
-    closeModalButtons.forEach((button) => {
-        button.addEventListener("click", closeModal);
-    });
-
-    if (modal) {
-        modal.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                closeModal();
-            }
-        });
-    }
-
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-            closeModal();
-        }
     });
 
     const setActiveTab = (tabName) => {
@@ -369,7 +331,7 @@
         button.addEventListener("click", () => copyWithFeedback(button));
     });
 
-    setActiveTab("overview");
+    setActiveTab(initialTab);
     applyFilters();
 
     const initialSlug = organizationMap.has(selectedSlug)

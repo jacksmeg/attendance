@@ -1,0 +1,172 @@
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import stat_card %}
+
+<section class="platform-suite-hero">
+    <div class="platform-suite-hero-copy">
+        <span class="platform-section-kicker">{{ platform_section_meta.kicker }}</span>
+        <h2>{{ platform_section_meta.hero_title }}</h2>
+        <p>{{ platform_section_meta.hero_copy }}</p>
+        <div class="platform-section-actions">
+            <a class="platform-section-button tone-blue" href="{{ organizations_url }}">
+                {{ icon('users') }}
+                <span>Open Organizations</span>
+            </a>
+            <a class="platform-section-button tone-purple" href="{{ licenses_url }}">
+                {{ icon('shield-check') }}
+                <span>Review Licenses</span>
+            </a>
+            <a class="platform-section-button tone-green" href="{{ create_url }}">
+                {{ icon('plus') }}
+                <span>Add Organization</span>
+            </a>
+        </div>
+    </div>
+    <div class="platform-suite-hero-side">
+        <article class="platform-metric-card accent-blue">
+            <span>Monthly Value</span>
+            <strong>{{ platform_stats.monthly_revenue_label }}</strong>
+            <small>Current active + trial subscription value</small>
+        </article>
+        <article class="platform-metric-card accent-green">
+            <span>Backup Coverage</span>
+            <strong>{{ platform_stats.backup_coverage }}%</strong>
+            <small>{{ platform_stats.customers_with_backups }} of {{ platform_stats.organizations }} institutions protected</small>
+        </article>
+        <article class="platform-metric-card accent-orange">
+            <span>Default Workspace</span>
+            <strong>{{ platform_stats.default_name }}</strong>
+            <small>{{ platform_stats.default_slug }}</small>
+        </article>
+    </div>
+</section>
+
+<section class="admin-stats-grid cols-6 platform-section-stats">
+    {{ stat_card('dashboard', 'blue', 'Institutions', platform_stats.organizations, 'Provisioned customers') }}
+    {{ stat_card('check-circle', 'green', 'Active', platform_stats.active, 'Licensed and live') }}
+    {{ stat_card('clock', 'purple', 'Trial', platform_stats.trial, 'Still onboarding') }}
+    {{ stat_card('clock', 'orange', 'Expiring Soon', platform_stats.expiring_soon, 'Due within 14 days') }}
+    {{ stat_card('shield-check', 'cyan', 'Grace Active', platform_stats.grace_active, 'Allowed after expiry') }}
+    {{ stat_card('document', 'red', 'Backup Snapshots', platform_stats.backups, 'Recovery points ready') }}
+</section>
+
+<section class="platform-dashboard-grid">
+    <article class="admin-table-card platform-suite-card">
+        <div class="admin-card-head">
+            <div class="admin-section-title">
+                <h2>License Watchlist</h2>
+                <p>See who needs commercial follow-up first, without opening each institution one by one.</p>
+            </div>
+            <a class="admin-toolbar-button tone-primary" href="{{ licenses_url }}">
+                {{ icon('shield-check') }}
+                <span>Open Licenses</span>
+            </a>
+        </div>
+        <div class="platform-watch-grid">
+            <section class="platform-watch-panel accent-orange">
+                <span class="platform-watch-label">Expiring Soon</span>
+                {% if platform_dashboard.expiring %}
+                    {% for organization in platform_dashboard.expiring %}
+                    <div class="platform-watch-item">
+                        <strong>{{ organization.display_name }}</strong>
+                        <span>{{ organization.access_summary.days_label or organization.access_summary.reason }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="platform-watch-empty">No institutions are close to expiry right now.</p>
+                {% endif %}
+            </section>
+            <section class="platform-watch-panel accent-red">
+                <span class="platform-watch-label">Blocked</span>
+                {% if platform_dashboard.blocked %}
+                    {% for organization in platform_dashboard.blocked %}
+                    <div class="platform-watch-item">
+                        <strong>{{ organization.display_name }}</strong>
+                        <span>{{ organization.access_summary.reason }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="platform-watch-empty">No blocked institutions at the moment.</p>
+                {% endif %}
+            </section>
+            <section class="platform-watch-panel accent-purple">
+                <span class="platform-watch-label">Trial</span>
+                {% if platform_dashboard.trial %}
+                    {% for organization in platform_dashboard.trial %}
+                    <div class="platform-watch-item">
+                        <strong>{{ organization.display_name }}</strong>
+                        <span>{{ organization.access_summary.days_label or 'Trial active' }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="platform-watch-empty">No institutions are currently on trial.</p>
+                {% endif %}
+            </section>
+        </div>
+    </article>
+
+    <article class="admin-side-card platform-suite-card">
+        <div class="admin-card-head">
+            <div class="admin-section-title">
+                <h2>Backup Coverage</h2>
+                <p>Monitor recovery readiness and open the backup desk when you need to intervene.</p>
+            </div>
+            <a class="admin-toolbar-button" href="{{ backups_url }}">
+                {{ icon('document') }}
+                <span>Open Backups</span>
+            </a>
+        </div>
+        <div class="platform-backup-spotlight">
+            {% if platform_dashboard.recent_backups %}
+                {% for organization in platform_dashboard.recent_backups %}
+                <div class="platform-backup-spotlight-row">
+                    <div>
+                        <strong>{{ organization.display_name }}</strong>
+                        <span>{{ organization.latest_backup.created_label }}</span>
+                    </div>
+                    <small>{{ organization.latest_backup.reason_label }}</small>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="admin-inline-notice">
+                    <strong>No backups yet</strong>
+                    <span>Create the first backup from the backup workspace to start building recovery history.</span>
+                </div>
+            {% endif %}
+        </div>
+    </article>
+</section>
+
+<section class="platform-launch-grid">
+    <article class="platform-launch-card tone-blue">
+        <div class="platform-launch-icon">{{ icon('users') }}</div>
+        <div class="platform-launch-copy">
+            <strong>Customer Directory</strong>
+            <span>Open institutions, access links, and admin usernames in one clean workspace.</span>
+        </div>
+        <a class="platform-launch-link" href="{{ organizations_url }}">Open</a>
+    </article>
+    <article class="platform-launch-card tone-purple">
+        <div class="platform-launch-icon">{{ icon('shield-check') }}</div>
+        <div class="platform-launch-copy">
+            <strong>License Center</strong>
+            <span>Apply trials, renewals, suspensions, and grace windows with less clutter.</span>
+        </div>
+        <a class="platform-launch-link" href="{{ licenses_url }}">Open</a>
+    </article>
+    <article class="platform-launch-card tone-cyan">
+        <div class="platform-launch-icon">{{ icon('document') }}</div>
+        <div class="platform-launch-copy">
+            <strong>Backup Desk</strong>
+            <span>Create snapshots, restore safely, and keep each institution protected.</span>
+        </div>
+        <a class="platform-launch-link" href="{{ backups_url }}">Open</a>
+    </article>
+    <article class="platform-launch-card tone-green">
+        <div class="platform-launch-icon">{{ icon('plus') }}</div>
+        <div class="platform-launch-copy">
+            <strong>New Organization</strong>
+            <span>Provision a fresh workspace with branding, access, and license details in one go.</span>
+        </div>
+        <a class="platform-launch-link" href="{{ create_url }}">Open</a>
+    </article>
+</section>

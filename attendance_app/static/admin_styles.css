@@ -3161,6 +3161,15 @@ body.platform-modal-open {
 }
 
 @media (max-width: 1100px) {
+    .platform-suite-hero,
+    .platform-section-hero,
+    .platform-dashboard-grid,
+    .platform-create-grid,
+    .platform-launch-grid,
+    .platform-watch-grid {
+        grid-template-columns: 1fr;
+    }
+
     .platform-control-grid {
         grid-template-columns: 1fr;
     }
@@ -3211,6 +3220,36 @@ body.platform-modal-open {
     .platform-modal-dialog {
         padding: 18px;
         border-radius: 22px;
+    }
+
+    .platform-suite-hero,
+    .platform-section-hero {
+        padding: 22px 18px;
+        border-radius: 26px;
+    }
+
+    .platform-section-actions,
+    .platform-toolbar-actions,
+    .platform-launch-grid {
+        gap: 12px;
+    }
+
+    .platform-section-button,
+    .platform-cta-button {
+        width: 100%;
+    }
+
+    .platform-launch-card,
+    .platform-watch-panel,
+    .platform-metric-card,
+    .platform-guide-item,
+    .platform-create-form {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .platform-create-card .admin-card-head {
+        padding: 20px 18px 0;
     }
 
     .platform-backup-row {
@@ -3735,6 +3774,532 @@ html[data-theme="dark"] .platform-modal-dialog {
     padding-bottom: 18px;
 }
 
+.platform-nav-link-accent {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(16, 185, 129, 0.12));
+    border-color: rgba(103, 162, 255, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.platform-nav-link-accent::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 25%, rgba(255, 255, 255, 0.22) 50%, transparent 75%);
+    transform: translateX(-135%);
+    opacity: 0;
+}
+
+.platform-nav-link-accent:hover::after,
+.platform-nav-link-accent.is-active::after {
+    opacity: 1;
+    animation: platformSidebarSheen 1.9s ease;
+}
+
+.platform-toolbar-pill {
+    display: inline-grid;
+    gap: 3px;
+    min-height: 56px;
+    padding: 12px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(139, 171, 239, 0.24);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 249, 255, 0.96));
+    box-shadow: 0 16px 34px rgba(31, 54, 120, 0.08);
+}
+
+.platform-toolbar-pill-label {
+    color: var(--admin-muted);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.platform-toolbar-pill strong {
+    color: var(--admin-text);
+    font-size: 0.95rem;
+}
+
+.platform-suite-hero,
+.platform-section-hero {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
+    gap: 22px;
+    padding: 30px;
+    margin-bottom: 22px;
+    border-radius: 32px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background:
+        radial-gradient(circle at top right, rgba(34, 197, 94, 0.16), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.14), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 255, 0.98));
+    box-shadow: 0 26px 56px rgba(31, 54, 120, 0.1);
+}
+
+.platform-suite-hero::before,
+.platform-section-hero::before {
+    content: "";
+    position: absolute;
+    inset: auto -90px -90px auto;
+    width: 240px;
+    height: 240px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.16), rgba(59, 130, 246, 0));
+    animation: platformFloatGlow 7s ease-in-out infinite;
+}
+
+.platform-suite-hero::after,
+.platform-section-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 5%, rgba(255, 255, 255, 0.18) 32%, transparent 60%);
+    transform: translateX(-125%);
+    animation: platformHeroSweep 11s linear infinite;
+    pointer-events: none;
+}
+
+.platform-suite-hero-create {
+    background:
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.14), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 248, 255, 0.98));
+}
+
+.platform-section-hero-licenses {
+    background:
+        radial-gradient(circle at top right, rgba(168, 85, 247, 0.18), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(34, 197, 94, 0.14), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 247, 255, 0.98));
+}
+
+.platform-section-hero-backups {
+    background:
+        radial-gradient(circle at top right, rgba(6, 182, 212, 0.16), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.12), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 249, 255, 0.98));
+}
+
+.platform-section-hero-copy,
+.platform-suite-hero-copy,
+.platform-suite-hero-side,
+.platform-section-hero-side {
+    position: relative;
+    z-index: 1;
+}
+
+.platform-section-hero-copy,
+.platform-suite-hero-copy {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+}
+
+.platform-section-kicker {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(47, 107, 255, 0.1);
+    color: #3158bb;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.platform-section-hero-copy h2,
+.platform-suite-hero-copy h2 {
+    margin: 0;
+    color: var(--admin-text);
+    font-size: clamp(2rem, 3vw, 3rem);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+    max-width: 15ch;
+}
+
+.platform-section-hero-copy p,
+.platform-suite-hero-copy p {
+    margin: 0;
+    color: var(--admin-muted);
+    font-size: 0.98rem;
+    line-height: 1.7;
+    max-width: 60ch;
+}
+
+.platform-section-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.platform-section-button,
+.platform-cta-button {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 16px;
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    box-shadow: 0 18px 34px rgba(31, 54, 120, 0.16);
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.platform-section-button::after,
+.platform-cta-button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 18%, rgba(255, 255, 255, 0.26) 50%, transparent 82%);
+    transform: translateX(-145%);
+}
+
+.platform-section-button:hover,
+.platform-cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 40px rgba(31, 54, 120, 0.2);
+    filter: saturate(1.05);
+}
+
+.platform-section-button:hover::after,
+.platform-cta-button:hover::after {
+    animation: platformButtonSheen 1.1s ease;
+}
+
+.platform-section-button.tone-blue,
+.platform-cta-button.tone-primary {
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+}
+
+.platform-section-button.tone-purple {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.platform-section-button.tone-green {
+    background: linear-gradient(135deg, #16a34a, #14b8a6);
+}
+
+.platform-section-button.tone-cyan {
+    background: linear-gradient(135deg, #0891b2, #2563eb);
+}
+
+.platform-section-hero-side,
+.platform-suite-hero-side {
+    display: grid;
+    gap: 14px;
+    align-content: stretch;
+}
+
+.platform-metric-card {
+    display: grid;
+    gap: 7px;
+    padding: 20px 22px;
+    border-radius: 24px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 18px 30px rgba(31, 54, 120, 0.08);
+}
+
+.platform-metric-card span {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+}
+
+.platform-metric-card strong {
+    color: var(--admin-text);
+    font-size: 1.24rem;
+    line-height: 1.25;
+}
+
+.platform-metric-card small {
+    color: var(--admin-muted);
+    line-height: 1.55;
+}
+
+.platform-metric-card.accent-blue {
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.96));
+}
+
+.platform-metric-card.accent-green {
+    background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.96));
+}
+
+.platform-metric-card.accent-orange {
+    background: linear-gradient(180deg, rgba(255, 247, 237, 0.98), rgba(255, 255, 255, 0.96));
+}
+
+.platform-metric-card.accent-cyan {
+    background: linear-gradient(180deg, rgba(236, 254, 255, 0.98), rgba(255, 255, 255, 0.96));
+}
+
+.platform-section-stats .admin-stat-card {
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.platform-section-stats .admin-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 40px rgba(31, 54, 120, 0.12);
+}
+
+.platform-dashboard-grid,
+.platform-create-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.85fr);
+    gap: 22px;
+    margin-top: 22px;
+}
+
+.platform-suite-card,
+.platform-guide-card,
+.platform-create-card {
+    min-width: 0;
+}
+
+.platform-watch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.platform-watch-panel {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.platform-watch-panel.accent-orange {
+    background: linear-gradient(180deg, rgba(255, 247, 237, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.platform-watch-panel.accent-red {
+    background: linear-gradient(180deg, rgba(255, 241, 242, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.platform-watch-panel.accent-purple {
+    background: linear-gradient(180deg, rgba(245, 243, 255, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.platform-watch-label {
+    color: var(--admin-text);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.platform-watch-item,
+.platform-backup-spotlight-row {
+    display: grid;
+    gap: 4px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.platform-watch-item strong,
+.platform-backup-spotlight-row strong,
+.platform-guide-item strong,
+.platform-launch-copy strong {
+    color: var(--admin-text);
+}
+
+.platform-watch-item span,
+.platform-watch-empty,
+.platform-backup-spotlight-row span,
+.platform-backup-spotlight-row small,
+.platform-guide-item span,
+.platform-launch-copy span {
+    color: var(--admin-muted);
+    line-height: 1.55;
+}
+
+.platform-backup-spotlight {
+    display: grid;
+    gap: 12px;
+}
+
+.platform-launch-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 22px;
+}
+
+.platform-launch-card {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    gap: 16px;
+    padding: 22px;
+    border-radius: 26px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
+    box-shadow: 0 20px 36px rgba(31, 54, 120, 0.08);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.platform-launch-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 44px rgba(31, 54, 120, 0.14);
+}
+
+.platform-launch-card.tone-blue {
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.platform-launch-card.tone-purple {
+    background: linear-gradient(180deg, rgba(245, 243, 255, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.platform-launch-card.tone-cyan {
+    background: linear-gradient(180deg, rgba(236, 254, 255, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.platform-launch-card.tone-green {
+    background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.platform-launch-icon,
+.platform-guide-icon {
+    width: 52px;
+    height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    color: #ffffff;
+    box-shadow: 0 16px 26px rgba(31, 54, 120, 0.14);
+}
+
+.platform-launch-card.tone-blue .platform-launch-icon,
+.platform-guide-icon.tone-blue {
+    background: linear-gradient(135deg, #2563eb, #38bdf8);
+}
+
+.platform-launch-card.tone-purple .platform-launch-icon,
+.platform-guide-icon.tone-purple {
+    background: linear-gradient(135deg, #8b5cf6, #4f46e5);
+}
+
+.platform-launch-card.tone-cyan .platform-launch-icon,
+.platform-guide-icon.tone-cyan {
+    background: linear-gradient(135deg, #0891b2, #2563eb);
+}
+
+.platform-launch-card.tone-green .platform-launch-icon {
+    background: linear-gradient(135deg, #16a34a, #14b8a6);
+}
+
+.platform-launch-copy {
+    display: grid;
+    gap: 8px;
+}
+
+.platform-launch-link {
+    width: fit-content;
+    color: var(--admin-blue);
+    text-decoration: none;
+    font-weight: 800;
+}
+
+.platform-guide-head {
+    display: grid;
+    gap: 10px;
+}
+
+.platform-guide-head h3 {
+    margin: 0;
+    color: var(--admin-text);
+    font-size: 1.3rem;
+}
+
+.platform-guide-list {
+    display: grid;
+    gap: 14px;
+}
+
+.platform-guide-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    padding: 16px;
+    border-radius: 20px;
+    background: rgba(249, 251, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.platform-create-card {
+    padding: 0;
+}
+
+.platform-create-card .admin-card-head {
+    padding: 24px 24px 0;
+}
+
+.platform-create-form {
+    padding: 24px;
+}
+
+@keyframes platformSidebarSheen {
+    0% {
+        transform: translateX(-135%);
+    }
+    100% {
+        transform: translateX(135%);
+    }
+}
+
+@keyframes platformHeroSweep {
+    0%,
+    76% {
+        transform: translateX(-125%);
+    }
+    100% {
+        transform: translateX(125%);
+    }
+}
+
+@keyframes platformFloatGlow {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(0, -10px, 0) scale(1.05);
+    }
+}
+
+@keyframes platformButtonSheen {
+    0% {
+        transform: translateX(-145%);
+    }
+    100% {
+        transform: translateX(145%);
+    }
+}
+
 .platform-ui .admin-table-card,
 .platform-ui .admin-side-card,
 .platform-ui .admin-inline-notice,
@@ -3768,6 +4333,59 @@ html[data-theme="dark"] .platform-profile-pill {
 
 html[data-theme="dark"] .platform-page-heading h1 {
     color: var(--admin-text);
+}
+
+html[data-theme="dark"] .platform-toolbar-pill,
+html[data-theme="dark"] .platform-metric-card,
+html[data-theme="dark"] .platform-watch-panel,
+html[data-theme="dark"] .platform-watch-item,
+html[data-theme="dark"] .platform-backup-spotlight-row,
+html[data-theme="dark"] .platform-launch-card,
+html[data-theme="dark"] .platform-guide-item,
+html[data-theme="dark"] .platform-create-card,
+html[data-theme="dark"] .platform-guide-card {
+    background: linear-gradient(180deg, rgba(11, 24, 47, 0.96), rgba(14, 29, 53, 0.96));
+    border-color: rgba(123, 149, 214, 0.18);
+    box-shadow: 0 20px 38px rgba(3, 9, 22, 0.32);
+}
+
+html[data-theme="dark"] .platform-section-hero,
+html[data-theme="dark"] .platform-suite-hero {
+    background:
+        radial-gradient(circle at top right, rgba(34, 197, 94, 0.16), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.16), transparent 30%),
+        linear-gradient(180deg, rgba(10, 18, 35, 0.98), rgba(13, 25, 46, 0.98));
+    border-color: rgba(123, 149, 214, 0.16);
+}
+
+html[data-theme="dark"] .platform-section-kicker {
+    background: rgba(59, 130, 246, 0.16);
+    color: #b8cbff;
+}
+
+html[data-theme="dark"] .platform-section-hero-copy h2,
+html[data-theme="dark"] .platform-suite-hero-copy h2,
+html[data-theme="dark"] .platform-guide-head h3,
+html[data-theme="dark"] .platform-metric-card strong,
+html[data-theme="dark"] .platform-watch-label,
+html[data-theme="dark"] .platform-watch-item strong,
+html[data-theme="dark"] .platform-backup-spotlight-row strong,
+html[data-theme="dark"] .platform-launch-copy strong,
+html[data-theme="dark"] .platform-toolbar-pill strong {
+    color: #f8fbff;
+}
+
+html[data-theme="dark"] .platform-section-hero-copy p,
+html[data-theme="dark"] .platform-suite-hero-copy p,
+html[data-theme="dark"] .platform-metric-card small,
+html[data-theme="dark"] .platform-watch-item span,
+html[data-theme="dark"] .platform-watch-empty,
+html[data-theme="dark"] .platform-backup-spotlight-row span,
+html[data-theme="dark"] .platform-backup-spotlight-row small,
+html[data-theme="dark"] .platform-launch-copy span,
+html[data-theme="dark"] .platform-guide-item span,
+html[data-theme="dark"] .platform-toolbar-pill-label {
+    color: rgba(205, 220, 248, 0.76);
 }
 
 @media (max-width: 1180px) {

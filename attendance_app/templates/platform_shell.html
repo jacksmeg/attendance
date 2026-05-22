@@ -17,11 +17,24 @@
     {% set display_name = display_name if display_name else (session.get('display_name') or session.get('admin_username') or 'Platform Admin') %}
     {% set current_role = 'Platform Super Admin' %}
     {% set initials = (display_name[:1] if display_name else 'P')|upper %}
+    {% if selected_organization_slug %}
+        {% set dashboard_url = url_for('app.platform_organizations', section='dashboard', organization=selected_organization_slug) %}
+        {% set organizations_url = url_for('app.platform_organizations', section='organizations', organization=selected_organization_slug) %}
+        {% set licenses_url = url_for('app.platform_organizations', section='licenses', organization=selected_organization_slug) %}
+        {% set backups_url = url_for('app.platform_organizations', section='backups', organization=selected_organization_slug) %}
+        {% set create_url = url_for('app.platform_organizations', section='create', organization=selected_organization_slug) %}
+    {% else %}
+        {% set dashboard_url = url_for('app.platform_organizations', section='dashboard') %}
+        {% set organizations_url = url_for('app.platform_organizations', section='organizations') %}
+        {% set licenses_url = url_for('app.platform_organizations', section='licenses') %}
+        {% set backups_url = url_for('app.platform_organizations', section='backups') %}
+        {% set create_url = url_for('app.platform_organizations', section='create') %}
+    {% endif %}
 
     <div class="platform-shell">
         <aside class="platform-sidebar">
             <div class="platform-sidebar-top">
-                <a class="platform-brand" href="{{ url_for('app.platform_organizations') }}">
+                <a class="platform-brand" href="{{ dashboard_url }}">
                     <span class="platform-brand-mark">
                         {% if app_logo_url %}
                         <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
@@ -39,17 +52,34 @@
                 </a>
 
                 <div class="platform-sidebar-card">
-                    <span class="platform-sidebar-kicker">Standalone control room</span>
-                    <h2>Manage the product, not one institution.</h2>
-                    <p>Provision customers, control licenses, assign domains, and manage backups without entering institution admin pages.</p>
+                    <span class="platform-sidebar-kicker">Platform cockpit</span>
+                    <h2>Operate the whole business with less clutter.</h2>
+                    <p>Open focused workspaces for onboarding, licensing, backups, and customer access instead of squeezing everything into one page.</p>
                 </div>
             </div>
 
             <nav class="platform-nav" aria-label="Platform navigation">
                 <span class="platform-nav-label">Workspace</span>
-                <a class="platform-nav-link {% if nav_primary == 'organizations' %}is-active{% endif %}" href="{{ url_for('app.platform_organizations') }}">
+                <a class="platform-nav-link {% if nav_primary == 'dashboard' %}is-active{% endif %}" href="{{ dashboard_url }}">
                     <span class="platform-nav-icon">{{ icon('dashboard') }}</span>
+                    <span>Dashboard</span>
+                </a>
+                <a class="platform-nav-link {% if nav_primary == 'organizations' %}is-active{% endif %}" href="{{ organizations_url }}">
+                    <span class="platform-nav-icon">{{ icon('users') }}</span>
                     <span>Organizations</span>
+                </a>
+                <a class="platform-nav-link {% if nav_primary == 'licenses' %}is-active{% endif %}" href="{{ licenses_url }}">
+                    <span class="platform-nav-icon">{{ icon('shield-check') }}</span>
+                    <span>Licenses</span>
+                </a>
+                <a class="platform-nav-link {% if nav_primary == 'backups' %}is-active{% endif %}" href="{{ backups_url }}">
+                    <span class="platform-nav-icon">{{ icon('document') }}</span>
+                    <span>Backups</span>
+                </a>
+                <span class="platform-nav-label">Actions</span>
+                <a class="platform-nav-link platform-nav-link-accent {% if nav_primary == 'create' %}is-active{% endif %}" href="{{ create_url }}">
+                    <span class="platform-nav-icon">{{ icon('plus') }}</span>
+                    <span>Add Organization</span>
                 </a>
             </nav>
 

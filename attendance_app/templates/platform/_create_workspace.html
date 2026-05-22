@@ -1,0 +1,73 @@
+{% from "_icons.html" import icon %}
+
+<section class="platform-suite-hero platform-suite-hero-create">
+    <div class="platform-suite-hero-copy">
+        <span class="platform-section-kicker">{{ platform_section_meta.kicker }}</span>
+        <h2>{{ platform_section_meta.hero_title }}</h2>
+        <p>{{ platform_section_meta.hero_copy }}</p>
+        <div class="platform-section-actions">
+            <a class="platform-section-button tone-blue" href="{{ url_for('app.platform_organizations', section='organizations') }}">
+                {{ icon('users') }}
+                <span>Open Directory</span>
+            </a>
+            <a class="platform-section-button tone-purple" href="{{ url_for('app.platform_organizations', section='licenses') }}">
+                {{ icon('shield-check') }}
+                <span>Review Licenses</span>
+            </a>
+        </div>
+    </div>
+    <div class="platform-suite-hero-side">
+        <article class="platform-metric-card accent-green">
+            <span>Recommended Flow</span>
+            <strong>Create → Handover → Go Live</strong>
+            <small>Provision the workspace, share the portal links, and let the institution admin take over.</small>
+        </article>
+        <article class="platform-metric-card accent-cyan">
+            <span>Default Plan</span>
+            <strong>{{ create_form.plan_name or 'Standard' }}</strong>
+            <small>Adjust the license terms before you create the institution.</small>
+        </article>
+    </div>
+</section>
+
+<section class="platform-create-grid">
+    <article class="admin-side-card platform-guide-card">
+        <div class="platform-guide-head">
+            <span class="platform-section-kicker">Onboarding guide</span>
+            <h3>What this creates for the customer</h3>
+        </div>
+        <div class="platform-guide-list">
+            <div class="platform-guide-item">
+                <span class="platform-guide-icon tone-blue">{{ icon('users') }}</span>
+                <div>
+                    <strong>Standalone institution workspace</strong>
+                    <span>Separate data, staff records, settings, reports, and payroll.</span>
+                </div>
+            </div>
+            <div class="platform-guide-item">
+                <span class="platform-guide-icon tone-purple">{{ icon('shield-check') }}</span>
+                <div>
+                    <strong>Dedicated admin access</strong>
+                    <span>Each institution gets its own admin username, password, and portal entry point.</span>
+                </div>
+            </div>
+            <div class="platform-guide-item">
+                <span class="platform-guide-icon tone-cyan">{{ icon('document') }}</span>
+                <div>
+                    <strong>License and backup tracking</strong>
+                    <span>Commercial terms and recovery coverage start from the moment you provision the workspace.</span>
+                </div>
+            </div>
+        </div>
+    </article>
+
+    <article class="admin-table-card platform-create-card">
+        <div class="admin-card-head">
+            <div class="admin-section-title">
+                <h2>Create Organization Workspace</h2>
+                <p>Fill the institution identity, access, and commercial details once. The system will generate the customer’s own portal immediately.</p>
+            </div>
+        </div>
+        {% include "platform/_organization_create_form.html" %}
+    </article>
+</section>

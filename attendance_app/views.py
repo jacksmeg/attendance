@@ -1008,8 +1008,11 @@ self.addEventListener("fetch", (event) => {{
     @platform_admin_required
     def platform_organizations():
         settings = current_app.config["APP_SETTINGS"]
-        selected_slug = request.args.get("organization", "").strip().lower()
-        open_create_modal = request.args.get("create", "").strip().lower() in {"1", "true", "yes"}
+        valid_sections = {"dashboard", "organizations", "licenses", "backups", "create"}
+        section = str(request.values.get("section", request.args.get("section", "organizations")) or "").strip().lower() or "organizations"
+        if section not in valid_sections:
+            section = "organizations"
+        selected_slug = request.values.get("organization", request.args.get("organization", "")).strip().lower()
         create_form = {
             "slug": "",
             "display_name": "",
@@ -1034,9 +1037,12 @@ self.addEventListener("fetch", (event) => {{
         update_forms: dict[str, dict[str, Any]] = {}
 
         if request.method == "POST":
+            return_section = str(request.form.get("section", section) or "").strip().lower() or section
+            if return_section not in valid_sections:
+                return_section = section
             action = request.form.get("action", "create").strip().lower()
             if action == "create":
-                open_create_modal = True
+                section = "create"
                 create_form = _read_platform_organization_form(request.form)
                 validation_error = _validate_platform_organization_form(create_form, creating=True)
                 if validation_error:
@@ -1092,11 +1098,13 @@ self.addEventListener("fetch", (event) => {{
                         return redirect(
                             url_for(
                                 "app.platform_organizations",
+                                section="organizations",
                                 organization=created_organization.slug,
                             )
                         )
             elif action == "update":
                 slug = request.form.get("organization_slug", "").strip()
+                section = return_section
                 selected_slug = slug.lower()
                 previous_organization = get_organization_by_slug(settings, slug)
                 if not previous_organization:
@@ -1178,11 +1186,13 @@ self.addEventListener("fetch", (event) => {{
                             return redirect(
                                 url_for(
                                     "app.platform_organizations",
+                                    section=return_section,
                                     organization=slug,
                                 )
                             )
             elif action == "license_action":
                 slug = request.form.get("organization_slug", "").strip()
+                section = return_section
                 selected_slug = slug.lower()
                 license_action = request.form.get("license_action", "").strip().lower()
                 if not slug:
@@ -1205,11 +1215,13 @@ self.addEventListener("fetch", (event) => {{
                         return redirect(
                             url_for(
                                 "app.platform_organizations",
+                                section=return_section,
                                 organization=slug,
                             )
                         )
             elif action == "create_backup":
                 slug = request.form.get("organization_slug", "").strip()
+                section = return_section
                 selected_slug = slug.lower()
                 target_organization = get_organization_by_slug(settings, slug)
                 if not target_organization:
@@ -1235,12 +1247,14 @@ self.addEventListener("fetch", (event) => {{
                     return redirect(
                         url_for(
                             "app.platform_organizations",
+                            section=return_section,
                             organization=slug,
                         )
                     )
             elif action == "restore_backup":
                 slug = request.form.get("organization_slug", "").strip()
                 backup_name = request.form.get("backup_name", "").strip()
+                section = return_section
                 selected_slug = slug.lower()
                 target_organization = get_organization_by_slug(settings, slug)
                 if not target_organization:
@@ -1278,6 +1292,7 @@ self.addEventListener("fetch", (event) => {{
                         return redirect(
                             url_for(
                                 "app.platform_organizations",
+                                section=return_section,
                                 organization=slug,
                             )
                         )
@@ -1303,6 +1318,76 @@ self.addEventListener("fetch", (event) => {{
             for row in rows
             if row["access_state"]["status"] in {LICENSE_STATUS_ACTIVE, LICENSE_STATUS_TRIAL}
         )
+        if section in {"organizations", "licenses", "backups"} and not selected_slug and rows:
+            selected_slug = str(rows[0]["slug"]).lower()
+        expiring_watchlist = sorted(
+            [
+                row
+                for row in rows
+                if row["access_state"]["days_remaining"] is not None
+                and 0 <= int(row["access_state"]["days_remaining"]) <= 14
+                and row["access_state"]["state"] in {"active", "trial", "expiring"}
+            ],
+            key=lambda row: int(row["access_state"]["days_remaining"] or 9999),
+        )[:6]
+        blocked_watchlist = [
+            row
+            for row in rows
+            if row["access_state"]["state"] in {"expired", "suspended"}
+        ][:6]
+        trial_watchlist = [
+            row
+            for row in rows
+            if row["access_state"]["status"] == LICENSE_STATUS_TRIAL
+        ][:6]
+        recent_backups = [
+            row
+            for row in rows
+            if row["latest_backup"]
+        ][:6]
+        section_map = {
+            "dashboard": {
+                "page_title": "Platform Dashboard",
+                "breadcrumbs": ["Platform", "Dashboard"],
+                "hero_title": "Run every customer workspace from one polished command center.",
+                "hero_copy": "Watch customer health, license urgency, backups, and onboarding momentum without digging through overloaded forms.",
+                "kicker": "Platform Command Center",
+                "initial_tab": "overview",
+            },
+            "organizations": {
+                "page_title": "Organizations",
+                "breadcrumbs": ["Platform", "Organizations"],
+                "hero_title": "Manage customer workspaces with a cleaner institution directory.",
+                "hero_copy": "Open a customer workspace, hand over access details, and keep identity, portal, and domain mapping organized.",
+                "kicker": "Institution Directory",
+                "initial_tab": "overview",
+            },
+            "licenses": {
+                "page_title": "Licenses",
+                "breadcrumbs": ["Platform", "Licenses"],
+                "hero_title": "Keep subscriptions, renewals, and grace windows under control.",
+                "hero_copy": "Focus on commercial health with brighter license cards, faster actions, and a cleaner review flow.",
+                "kicker": "License Command Center",
+                "initial_tab": "license",
+            },
+            "backups": {
+                "page_title": "Backups",
+                "breadcrumbs": ["Platform", "Backups"],
+                "hero_title": "Protect each institution with clean backup and restore coverage.",
+                "hero_copy": "Monitor recovery readiness, create snapshots on demand, and restore customers from one dedicated workspace.",
+                "kicker": "Backup Operations",
+                "initial_tab": "backups",
+            },
+            "create": {
+                "page_title": "Add Organization",
+                "breadcrumbs": ["Platform", "Add Organization"],
+                "hero_title": "Provision a new institution with everything ready from day one.",
+                "hero_copy": "Create the workspace, assign the first admin, set commercial terms, and hand over a clean portal in one guided step.",
+                "kicker": "New Workspace",
+                "initial_tab": "overview",
+            },
+        }
+        section_meta = section_map[section]
         stats = {
             "organizations": count_organizations(settings),
             "hostnames": count_organization_hostnames(settings),
@@ -1320,18 +1405,33 @@ self.addEventListener("fetch", (event) => {{
             "backups": total_backups,
             "customers_with_backups": customers_with_backups,
             "monthly_revenue": monthly_revenue,
+            "monthly_revenue_label": f"GH₵{monthly_revenue:,.2f}",
+            "backup_coverage": round((customers_with_backups / len(rows)) * 100) if rows else 0,
         }
         return render_template(
             "platform/organizations.html",
-            title="Platform Organizations",
+            title=section_meta["page_title"],
             create_form=create_form,
             organizations=rows,
             platform_stats=stats,
-            open_create_modal=open_create_modal,
             selected_organization_slug=selected_slug,
+            platform_section=section,
+            platform_section_meta=section_meta,
+            platform_initial_tab=section_meta["initial_tab"],
+            platform_dashboard={
+                "expiring": expiring_watchlist,
+                "blocked": blocked_watchlist,
+                "trial": trial_watchlist,
+                "recent_backups": recent_backups,
+            },
             license_status_options=_platform_license_status_options(),
             billing_cycle_options=_platform_billing_cycle_options(),
-            **_platform_context("Organizations", "organizations", ["Platform", "Organizations"]),
+            **_platform_context(
+                section_meta["page_title"],
+                section,
+                section_meta["breadcrumbs"],
+                body_class=f"platform-section-{section}",
+            ),
         )
 
     @bp.route("/platform/organizations/<slug>/backups/<path:backup_name>")

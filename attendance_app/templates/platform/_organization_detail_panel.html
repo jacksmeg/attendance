@@ -1,7 +1,7 @@
 {% from "_icons.html" import icon %}
 {% from "_admin_macros.html" import section_title %}
 
-<article class="admin-side-card platform-detail-panel">
+<article class="admin-side-card platform-detail-panel" data-platform-initial-tab="{{ platform_initial_tab|default('overview') }}">
     <div class="platform-detail-empty" data-platform-empty {% if organizations %}hidden{% endif %}>
         <div class="admin-empty-state">
             <h3>No institution selected yet.</h3>
@@ -30,6 +30,7 @@
             <section class="platform-detail-section is-active" data-platform-panel="overview">
                 <form method="post" class="admin-form-grid platform-org-form platform-drawer-form">
                     <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="section" value="{{ platform_section|default('organizations') }}">
                     <input type="hidden" name="organization_slug" id="platformUpdateSlug">
                     <label class="admin-field">
                         <span>Institution Name</span>
@@ -180,6 +181,7 @@
                     </div>
                     <form method="post" class="platform-license-action-grid">
                         <input type="hidden" name="action" value="license_action">
+                        <input type="hidden" name="section" value="{{ platform_section|default('licenses') }}">
                         <input type="hidden" name="organization_slug" id="platformLicenseActionSlug">
                         <button class="platform-license-quick-button tone-trial" type="submit" name="license_action" value="start_trial">
                             {{ icon('clock') }}
@@ -206,6 +208,7 @@
 
                 <form method="post" class="platform-license-editor">
                     <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="section" value="{{ platform_section|default('licenses') }}">
                     <input type="hidden" name="organization_slug" id="platformLicenseSlug">
                     <div class="platform-license-editor-grid">
                         <section class="platform-license-editor-card">
@@ -311,6 +314,7 @@
                     <div class="platform-backup-controls">
                         <form method="post" class="platform-backup-action-form">
                             <input type="hidden" name="action" value="create_backup">
+                            <input type="hidden" name="section" value="{{ platform_section|default('backups') }}">
                             <input type="hidden" name="organization_slug" id="platformBackupSlug">
                             <button class="admin-toolbar-button tone-primary" type="submit">
                                 {{ icon('plus') }}
@@ -319,6 +323,7 @@
                         </form>
                         <form method="post" class="platform-backup-restore-form" id="platformRestoreForm">
                             <input type="hidden" name="action" value="restore_backup">
+                            <input type="hidden" name="section" value="{{ platform_section|default('backups') }}">
                             <input type="hidden" name="organization_slug" id="platformRestoreSlug">
                             <label class="admin-field platform-backup-select">
                                 <span>Restore from snapshot</span>

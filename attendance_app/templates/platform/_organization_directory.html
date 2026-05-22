@@ -3,7 +3,7 @@
 
 <article class="admin-table-card platform-control-card">
     <div class="admin-card-head platform-control-head">
-        {{ section_title('Institution Directory', 'Create customers, scan license health, and open each institution portal without scrolling through long cards') }}
+        {{ section_title(directory_title|default('Institution Directory'), directory_subtitle|default('Create customers, scan license health, and open each institution portal without scrolling through long cards')) }}
         <div class="platform-segmented-filter" role="tablist" aria-label="Institution status filter">
             <button class="admin-page-chip is-active" type="button" data-license-filter="all">All</button>
             <button class="admin-page-chip" type="button" data-license-filter="active">Active</button>
