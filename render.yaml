@@ -12,7 +12,7 @@ services:
       sizeGB: 10
     envVars:
       - key: ATTENDANCE_APP_NAME
-        value: Staff Attendance System
+        value: JHIMS ATTENDANCE SYSTEM
       - key: ATTENDANCE_SECRET_KEY
         generateValue: true
       - key: ATTENDANCE_ADMIN_USER

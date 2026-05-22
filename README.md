@@ -1,4 +1,4 @@
-# Staff Attendance System
+# JHIMS ATTENDANCE SYSTEM
 
 This project is a full Python attendance application for organizations that want to record staff attendance with a fingerprint device.
 
