@@ -21,6 +21,15 @@
     const tabPanels = Array.from(document.querySelectorAll("[data-platform-panel]"));
     let currentFilter = "all";
 
+    const toneMap = {
+        active: "green",
+        trial: "purple",
+        expiring: "orange",
+        grace: "cyan",
+        suspended: "orange",
+        expired: "red",
+    };
+
     const setCopyTarget = (button, value) => {
         if (!button) return;
         button.dataset.copyText = value || "";
@@ -163,6 +172,36 @@
         });
     };
 
+    const renderLicenseHistory = (organization) => {
+        const historyList = document.getElementById("platformLicenseHistoryList");
+        const historyEmpty = document.getElementById("platformLicenseHistoryEmpty");
+        if (!historyList || !historyEmpty) return;
+
+        historyList.innerHTML = "";
+        if (!organization.license_history || !organization.license_history.length) {
+            historyEmpty.hidden = false;
+            return;
+        }
+
+        historyEmpty.hidden = true;
+        organization.license_history.forEach((event) => {
+            const row = document.createElement("article");
+            row.className = "platform-license-history-row";
+            const tone = toneMap[event.next_status || event.previous_status] || "neutral";
+            row.innerHTML = `
+                <div class="platform-license-history-copy">
+                    <div class="platform-license-history-topline">
+                        <span class="admin-table-chip tone-${tone}">${event.title}</span>
+                        <strong>${event.created_label}</strong>
+                    </div>
+                    <p>${event.details || "License record updated from the platform control room."}</p>
+                    <span>By ${event.actor_name || "Platform Super Admin"}</span>
+                </div>
+            `;
+            historyList.appendChild(row);
+        });
+    };
+
     const assignField = (id, value) => {
         const field = document.getElementById(id);
         if (!field) return;
@@ -187,15 +226,8 @@
         detailTitle.textContent = organization.display_name;
         detailSubtitle.textContent = `${organization.slug} · ${organization.hostnames.length} domain${organization.hostnames.length === 1 ? "" : "s"}`;
 
-        const toneClass =
-            organization.access_state.status === "active"
-                ? "tone-green"
-                : organization.access_state.status === "trial"
-                    ? "tone-purple"
-                    : organization.access_state.status === "suspended"
-                        ? "tone-orange"
-                        : "tone-red";
-        detailBadge.innerHTML = `<span class="admin-table-chip ${toneClass}">${organization.access_state.status.replace("-", " ")}</span>`;
+        const toneClass = `tone-${organization.access_summary.tone || "neutral"}`;
+        detailBadge.innerHTML = `<span class="admin-table-chip ${toneClass}">${organization.access_summary.state_label}</span>`;
 
         assignField("platformUpdateSlug", organization.slug);
         assignField("platformUpdateDisplayName", organization.form.display_name);
@@ -212,6 +244,7 @@
         assignField("platformLicenseBillingCycle", organization.form.billing_cycle);
         assignField("platformLicenseSubscriptionAmount", organization.form.subscription_amount);
         assignField("platformLicenseRenewalDueOn", organization.form.renewal_due_on);
+        assignField("platformLicenseGraceDays", organization.form.grace_days);
         assignField("platformLicenseLastPaymentOn", organization.form.last_payment_on);
         assignField("platformLicenseBillingContactName", organization.form.billing_contact_name);
         assignField("platformLicenseBillingEmail", organization.form.billing_email);
@@ -220,6 +253,7 @@
 
         assignField("platformBackupSlug", organization.slug);
         assignField("platformRestoreSlug", organization.slug);
+        assignField("platformLicenseActionSlug", organization.slug);
 
         const adminLink = organization.preferred_admin_login_url;
         const staffLink = organization.preferred_staff_login_url;
@@ -240,7 +274,34 @@
         setCopyTarget(document.getElementById("platformCopyStaffLink"), staffLink);
         setCopyTarget(document.getElementById("platformCopyUsername"), organization.admin_username);
 
+        const licenseStateValue = document.getElementById("platformLicenseStateValue");
+        const licenseStateHint = document.getElementById("platformLicenseStateHint");
+        const licenseWindowValue = document.getElementById("platformLicenseWindowValue");
+        const licenseWindowHint = document.getElementById("platformLicenseWindowHint");
+        const licenseRenewalValue = document.getElementById("platformLicenseRenewalValue");
+        const licenseRenewalHint = document.getElementById("platformLicenseRenewalHint");
+        const licenseSubscriptionValue = document.getElementById("platformLicenseSubscriptionValue");
+        const licenseSubscriptionHint = document.getElementById("platformLicenseSubscriptionHint");
+        const licenseGraceValue = document.getElementById("platformLicenseGraceValue");
+        const licenseGraceHint = document.getElementById("platformLicenseGraceHint");
+        const licenseContactValue = document.getElementById("platformLicenseContactValue");
+        const licenseContactHint = document.getElementById("platformLicenseContactHint");
+
+        if (licenseStateValue) licenseStateValue.textContent = organization.license_health.state_label;
+        if (licenseStateHint) licenseStateHint.textContent = organization.access_summary.reason;
+        if (licenseWindowValue) licenseWindowValue.textContent = organization.license_health.days_label;
+        if (licenseWindowHint) licenseWindowHint.textContent = organization.access_summary.expires_on || "No expiry date set";
+        if (licenseRenewalValue) licenseRenewalValue.textContent = organization.license_health.renewal_label;
+        if (licenseRenewalHint) licenseRenewalHint.textContent = organization.license_health.renewal_hint || "No renewal reminder set";
+        if (licenseSubscriptionValue) licenseSubscriptionValue.textContent = organization.license_health.subscription_label;
+        if (licenseSubscriptionHint) licenseSubscriptionHint.textContent = organization.license_health.billing_cycle_label;
+        if (licenseGraceValue) licenseGraceValue.textContent = organization.license_health.grace_label;
+        if (licenseGraceHint) licenseGraceHint.textContent = organization.access_state.state === "grace" ? "Access is currently running on grace time." : "Fallback access after the expiry date.";
+        if (licenseContactValue) licenseContactValue.textContent = organization.billing_contact_name || organization.billing_email || organization.billing_phone || "Not assigned";
+        if (licenseContactHint) licenseContactHint.textContent = organization.billing_email || organization.billing_phone || "Add a billing contact for renewal follow-up.";
+
         renderBackups(organization);
+        renderLicenseHistory(organization);
         updateHistorySelection(organization.slug);
     };
 

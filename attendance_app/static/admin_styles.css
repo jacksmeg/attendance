@@ -2725,6 +2725,95 @@ body.admin-ui {
     gap: 14px;
 }
 
+.platform-license-health-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.platform-license-health-card,
+.platform-license-action-panel,
+.platform-license-history {
+    display: grid;
+    gap: 10px;
+    padding: 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: linear-gradient(180deg, rgba(246, 250, 255, 0.98), rgba(255, 255, 255, 0.98));
+    box-shadow: 0 16px 32px rgba(31, 54, 120, 0.05);
+}
+
+.platform-license-health-card > span {
+    color: var(--admin-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.platform-license-health-card > strong {
+    color: var(--admin-text);
+    font-size: 1.1rem;
+    line-height: 1.25;
+}
+
+.platform-license-health-card > small,
+.platform-license-action-head span,
+.platform-license-history-copy span,
+.platform-license-history-copy p {
+    color: var(--admin-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.platform-license-action-head {
+    display: grid;
+    gap: 6px;
+}
+
+.platform-license-action-head strong,
+.platform-license-history-copy strong {
+    color: var(--admin-text);
+}
+
+.platform-license-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.platform-license-action-grid .admin-toolbar-button {
+    width: 100%;
+    justify-content: center;
+}
+
+.platform-license-history-list {
+    display: grid;
+    gap: 10px;
+}
+
+.platform-license-history-row {
+    display: grid;
+    gap: 8px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(248, 251, 255, 0.92);
+}
+
+.platform-license-history-copy {
+    display: grid;
+    gap: 6px;
+}
+
+.platform-license-history-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .platform-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -2792,6 +2881,11 @@ body.platform-modal-open {
     .platform-org-meta-grid,
     .platform-org-license-grid,
     .platform-access-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .platform-license-health-grid,
+    .platform-license-action-grid {
         grid-template-columns: 1fr;
     }
 
@@ -2945,11 +3039,19 @@ html[data-theme="dark"] .platform-org-card,
 html[data-theme="dark"] .platform-org-meta,
 html[data-theme="dark"] .platform-org-license-card,
 html[data-theme="dark"] .platform-access-card,
+html[data-theme="dark"] .platform-license-health-card,
+html[data-theme="dark"] .platform-license-action-panel,
+html[data-theme="dark"] .platform-license-history,
 html[data-theme="dark"] .platform-backup-section,
 html[data-theme="dark"] .platform-backup-row {
     background: linear-gradient(180deg, #0c1729 0%, #0f1d33 100%);
     border-color: var(--admin-line);
     color: var(--admin-text);
+}
+
+html[data-theme="dark"] .platform-license-history-row {
+    background: rgba(10, 21, 38, 0.9);
+    border-color: var(--admin-line);
 }
 
 html[data-theme="dark"] .platform-access-panel {

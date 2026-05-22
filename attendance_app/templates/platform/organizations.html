@@ -22,8 +22,8 @@
     {{ stat_card('check-circle', 'green', 'Active', platform_stats.active, 'Live customer workspaces') }}
     {{ stat_card('clock', 'purple', 'Trial', platform_stats.trial, 'Institutions still onboarding') }}
     {{ stat_card('clock', 'orange', 'Expiring Soon', platform_stats.expiring_soon, 'Due within 14 days') }}
+    {{ stat_card('shield-check', 'cyan', 'Grace Active', platform_stats.grace_active, 'Temporarily allowed past expiry') }}
     {{ stat_card('close', 'red', 'Blocked', platform_stats.blocked, 'Expired or suspended access') }}
-    {{ stat_card('document', 'purple', 'Backups', platform_stats.backups, platform_stats.customers_with_backups ~ ' institutions protected') }}
 </section>
 
 <section class="platform-control-grid" data-selected-organization="{{ selected_organization_slug }}">

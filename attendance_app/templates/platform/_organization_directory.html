@@ -8,6 +8,7 @@
             <button class="admin-page-chip is-active" type="button" data-license-filter="all">All</button>
             <button class="admin-page-chip" type="button" data-license-filter="active">Active</button>
             <button class="admin-page-chip" type="button" data-license-filter="trial">Trial</button>
+            <button class="admin-page-chip" type="button" data-license-filter="grace">Grace</button>
             <button class="admin-page-chip" type="button" data-license-filter="blocked">Blocked</button>
         </div>
     </div>
@@ -28,7 +29,7 @@
             <tbody>
                 {% if organizations %}
                     {% for organization in organizations %}
-                    {% set status_value = organization.access_state.status %}
+                    {% set status_value = organization.access_summary.state %}
                     {% set status_bucket = 'blocked' if status_value in ['expired', 'suspended'] else status_value %}
                     <tr
                         data-organization-row
@@ -46,8 +47,8 @@
                                     {% if organization.is_default %}
                                     <span class="admin-table-chip tone-blue">Default</span>
                                     {% endif %}
-                                    <span class="admin-table-chip {% if status_value == 'active' %}tone-green{% elif status_value == 'trial' %}tone-purple{% elif status_value == 'suspended' %}tone-orange{% else %}tone-red{% endif %}">
-                                        {{ status_value|replace('-', ' ')|title }}
+                                    <span class="admin-table-chip tone-{{ organization.access_summary.tone }}">
+                                        {{ organization.access_summary.state_label }}
                                     </span>
                                 </div>
                             </div>
@@ -60,14 +61,14 @@
                         </td>
                         <td>
                             <div class="platform-table-meta">
-                                <strong>{{ organization.access_state.reason }}</strong>
-                                <span>{{ organization.access_state.days_label or 'No expiry limit' }}</span>
+                                <strong>{{ organization.access_summary.reason }}</strong>
+                                <span>{{ organization.access_summary.days_label or 'No expiry limit' }}</span>
                             </div>
                         </td>
                         <td>
                             <div class="platform-table-meta">
                                 <strong>{{ organization.plan_name }}</strong>
-                                <span>GH₵{{ '%.2f'|format(organization.subscription_amount) }} · {{ organization.billing_cycle|replace('-', ' ')|title }}</span>
+                                <span>{{ organization.license_health.subscription_label }} · {{ organization.license_health.billing_cycle_label }}</span>
                             </div>
                         </td>
                         <td>

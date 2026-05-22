@@ -163,14 +163,17 @@ from .services.tenancy import (
     LICENSE_STATUS_EXPIRED,
     LICENSE_STATUS_SUSPENDED,
     LICENSE_STATUS_TRIAL,
+    apply_organization_license_action,
     count_organization_hostnames,
     count_organizations,
     count_organizations_by_license,
     get_current_organization_access_state,
     get_organization_access_state,
     get_organization_by_slug,
+    list_organization_license_events,
     list_organizations,
     provision_organization,
+    record_organization_license_event,
     update_organization,
 )
 
@@ -1026,6 +1029,7 @@ self.addEventListener("fetch", (event) => {{
             "renewal_due_on": "",
             "last_payment_on": "",
             "license_notes": "",
+            "grace_days": "0",
         }
         update_forms: dict[str, dict[str, Any]] = {}
 
@@ -1056,12 +1060,27 @@ self.addEventListener("fetch", (event) => {{
                             renewal_due_on=create_form["renewal_due_on"],
                             last_payment_on=create_form["last_payment_on"],
                             license_notes=create_form["license_notes"],
+                            grace_days=create_form["grace_days"],
                         )
                         init_db(created_organization.database_path)
                         save_admin_credentials_for_database(
                             created_organization.database_path,
                             username=create_form["admin_username"],
                             password=create_form["admin_password"],
+                        )
+                        record_organization_license_event(
+                            settings,
+                            slug=created_organization.slug,
+                            event_type="provisioned",
+                            title="Institution provisioned",
+                            actor_name=current_display_name() or "Platform Super Admin",
+                            details=(
+                                f"{create_form['display_name']} was provisioned on the "
+                                f"{create_form['plan_name']} plan."
+                            ),
+                            next_status=created_organization.license_status,
+                            next_expires_on=created_organization.expires_on,
+                            amount=created_organization.subscription_amount,
                         )
                     except ValueError as exc:
                         flash(str(exc), "error")
@@ -1079,48 +1098,108 @@ self.addEventListener("fetch", (event) => {{
             elif action == "update":
                 slug = request.form.get("organization_slug", "").strip()
                 selected_slug = slug.lower()
-                update_form = _read_platform_organization_form(request.form)
-                update_form["slug"] = slug
-                update_forms[slug] = update_form
-                validation_error = _validate_platform_organization_form(update_form, creating=False)
-                if validation_error:
-                    flash(validation_error, "error")
+                previous_organization = get_organization_by_slug(settings, slug)
+                if not previous_organization:
+                    flash("The selected institution could not be found.", "error")
+                else:
+                    admin_security = get_admin_security_for_database(
+                        previous_organization.database_path,
+                        default_username=current_app.config["APP_SETTINGS"].admin_username,
+                    )
+                    update_form = _read_platform_organization_form(request.form)
+                    update_form = _hydrate_platform_update_form(
+                        update_form,
+                        request.form,
+                        previous_organization,
+                        admin_security["admin_username"],
+                    )
+                    update_form["slug"] = slug
+                    update_forms[slug] = update_form
+                    validation_error = _validate_platform_organization_form(update_form, creating=False)
+                    if validation_error:
+                        flash(validation_error, "error")
+                    else:
+                        try:
+                            updated_organization = update_organization(
+                                settings,
+                                slug=slug,
+                                display_name=update_form["display_name"],
+                                hostnames=update_form["hostnames_list"],
+                                is_default=update_form["is_default"],
+                                plan_name=update_form["plan_name"],
+                                license_status=update_form["license_status"],
+                                expires_on=update_form["expires_on"],
+                                billing_contact_name=update_form["billing_contact_name"],
+                                billing_email=update_form["billing_email"],
+                                billing_phone=update_form["billing_phone"],
+                                billing_cycle=update_form["billing_cycle"],
+                                subscription_amount=update_form["subscription_amount"],
+                                renewal_due_on=update_form["renewal_due_on"],
+                                last_payment_on=update_form["last_payment_on"],
+                                license_notes=update_form["license_notes"],
+                                grace_days=update_form["grace_days"],
+                            )
+                            if update_form["admin_password"]:
+                                save_admin_credentials_for_database(
+                                    updated_organization.database_path,
+                                    username=update_form["admin_username"],
+                                    password=update_form["admin_password"],
+                                )
+                            else:
+                                save_admin_credentials_for_database(
+                                    updated_organization.database_path,
+                                    username=update_form["admin_username"],
+                                )
+                            if _license_fields_changed(previous_organization, update_form):
+                                record_organization_license_event(
+                                    settings,
+                                    slug=updated_organization.slug,
+                                    event_type="license_profile_updated",
+                                    title="License profile updated",
+                                    actor_name=current_display_name() or "Platform Super Admin",
+                                    details=(
+                                        f"Plan set to {updated_organization.plan_name}; "
+                                        f"billing cycle {updated_organization.billing_cycle}; "
+                                        f"grace period {updated_organization.grace_days} day(s)."
+                                    ),
+                                    previous_status=previous_organization.license_status,
+                                    next_status=updated_organization.license_status,
+                                    previous_expires_on=previous_organization.expires_on,
+                                    next_expires_on=updated_organization.expires_on,
+                                    amount=updated_organization.subscription_amount,
+                                )
+                        except ValueError as exc:
+                            flash(str(exc), "error")
+                        else:
+                            flash(
+                                f"{update_form['display_name']} was updated successfully.",
+                                "success",
+                            )
+                            return redirect(
+                                url_for(
+                                    "app.platform_organizations",
+                                    organization=slug,
+                                )
+                            )
+            elif action == "license_action":
+                slug = request.form.get("organization_slug", "").strip()
+                selected_slug = slug.lower()
+                license_action = request.form.get("license_action", "").strip().lower()
+                if not slug:
+                    flash("Choose an institution before applying a license action.", "error")
                 else:
                     try:
-                        updated_organization = update_organization(
+                        updated_organization = apply_organization_license_action(
                             settings,
                             slug=slug,
-                            display_name=update_form["display_name"],
-                            hostnames=update_form["hostnames_list"],
-                            is_default=update_form["is_default"],
-                            plan_name=update_form["plan_name"],
-                            license_status=update_form["license_status"],
-                            expires_on=update_form["expires_on"],
-                            billing_contact_name=update_form["billing_contact_name"],
-                            billing_email=update_form["billing_email"],
-                            billing_phone=update_form["billing_phone"],
-                            billing_cycle=update_form["billing_cycle"],
-                            subscription_amount=update_form["subscription_amount"],
-                            renewal_due_on=update_form["renewal_due_on"],
-                            last_payment_on=update_form["last_payment_on"],
-                            license_notes=update_form["license_notes"],
+                            action=license_action,
+                            actor_name=current_display_name() or "Platform Super Admin",
                         )
-                        if update_form["admin_password"]:
-                            save_admin_credentials_for_database(
-                                updated_organization.database_path,
-                                username=update_form["admin_username"],
-                                password=update_form["admin_password"],
-                            )
-                        else:
-                            save_admin_credentials_for_database(
-                                updated_organization.database_path,
-                                username=update_form["admin_username"],
-                            )
                     except ValueError as exc:
                         flash(str(exc), "error")
                     else:
                         flash(
-                            f"{update_form['display_name']} was updated successfully.",
+                            f"{updated_organization.display_name}: {license_action.replace('_', ' ').title()} applied.",
                             "success",
                         )
                         return redirect(
@@ -1212,12 +1291,18 @@ self.addEventListener("fetch", (event) => {{
         expiring_soon = sum(
             1
             for row in rows
-            if row["access_state"]["status"] in {LICENSE_STATUS_ACTIVE, LICENSE_STATUS_TRIAL}
+            if row["access_state"]["state"] in {"active", "trial", "expiring"}
             and row["access_state"]["days_remaining"] is not None
             and 0 <= int(row["access_state"]["days_remaining"]) <= 14
         )
+        grace_active = sum(1 for row in rows if row["access_state"]["state"] == "grace")
         total_backups = sum(len(row["backups"]) for row in rows)
         customers_with_backups = sum(1 for row in rows if row["backups"])
+        monthly_revenue = sum(
+            row["subscription_amount"]
+            for row in rows
+            if row["access_state"]["status"] in {LICENSE_STATUS_ACTIVE, LICENSE_STATUS_TRIAL}
+        )
         stats = {
             "organizations": count_organizations(settings),
             "hostnames": count_organization_hostnames(settings),
@@ -1231,8 +1316,10 @@ self.addEventListener("fetch", (event) => {{
                 LICENSE_STATUS_SUSPENDED,
             ),
             "expiring_soon": expiring_soon,
+            "grace_active": grace_active,
             "backups": total_backups,
             "customers_with_backups": customers_with_backups,
+            "monthly_revenue": monthly_revenue,
         }
         return render_template(
             "platform/organizations.html",
@@ -3872,6 +3959,7 @@ def _platform_organization_rows(
             "renewal_due_on": organization.renewal_due_on,
             "last_payment_on": organization.last_payment_on,
             "license_notes": organization.license_notes,
+            "grace_days": str(organization.grace_days),
         }
         primary_url = ""
         if hostnames:
@@ -3881,7 +3969,21 @@ def _platform_organization_rows(
         hostname_admin_login_url = f"{primary_url}/admin/login" if primary_url else ""
         hostname_staff_login_url = f"{primary_url}/staff/login" if primary_url else ""
         access_state = get_organization_access_state(organization)
+        access_summary = access_state_summary(access_state)
         backups = list_organization_backups(organization, limit=6)
+        license_history = [
+            {
+                **event,
+                "created_label": _format_history_datetime(event.get("created_at", "")),
+                "amount_label": f"GH₵{float(event.get('amount') or 0):,.2f}" if event.get("amount") else "",
+                "tone": _platform_license_tone(event.get("next_status") or event.get("previous_status") or ""),
+            }
+            for event in list_organization_license_events(
+                current_app.config["APP_SETTINGS"],
+                organization.slug,
+                limit=12,
+            )
+        ]
         backup_rows = [
             {
                 "name": snapshot.name,
@@ -3924,7 +4026,20 @@ def _platform_organization_rows(
                 "renewal_due_on": organization.renewal_due_on,
                 "last_payment_on": organization.last_payment_on,
                 "license_notes": organization.license_notes,
+                "grace_days": organization.grace_days,
                 "access_state": access_state,
+                "access_summary": access_summary,
+                "license_health": {
+                    "tone": access_summary["tone"],
+                    "state_label": access_summary["state_label"],
+                    "days_label": access_summary["days_label"] or "No expiry date set",
+                    "renewal_label": _format_date_label(organization.renewal_due_on),
+                    "renewal_hint": access_summary["renewal_label"],
+                    "grace_label": f"{organization.grace_days} day{'s' if organization.grace_days != 1 else ''}",
+                    "subscription_label": f"GH₵{organization.subscription_amount:,.2f}",
+                    "billing_cycle_label": organization.billing_cycle.replace("-", " ").title(),
+                },
+                "license_history": license_history,
                 "backups": backup_rows,
                 "latest_backup": backup_rows[0] if backup_rows else None,
             }
@@ -3959,6 +4074,7 @@ def _read_platform_organization_form(form) -> dict[str, Any]:
         "renewal_due_on": str(form.get("renewal_due_on", "") or "").strip(),
         "last_payment_on": str(form.get("last_payment_on", "") or "").strip(),
         "license_notes": str(form.get("license_notes", "") or "").strip(),
+        "grace_days": str(form.get("grace_days", "0") or "").strip() or "0",
     }
 
 
@@ -4010,6 +4126,11 @@ def _validate_platform_organization_form(
             float(str(form_values.get("subscription_amount", "0")).strip())
     except ValueError:
         return "Subscription amount must be a valid number."
+    try:
+        if int(str(form_values.get("grace_days", "0")).strip()) < 0:
+            return "Grace period must be zero or a positive number of days."
+    except ValueError:
+        return "Grace period must be a valid whole number."
     admin_password = str(form_values.get("admin_password", ""))
     confirm_admin_password = str(form_values.get("confirm_admin_password", ""))
     if creating and not admin_password:
@@ -4020,6 +4141,70 @@ def _validate_platform_organization_form(
         if admin_password != confirm_admin_password:
             return "Institution admin password confirmation does not match."
     return None
+
+
+def _hydrate_platform_update_form(
+    form_values: dict[str, Any],
+    raw_form,
+    organization: Any,
+    admin_username: str,
+) -> dict[str, Any]:
+    submitted_keys = set(raw_form.keys())
+    overview_keys = {"display_name", "hostnames", "admin_username", "is_default"}
+
+    if "display_name" not in submitted_keys:
+        form_values["display_name"] = organization.display_name
+    if "hostnames" not in submitted_keys:
+        form_values["hostnames_list"] = list(organization.hostnames)
+        form_values["hostnames"] = "\n".join(organization.hostnames)
+    if "admin_username" not in submitted_keys:
+        form_values["admin_username"] = admin_username
+    if "plan_name" not in submitted_keys:
+        form_values["plan_name"] = organization.plan_name
+    if "license_status" not in submitted_keys:
+        form_values["license_status"] = organization.license_status
+    if "expires_on" not in submitted_keys:
+        form_values["expires_on"] = organization.expires_on
+    if "billing_contact_name" not in submitted_keys:
+        form_values["billing_contact_name"] = organization.billing_contact_name
+    if "billing_email" not in submitted_keys:
+        form_values["billing_email"] = organization.billing_email
+    if "billing_phone" not in submitted_keys:
+        form_values["billing_phone"] = organization.billing_phone
+    if "billing_cycle" not in submitted_keys:
+        form_values["billing_cycle"] = organization.billing_cycle
+    if "subscription_amount" not in submitted_keys:
+        form_values["subscription_amount"] = f"{organization.subscription_amount:.2f}"
+    if "renewal_due_on" not in submitted_keys:
+        form_values["renewal_due_on"] = organization.renewal_due_on
+    if "last_payment_on" not in submitted_keys:
+        form_values["last_payment_on"] = organization.last_payment_on
+    if "license_notes" not in submitted_keys:
+        form_values["license_notes"] = organization.license_notes
+    if "grace_days" not in submitted_keys:
+        form_values["grace_days"] = str(organization.grace_days)
+    if not (submitted_keys & overview_keys):
+        form_values["is_default"] = organization.is_default
+    return form_values
+
+
+def _license_fields_changed(organization: Any, form_values: dict[str, Any]) -> bool:
+    return any(
+        (
+            str(form_values.get("plan_name", "")).strip() != str(organization.plan_name),
+            str(form_values.get("license_status", "")).strip() != str(organization.license_status),
+            str(form_values.get("expires_on", "")).strip() != str(organization.expires_on),
+            str(form_values.get("billing_contact_name", "")).strip() != str(organization.billing_contact_name),
+            str(form_values.get("billing_email", "")).strip() != str(organization.billing_email),
+            str(form_values.get("billing_phone", "")).strip() != str(organization.billing_phone),
+            str(form_values.get("billing_cycle", "")).strip() != str(organization.billing_cycle),
+            str(form_values.get("subscription_amount", "")).strip() != f"{organization.subscription_amount:.2f}",
+            str(form_values.get("renewal_due_on", "")).strip() != str(organization.renewal_due_on),
+            str(form_values.get("last_payment_on", "")).strip() != str(organization.last_payment_on),
+            str(form_values.get("license_notes", "")).strip() != str(organization.license_notes),
+            str(form_values.get("grace_days", "")).strip() != str(organization.grace_days),
+        )
+    )
 
 
 def _platform_license_status_options() -> list[dict[str, str]]:
@@ -4050,22 +4235,77 @@ def _looks_like_iso_date(value: str) -> bool:
 
 def access_state_summary(access_state: dict[str, Any]) -> dict[str, Any]:
     days_remaining = access_state.get("days_remaining")
+    state = str(access_state.get("state") or access_state.get("status") or LICENSE_STATUS_ACTIVE)
     days_label = ""
-    if days_remaining is not None:
+    if state == "grace":
+        grace_remaining = access_state.get("grace_days_remaining")
+        if grace_remaining is None:
+            days_label = "Grace active"
+        elif grace_remaining == 0:
+            days_label = "Grace ends today"
+        else:
+            days_label = f"{grace_remaining} grace day{'s' if grace_remaining != 1 else ''} left"
+    elif days_remaining is not None:
         if days_remaining < 0:
             days_label = "Expired"
         elif days_remaining == 0:
             days_label = "Ends today"
         else:
             days_label = f"{days_remaining} day{'s' if days_remaining != 1 else ''} left"
+    renewal_days_remaining = access_state.get("renewal_days_remaining")
+    renewal_label = ""
+    if renewal_days_remaining is not None:
+        if renewal_days_remaining < 0:
+            renewal_label = "Renewal overdue"
+        elif renewal_days_remaining == 0:
+            renewal_label = "Renewal due today"
+        else:
+            renewal_label = f"Renewal in {renewal_days_remaining} day{'s' if renewal_days_remaining != 1 else ''}"
     return {
         "status": access_state.get("status", LICENSE_STATUS_ACTIVE),
+        "state": state,
+        "state_label": state.replace("-", " ").title(),
         "access_allowed": bool(access_state.get("access_allowed")),
         "expires_on": access_state.get("expires_on", ""),
         "days_remaining": days_remaining,
         "days_label": days_label,
+        "renewal_due_on": access_state.get("renewal_due_on", ""),
+        "renewal_days_remaining": renewal_days_remaining,
+        "renewal_label": renewal_label,
+        "tone": _platform_license_tone(state),
         "reason": access_state.get("reason", ""),
     }
+
+
+def _platform_license_tone(status: str) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized == "active":
+        return "green"
+    if normalized == "trial":
+        return "purple"
+    if normalized == "expiring":
+        return "orange"
+    if normalized == "grace":
+        return "cyan"
+    if normalized == "suspended":
+        return "orange"
+    if normalized == "expired":
+        return "red"
+    return "neutral"
+
+
+def _format_date_label(value: str) -> str:
+    try:
+        return date.fromisoformat(str(value or "").strip()).strftime("%d %b %Y")
+    except ValueError:
+        return "Not scheduled"
+
+
+def _format_history_datetime(value: str) -> str:
+    try:
+        return datetime.fromisoformat(str(value or "").strip()).strftime("%d %b %Y, %I:%M %p")
+    except ValueError:
+        return "Just now"
 
 
 def _reference_people() -> list[dict[str, Any]]:

@@ -65,6 +65,10 @@
                 <input type="date" name="renewal_due_on" value="{{ create_form.renewal_due_on }}">
             </label>
             <label class="admin-field">
+                <span>Grace Period (Days)</span>
+                <input type="number" min="0" step="1" name="grace_days" value="{{ create_form.grace_days }}" placeholder="0">
+            </label>
+            <label class="admin-field">
                 <span>Last Payment Date</span>
                 <input type="date" name="last_payment_on" value="{{ create_form.last_payment_on }}">
             </label>

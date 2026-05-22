@@ -16,7 +16,12 @@ from attendance_app.services.settings import save_admin_credentials_for_database
 from attendance_app.services.settings import get_admin_security_for_database
 from attendance_app.services.shifts import get_shift, list_shifts
 from attendance_app.services.staff import count_active_staff, create_staff, get_staff, get_staff_by_code, upsert_fingerprint
-from attendance_app.services.tenancy import get_current_organization, get_organization_by_slug, provision_organization
+from attendance_app.services.tenancy import (
+    get_current_organization,
+    get_organization_by_slug,
+    list_organization_license_events,
+    provision_organization,
+)
 
 TEST_SELFIE_DATA_URL = (
     "data:image/png;base64,"
@@ -400,6 +405,7 @@ class AttendanceAppTests(unittest.TestCase):
                 "renewal_due_on": renewal_date,
                 "last_payment_on": payment_date,
                 "license_notes": "Annual hospital deployment with onboarding support.",
+                "grace_days": "5",
                 "admin_password": "Cedar@1234",
                 "confirm_admin_password": "Cedar@1234",
             },
@@ -425,6 +431,154 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(organization.renewal_due_on, renewal_date)
         self.assertEqual(organization.last_payment_on, payment_date)
         self.assertEqual(organization.license_notes, "Annual hospital deployment with onboarding support.")
+        self.assertEqual(organization.grace_days, 5)
+
+    def test_platform_license_form_updates_without_overwriting_access_fields(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "create",
+                "display_name": "North Ridge Clinic",
+                "slug": "north-ridge-clinic",
+                "hostnames": "attendance.northridge.example",
+                "admin_username": "ridgeadmin",
+                "plan_name": "Starter",
+                "license_status": "trial",
+                "expires_on": (date.today() + timedelta(days=14)).isoformat(),
+                "billing_cycle": "monthly",
+                "subscription_amount": "199.00",
+                "admin_password": "North@1234",
+                "confirm_admin_password": "North@1234",
+            },
+            follow_redirects=True,
+        )
+
+        renewal_date = (date.today() + timedelta(days=45)).isoformat()
+        response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "update",
+                "organization_slug": "north-ridge-clinic",
+                "plan_name": "Enterprise",
+                "license_status": "active",
+                "expires_on": (date.today() + timedelta(days=60)).isoformat(),
+                "billing_cycle": "quarterly",
+                "subscription_amount": "899.00",
+                "renewal_due_on": renewal_date,
+                "grace_days": "7",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"North Ridge Clinic", response.data)
+        self.assertIn(b"Enterprise", response.data)
+
+        with self.app.app_context():
+            organization = get_organization_by_slug(
+                self.app.config["APP_SETTINGS"],
+                "north-ridge-clinic",
+            )
+            self.assertIsNotNone(organization)
+            assert organization is not None
+            self.assertEqual(organization.display_name, "North Ridge Clinic")
+            self.assertEqual(organization.hostnames, ("attendance.northridge.example",))
+            self.assertEqual(organization.plan_name, "Enterprise")
+            self.assertEqual(organization.license_status, "active")
+            self.assertEqual(organization.billing_cycle, "quarterly")
+            self.assertAlmostEqual(organization.subscription_amount, 899.0)
+            self.assertEqual(organization.renewal_due_on, renewal_date)
+            self.assertEqual(organization.grace_days, 7)
+
+    def test_platform_super_admin_can_apply_license_quick_action(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "create",
+                "display_name": "Summit Hospital",
+                "slug": "summit-hospital",
+                "hostnames": "attendance.summit.example",
+                "admin_username": "summitadmin",
+                "plan_name": "Growth",
+                "license_status": "active",
+                "expires_on": date.today().isoformat(),
+                "billing_cycle": "monthly",
+                "subscription_amount": "320.00",
+                "admin_password": "Summit@1234",
+                "confirm_admin_password": "Summit@1234",
+            },
+            follow_redirects=True,
+        )
+
+        response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "license_action",
+                "organization_slug": "summit-hospital",
+                "license_action": "renew_cycle",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Renew Cycle applied", response.data)
+
+        with self.app.app_context():
+            organization = get_organization_by_slug(
+                self.app.config["APP_SETTINGS"],
+                "summit-hospital",
+            )
+            events = list_organization_license_events(
+                self.app.config["APP_SETTINGS"],
+                "summit-hospital",
+            )
+
+        assert organization is not None
+        self.assertEqual(organization.license_status, "active")
+        self.assertTrue(organization.expires_on)
+        self.assertEqual(organization.last_payment_on, date.today().isoformat())
+        self.assertTrue(events)
+        self.assertEqual(events[0]["event_type"], "renew_cycle")
+
+    def test_license_grace_period_allows_temporary_access(self) -> None:
+        grace_host = "grace.attendance.local"
+
+        with self.app.app_context():
+            provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="grace-clinic",
+                display_name="Grace Clinic",
+                hostnames=[grace_host],
+                plan_name="Starter",
+                license_status="active",
+                expires_on=(date.today() - timedelta(days=1)).isoformat(),
+                billing_email="renewals@grace.example",
+                grace_days=3,
+            )
+
+        login_response = self.client.get(
+            "/staff/login",
+            base_url=f"https://{grace_host}",
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Staff Login", login_response.data)
+        self.assertNotIn(b"Expired License", login_response.data)
+
+        health_response = self.client.get("/health", base_url=f"https://{grace_host}")
+        payload = health_response.get_json()
+        self.assertTrue(payload["license"]["access_allowed"])
+        self.assertEqual(payload["license"]["state"], "grace")
 
     def test_platform_organizations_page_creates_automatic_backups(self) -> None:
         self.client.post(

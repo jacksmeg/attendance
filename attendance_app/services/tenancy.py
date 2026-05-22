@@ -57,6 +57,7 @@ class OrganizationContext:
     renewal_due_on: str = ""
     last_payment_on: str = ""
     license_notes: str = ""
+    grace_days: int = 0
 
 
 def init_platform_registry(registry_path: Path) -> None:
@@ -123,6 +124,34 @@ def init_platform_registry(registry_path: Path) -> None:
         _ensure_registry_column(db, "organizations", "renewal_due_on", "TEXT")
         _ensure_registry_column(db, "organizations", "last_payment_on", "TEXT")
         _ensure_registry_column(db, "organizations", "license_notes", "TEXT")
+        _ensure_registry_column(
+            db,
+            "organizations",
+            "grace_days",
+            "INTEGER NOT NULL DEFAULT 0",
+        )
+        db.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS organization_license_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id INTEGER NOT NULL,
+                event_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                details TEXT NOT NULL DEFAULT '',
+                actor_name TEXT NOT NULL DEFAULT 'Platform Super Admin',
+                previous_status TEXT,
+                next_status TEXT,
+                previous_expires_on TEXT,
+                next_expires_on TEXT,
+                amount REAL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_license_events_org
+            ON organization_license_events(organization_id, created_at DESC);
+            """
+        )
         db.commit()
     finally:
         db.close()
@@ -164,6 +193,7 @@ def provision_organization(
     renewal_due_on: str = "",
     last_payment_on: str = "",
     license_notes: str = "",
+    grace_days: int | str = 0,
 ) -> OrganizationContext:
     normalized_slug = _normalize_slug(slug)
     if not normalized_slug:
@@ -204,8 +234,8 @@ def provision_organization(
                 is_default, is_active, created_at, updated_at,
                 license_status, plan_name, expires_on,
                 billing_contact_name, billing_email, billing_phone,
-                billing_cycle, subscription_amount, renewal_due_on, last_payment_on, license_notes
-            ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                billing_cycle, subscription_amount, renewal_due_on, last_payment_on, license_notes, grace_days
+            ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(slug) DO UPDATE SET
                 display_name = excluded.display_name,
                 database_path = excluded.database_path,
@@ -223,7 +253,8 @@ def provision_organization(
                 subscription_amount = excluded.subscription_amount,
                 renewal_due_on = excluded.renewal_due_on,
                 last_payment_on = excluded.last_payment_on,
-                license_notes = excluded.license_notes
+                license_notes = excluded.license_notes,
+                grace_days = excluded.grace_days
             """,
             (
                 normalized_slug,
@@ -245,6 +276,7 @@ def provision_organization(
                 _normalize_optional_date(renewal_due_on),
                 _normalize_optional_date(last_payment_on),
                 str(license_notes).strip(),
+                _to_non_negative_int(grace_days),
             ),
         )
         row = db.execute(
@@ -369,6 +401,7 @@ def update_organization(
     renewal_due_on: str = "",
     last_payment_on: str = "",
     license_notes: str = "",
+    grace_days: int | str = 0,
 ) -> OrganizationContext:
     organization = get_organization_by_slug(settings, slug)
     if not organization:
@@ -407,7 +440,8 @@ def update_organization(
                 subscription_amount = ?,
                 renewal_due_on = ?,
                 last_payment_on = ?,
-                license_notes = ?
+                license_notes = ?,
+                grace_days = ?
             WHERE slug = ?
             """,
             (
@@ -425,6 +459,7 @@ def update_organization(
                 _normalize_optional_date(renewal_due_on),
                 _normalize_optional_date(last_payment_on),
                 str(license_notes).strip(),
+                _to_non_negative_int(grace_days),
                 organization.slug,
             ),
         )
@@ -545,8 +580,11 @@ def get_current_organization_access_state() -> dict[str, Any]:
 
 def get_organization_access_state(organization: OrganizationContext) -> dict[str, Any]:
     expires_value = _parse_date(organization.expires_on)
+    renewal_due_value = _parse_date(organization.renewal_due_on)
     today_value = date.today()
     effective_status = organization.license_status
+    grace_days = max(0, int(organization.grace_days or 0))
+    state = effective_status
 
     if effective_status != LICENSE_STATUS_SUSPENDED and expires_value and expires_value < today_value:
         effective_status = LICENSE_STATUS_EXPIRED
@@ -557,23 +595,267 @@ def get_organization_access_state(organization: OrganizationContext) -> dict[str
     if expires_value:
         days_remaining = (expires_value - today_value).days
 
+    grace_days_remaining: int | None = None
+    if days_remaining is not None and days_remaining < 0 and grace_days > 0:
+        overdue_days = abs(days_remaining)
+        if overdue_days <= grace_days and organization.license_status in {
+            LICENSE_STATUS_ACTIVE,
+            LICENSE_STATUS_TRIAL,
+        }:
+            state = "grace"
+            grace_days_remaining = grace_days - overdue_days
+        else:
+            state = effective_status
+    elif effective_status in {LICENSE_STATUS_ACTIVE, LICENSE_STATUS_TRIAL}:
+        if days_remaining is not None and 0 <= days_remaining <= 14:
+            state = "expiring"
+        else:
+            state = effective_status
+    else:
+        state = effective_status
+
     access_allowed = effective_status in {LICENSE_STATUS_ACTIVE, LICENSE_STATUS_TRIAL}
+    if state == "grace":
+        access_allowed = True
+
     reason = "License active."
-    if effective_status == LICENSE_STATUS_TRIAL:
+    if state == "grace":
+        reason = "License expired, but the grace period is still active."
+    elif effective_status == LICENSE_STATUS_TRIAL:
         reason = "Trial access is active."
+        if days_remaining is not None and 0 <= days_remaining <= 7:
+            reason = "Trial access is active and ends soon."
+    elif state == "expiring":
+        reason = "License active, but renewal is due soon."
     elif effective_status == LICENSE_STATUS_SUSPENDED:
         reason = "Organization access is suspended."
     elif effective_status == LICENSE_STATUS_EXPIRED:
         reason = "Organization license has expired."
 
+    renewal_days_remaining: int | None = None
+    if renewal_due_value:
+        renewal_days_remaining = (renewal_due_value - today_value).days
+
     return {
         "status": effective_status,
+        "state": state,
         "access_allowed": access_allowed,
         "expires_on": organization.expires_on,
         "expires_date": expires_value,
         "days_remaining": days_remaining,
+        "grace_days": grace_days,
+        "grace_days_remaining": grace_days_remaining,
+        "renewal_due_on": organization.renewal_due_on,
+        "renewal_due_date": renewal_due_value,
+        "renewal_days_remaining": renewal_days_remaining,
         "reason": reason,
     }
+
+
+def record_organization_license_event(
+    settings: AppConfig,
+    *,
+    slug: str,
+    event_type: str,
+    title: str,
+    actor_name: str = "Platform Super Admin",
+    details: str = "",
+    previous_status: str = "",
+    next_status: str = "",
+    previous_expires_on: str = "",
+    next_expires_on: str = "",
+    amount: float | int | str | None = None,
+) -> None:
+    organization = get_organization_by_slug(settings, slug)
+    if not organization:
+        raise ValueError(f"Organization '{slug}' was not found.")
+
+    db = sqlite3.connect(settings.platform_registry_path)
+    db.row_factory = sqlite3.Row
+    try:
+        row = db.execute(
+            "SELECT id FROM organizations WHERE slug = ?",
+            (organization.slug,),
+        ).fetchone()
+        if not row:
+            raise ValueError(f"Organization '{slug}' was not found.")
+        timestamp = datetime.now().isoformat(timespec="seconds")
+        db.execute(
+            """
+            INSERT INTO organization_license_events (
+                organization_id,
+                event_type,
+                title,
+                details,
+                actor_name,
+                previous_status,
+                next_status,
+                previous_expires_on,
+                next_expires_on,
+                amount,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                int(row["id"]),
+                str(event_type).strip() or "license_update",
+                str(title).strip() or "License updated",
+                str(details).strip(),
+                str(actor_name).strip() or "Platform Super Admin",
+                str(previous_status).strip(),
+                str(next_status).strip(),
+                _normalize_optional_date(previous_expires_on),
+                _normalize_optional_date(next_expires_on),
+                _to_amount(amount) if amount not in {None, ""} else None,
+                timestamp,
+            ),
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def list_organization_license_events(
+    settings: AppConfig,
+    slug: str,
+    *,
+    limit: int = 12,
+) -> list[dict[str, Any]]:
+    organization = get_organization_by_slug(settings, slug)
+    if not organization:
+        return []
+    db = sqlite3.connect(settings.platform_registry_path)
+    db.row_factory = sqlite3.Row
+    try:
+        rows = db.execute(
+            """
+            SELECT
+                e.event_type,
+                e.title,
+                e.details,
+                e.actor_name,
+                e.previous_status,
+                e.next_status,
+                e.previous_expires_on,
+                e.next_expires_on,
+                e.amount,
+                e.created_at
+            FROM organization_license_events e
+            JOIN organizations o ON o.id = e.organization_id
+            WHERE o.slug = ?
+            ORDER BY e.created_at DESC, e.id DESC
+            LIMIT ?
+            """,
+            (organization.slug, max(1, int(limit))),
+        ).fetchall()
+        return [
+            {
+                "event_type": str(row["event_type"] or ""),
+                "title": str(row["title"] or ""),
+                "details": str(row["details"] or ""),
+                "actor_name": str(row["actor_name"] or ""),
+                "previous_status": str(row["previous_status"] or ""),
+                "next_status": str(row["next_status"] or ""),
+                "previous_expires_on": str(row["previous_expires_on"] or ""),
+                "next_expires_on": str(row["next_expires_on"] or ""),
+                "amount": float(row["amount"] or 0),
+                "created_at": str(row["created_at"] or ""),
+            }
+            for row in rows
+        ]
+    finally:
+        db.close()
+
+
+def apply_organization_license_action(
+    settings: AppConfig,
+    *,
+    slug: str,
+    action: str,
+    actor_name: str = "Platform Super Admin",
+) -> OrganizationContext:
+    organization = get_organization_by_slug(settings, slug)
+    if not organization:
+        raise ValueError(f"Organization '{slug}' was not found.")
+
+    current_expiry = _parse_date(organization.expires_on)
+    today_value = date.today()
+    base_date = current_expiry if current_expiry and current_expiry >= today_value else today_value
+
+    target_status = organization.license_status
+    target_expiry = organization.expires_on
+    target_renewal = organization.renewal_due_on
+    target_payment = organization.last_payment_on
+    title = "License action applied"
+    details = ""
+    action_key = str(action or "").strip().lower()
+
+    if action_key == "start_trial":
+        target_status = LICENSE_STATUS_TRIAL
+        target_expiry = (today_value + timedelta(days=14)).isoformat()
+        target_renewal = target_expiry
+        title = "Trial started"
+        details = "A fresh 14-day trial was started from the platform portal."
+    elif action_key == "activate_30":
+        target_status = LICENSE_STATUS_ACTIVE
+        target_expiry = (today_value + timedelta(days=30)).isoformat()
+        target_renewal = target_expiry
+        title = "30-day activation applied"
+        details = "A 30-day active license window was applied."
+    elif action_key == "renew_cycle":
+        target_status = LICENSE_STATUS_ACTIVE
+        next_expiry = _add_billing_cycle(base_date, organization.billing_cycle)
+        target_expiry = next_expiry.isoformat()
+        target_renewal = target_expiry
+        target_payment = today_value.isoformat()
+        title = "License renewed"
+        details = f"The license was renewed for the next {organization.billing_cycle} cycle."
+    elif action_key == "suspend":
+        target_status = LICENSE_STATUS_SUSPENDED
+        title = "Institution suspended"
+        details = "Access was suspended from the platform control room."
+    elif action_key == "mark_expired":
+        target_status = LICENSE_STATUS_EXPIRED
+        target_expiry = (today_value - timedelta(days=1)).isoformat()
+        target_renewal = target_expiry
+        title = "License marked expired"
+        details = "The license was manually marked as expired."
+    else:
+        raise ValueError("Choose a valid license action.")
+
+    updated = update_organization(
+        settings,
+        slug=organization.slug,
+        display_name=organization.display_name,
+        hostnames=organization.hostnames,
+        is_default=organization.is_default,
+        license_status=target_status,
+        plan_name=organization.plan_name,
+        expires_on=target_expiry,
+        billing_contact_name=organization.billing_contact_name,
+        billing_email=organization.billing_email,
+        billing_phone=organization.billing_phone,
+        billing_cycle=organization.billing_cycle,
+        subscription_amount=organization.subscription_amount,
+        renewal_due_on=target_renewal,
+        last_payment_on=target_payment,
+        license_notes=organization.license_notes,
+        grace_days=organization.grace_days,
+    )
+    record_organization_license_event(
+        settings,
+        slug=organization.slug,
+        event_type=action_key,
+        title=title,
+        details=details,
+        actor_name=actor_name,
+        previous_status=organization.license_status,
+        next_status=updated.license_status,
+        previous_expires_on=organization.expires_on,
+        next_expires_on=updated.expires_on,
+        amount=updated.subscription_amount,
+    )
+    return updated
 
 
 def _organization_select_query(where_clause: str = "", tail_clause: str = "") -> str:
@@ -596,6 +878,7 @@ def _organization_select_query(where_clause: str = "", tail_clause: str = "") ->
             o.renewal_due_on,
             o.last_payment_on,
             o.license_notes,
+            o.grace_days,
             GROUP_CONCAT(d.hostname, ',') AS hostnames
         FROM organizations o
         LEFT JOIN organization_domains d ON d.organization_id = o.id
@@ -627,6 +910,7 @@ def _row_to_context(row: sqlite3.Row) -> OrganizationContext:
         renewal_due_on=str(row["renewal_due_on"] or ""),
         last_payment_on=str(row["last_payment_on"] or ""),
         license_notes=str(row["license_notes"] or ""),
+        grace_days=_to_non_negative_int(row["grace_days"]),
     )
 
 
@@ -703,3 +987,37 @@ def _to_amount(value: float | int | str | None) -> float:
         return round(float(str(value or "0").strip()), 2)
     except ValueError:
         return 0.0
+
+
+def _to_non_negative_int(value: Any) -> int:
+    try:
+        return max(0, int(str(value or "0").strip()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _add_billing_cycle(base_date: date, billing_cycle: str) -> date:
+    normalized_cycle = _normalize_billing_cycle(billing_cycle)
+    months = {
+        BILLING_CYCLE_MONTHLY: 1,
+        BILLING_CYCLE_QUARTERLY: 3,
+        BILLING_CYCLE_YEARLY: 12,
+        BILLING_CYCLE_MANUAL: 1,
+    }.get(normalized_cycle, 1)
+    return _add_months(base_date, months)
+
+
+def _add_months(base_date: date, months: int) -> date:
+    month_index = base_date.month - 1 + months
+    year = base_date.year + (month_index // 12)
+    month = (month_index % 12) + 1
+    day = min(base_date.day, _days_in_month(year, month))
+    return date(year, month, day)
+
+
+def _days_in_month(year: int, month: int) -> int:
+    if month == 12:
+        return 31
+    next_month = date(year + (1 if month == 12 else 0), 1 if month == 12 else month + 1, 1)
+    current_month = date(year, month, 1)
+    return (next_month - current_month).days

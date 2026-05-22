@@ -123,6 +123,72 @@
             </section>
 
             <section class="platform-detail-section" data-platform-panel="license">
+                <div class="platform-license-health-grid">
+                    <article class="platform-license-health-card">
+                        <span>License State</span>
+                        <strong id="platformLicenseStateValue">—</strong>
+                        <small id="platformLicenseStateHint">Waiting for institution selection</small>
+                    </article>
+                    <article class="platform-license-health-card">
+                        <span>Access Window</span>
+                        <strong id="platformLicenseWindowValue">—</strong>
+                        <small id="platformLicenseWindowHint">Expiry information appears here</small>
+                    </article>
+                    <article class="platform-license-health-card">
+                        <span>Renewal</span>
+                        <strong id="platformLicenseRenewalValue">—</strong>
+                        <small id="platformLicenseRenewalHint">Renewal urgency appears here</small>
+                    </article>
+                    <article class="platform-license-health-card">
+                        <span>Subscription</span>
+                        <strong id="platformLicenseSubscriptionValue">—</strong>
+                        <small id="platformLicenseSubscriptionHint">Billing cycle appears here</small>
+                    </article>
+                    <article class="platform-license-health-card">
+                        <span>Grace Period</span>
+                        <strong id="platformLicenseGraceValue">—</strong>
+                        <small id="platformLicenseGraceHint">Fallback access period after expiry</small>
+                    </article>
+                    <article class="platform-license-health-card">
+                        <span>Next Contact</span>
+                        <strong id="platformLicenseContactValue">—</strong>
+                        <small id="platformLicenseContactHint">Billing owner for follow-up</small>
+                    </article>
+                </div>
+
+                <section class="platform-license-action-panel">
+                    <div class="platform-license-action-head">
+                        <div>
+                            <strong>Quick License Actions</strong>
+                            <span>Apply the most common activation, renewal, and restriction steps without editing every field manually.</span>
+                        </div>
+                    </div>
+                    <form method="post" class="platform-license-action-grid">
+                        <input type="hidden" name="action" value="license_action">
+                        <input type="hidden" name="organization_slug" id="platformLicenseActionSlug">
+                        <button class="admin-toolbar-button tone-primary" type="submit" name="license_action" value="start_trial">
+                            {{ icon('clock') }}
+                            <span>Start 14-Day Trial</span>
+                        </button>
+                        <button class="admin-toolbar-button tone-primary" type="submit" name="license_action" value="activate_30">
+                            {{ icon('check-circle') }}
+                            <span>Activate 30 Days</span>
+                        </button>
+                        <button class="admin-toolbar-button" type="submit" name="license_action" value="renew_cycle">
+                            {{ icon('arrow-right') }}
+                            <span>Renew Next Cycle</span>
+                        </button>
+                        <button class="admin-toolbar-button" type="submit" name="license_action" value="suspend">
+                            {{ icon('shield-check') }}
+                            <span>Suspend Access</span>
+                        </button>
+                        <button class="admin-toolbar-button" type="submit" name="license_action" value="mark_expired">
+                            {{ icon('close') }}
+                            <span>Mark Expired</span>
+                        </button>
+                    </form>
+                </section>
+
                 <form method="post" class="admin-form-grid platform-org-form platform-drawer-form">
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="organization_slug" id="platformLicenseSlug">
@@ -159,6 +225,10 @@
                         <input type="date" name="renewal_due_on" id="platformLicenseRenewalDueOn">
                     </label>
                     <label class="admin-field">
+                        <span>Grace Period (Days)</span>
+                        <input type="number" min="0" step="1" name="grace_days" id="platformLicenseGraceDays">
+                    </label>
+                    <label class="admin-field">
                         <span>Last Payment Date</span>
                         <input type="date" name="last_payment_on" id="platformLicenseLastPaymentOn">
                     </label>
@@ -185,6 +255,17 @@
                         </button>
                     </div>
                 </form>
+
+                <section class="platform-license-history">
+                    <div class="admin-card-head">
+                        {{ section_title('License Timeline', 'Track activation, renewal, suspension, and billing profile changes for this institution') }}
+                    </div>
+                    <div class="platform-license-history-list" id="platformLicenseHistoryList"></div>
+                    <div class="admin-inline-notice" id="platformLicenseHistoryEmpty">
+                        <strong>No license activity yet</strong>
+                        <span>License actions from the platform portal will appear here for future tracking.</span>
+                    </div>
+                </section>
             </section>
 
             <section class="platform-detail-section" data-platform-panel="backups">
