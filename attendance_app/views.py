@@ -1005,6 +1005,8 @@ self.addEventListener("fetch", (event) => {{
     @platform_admin_required
     def platform_organizations():
         settings = current_app.config["APP_SETTINGS"]
+        selected_slug = request.args.get("organization", "").strip().lower()
+        open_create_modal = request.args.get("create", "").strip().lower() in {"1", "true", "yes"}
         create_form = {
             "slug": "",
             "display_name": "",
@@ -1030,6 +1032,7 @@ self.addEventListener("fetch", (event) => {{
         if request.method == "POST":
             action = request.form.get("action", "create").strip().lower()
             if action == "create":
+                open_create_modal = True
                 create_form = _read_platform_organization_form(request.form)
                 validation_error = _validate_platform_organization_form(create_form, creating=True)
                 if validation_error:
@@ -1067,9 +1070,15 @@ self.addEventListener("fetch", (event) => {{
                             f"{create_form['display_name']} was provisioned successfully.",
                             "success",
                         )
-                        return redirect(url_for("app.platform_organizations"))
+                        return redirect(
+                            url_for(
+                                "app.platform_organizations",
+                                organization=created_organization.slug,
+                            )
+                        )
             elif action == "update":
                 slug = request.form.get("organization_slug", "").strip()
+                selected_slug = slug.lower()
                 update_form = _read_platform_organization_form(request.form)
                 update_form["slug"] = slug
                 update_forms[slug] = update_form
@@ -1114,9 +1123,15 @@ self.addEventListener("fetch", (event) => {{
                             f"{update_form['display_name']} was updated successfully.",
                             "success",
                         )
-                        return redirect(url_for("app.platform_organizations"))
+                        return redirect(
+                            url_for(
+                                "app.platform_organizations",
+                                organization=slug,
+                            )
+                        )
             elif action == "create_backup":
                 slug = request.form.get("organization_slug", "").strip()
+                selected_slug = slug.lower()
                 target_organization = get_organization_by_slug(settings, slug)
                 if not target_organization:
                     flash("The selected institution could not be found.", "error")
@@ -1138,10 +1153,16 @@ self.addEventListener("fetch", (event) => {{
                         f"Backup created for {target_organization.display_name}: {backup_path.name}",
                         "success",
                     )
-                    return redirect(url_for("app.platform_organizations"))
+                    return redirect(
+                        url_for(
+                            "app.platform_organizations",
+                            organization=slug,
+                        )
+                    )
             elif action == "restore_backup":
                 slug = request.form.get("organization_slug", "").strip()
                 backup_name = request.form.get("backup_name", "").strip()
+                selected_slug = slug.lower()
                 target_organization = get_organization_by_slug(settings, slug)
                 if not target_organization:
                     flash("The selected institution could not be found.", "error")
@@ -1175,12 +1196,28 @@ self.addEventListener("fetch", (event) => {{
                             f"A safety snapshot was saved as {pre_restore_backup.name}.",
                             "success",
                         )
-                        return redirect(url_for("app.platform_organizations"))
+                        return redirect(
+                            url_for(
+                                "app.platform_organizations",
+                                organization=slug,
+                            )
+                        )
 
         organizations = list_organizations(settings)
         ensure_automatic_backups(organizations)
         organizations = list_organizations(settings)
         rows = _platform_organization_rows(organizations, update_forms=update_forms)
+        if not selected_slug and rows:
+            selected_slug = str(rows[0]["slug"]).lower()
+        expiring_soon = sum(
+            1
+            for row in rows
+            if row["access_state"]["status"] in {LICENSE_STATUS_ACTIVE, LICENSE_STATUS_TRIAL}
+            and row["access_state"]["days_remaining"] is not None
+            and 0 <= int(row["access_state"]["days_remaining"]) <= 14
+        )
+        total_backups = sum(len(row["backups"]) for row in rows)
+        customers_with_backups = sum(1 for row in rows if row["backups"])
         stats = {
             "organizations": count_organizations(settings),
             "hostnames": count_organization_hostnames(settings),
@@ -1193,6 +1230,9 @@ self.addEventListener("fetch", (event) => {{
                 LICENSE_STATUS_EXPIRED,
                 LICENSE_STATUS_SUSPENDED,
             ),
+            "expiring_soon": expiring_soon,
+            "backups": total_backups,
+            "customers_with_backups": customers_with_backups,
         }
         return render_template(
             "platform/organizations.html",
@@ -1200,6 +1240,8 @@ self.addEventListener("fetch", (event) => {{
             create_form=create_form,
             organizations=rows,
             platform_stats=stats,
+            open_create_modal=open_create_modal,
+            selected_organization_slug=selected_slug,
             license_status_options=_platform_license_status_options(),
             billing_cycle_options=_platform_billing_cycle_options(),
             **_platform_context("Organizations", "organizations", ["Platform", "Organizations"]),
@@ -3840,6 +3882,20 @@ def _platform_organization_rows(
         hostname_staff_login_url = f"{primary_url}/staff/login" if primary_url else ""
         access_state = get_organization_access_state(organization)
         backups = list_organization_backups(organization, limit=6)
+        backup_rows = [
+            {
+                "name": snapshot.name,
+                "created_label": snapshot.created_label,
+                "size_label": snapshot.size_label,
+                "reason_label": snapshot.reason_label,
+                "download_url": url_for(
+                    "app.platform_download_backup",
+                    slug=organization.slug,
+                    backup_name=snapshot.name,
+                ),
+            }
+            for snapshot in backups
+        ]
         rows.append(
             {
                 "slug": organization.slug,
@@ -3869,21 +3925,8 @@ def _platform_organization_rows(
                 "last_payment_on": organization.last_payment_on,
                 "license_notes": organization.license_notes,
                 "access_state": access_state,
-                "backups": [
-                    {
-                        "name": snapshot.name,
-                        "created_label": snapshot.created_label,
-                        "size_label": snapshot.size_label,
-                        "reason_label": snapshot.reason_label,
-                        "download_url": url_for(
-                            "app.platform_download_backup",
-                            slug=organization.slug,
-                            backup_name=snapshot.name,
-                        ),
-                    }
-                    for snapshot in backups
-                ],
-                "latest_backup": backups[0] if backups else None,
+                "backups": backup_rows,
+                "latest_backup": backup_rows[0] if backup_rows else None,
             }
         )
     return rows

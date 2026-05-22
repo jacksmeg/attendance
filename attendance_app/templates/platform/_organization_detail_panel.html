@@ -1,0 +1,250 @@
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import section_title %}
+
+<article class="admin-side-card platform-detail-panel">
+    <div class="platform-detail-empty" data-platform-empty {% if organizations %}hidden{% endif %}>
+        <div class="admin-empty-state">
+            <h3>No institution selected yet.</h3>
+            <p>Create a customer workspace or choose an institution row to manage its portal, license, and backups.</p>
+        </div>
+    </div>
+
+    <div class="platform-detail-body" data-platform-detail {% if not organizations %}hidden{% endif %}>
+        <div class="platform-detail-head">
+            <div>
+                <p class="platform-detail-kicker">Institution Workspace</p>
+                <h2 id="platformDetailTitle">Institution</h2>
+                <span id="platformDetailSubtitle" class="platform-detail-subtitle">Select a workspace to begin</span>
+            </div>
+            <div id="platformDetailBadge" class="platform-detail-badge"></div>
+        </div>
+
+        <div class="platform-detail-tabs" role="tablist" aria-label="Institution detail sections">
+            <button class="platform-detail-tab is-active" type="button" data-platform-tab="overview">Overview</button>
+            <button class="platform-detail-tab" type="button" data-platform-tab="access">Access</button>
+            <button class="platform-detail-tab" type="button" data-platform-tab="license">License</button>
+            <button class="platform-detail-tab" type="button" data-platform-tab="backups">Backups</button>
+        </div>
+
+        <div class="platform-detail-panels">
+            <section class="platform-detail-section is-active" data-platform-panel="overview">
+                <form method="post" class="admin-form-grid platform-org-form platform-drawer-form">
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="organization_slug" id="platformUpdateSlug">
+                    <label class="admin-field">
+                        <span>Institution Name</span>
+                        <input type="text" name="display_name" id="platformUpdateDisplayName" required>
+                    </label>
+                    <label class="admin-field">
+                        <span>Institution Admin Username</span>
+                        <input type="text" name="admin_username" id="platformUpdateAdminUsername" required>
+                    </label>
+                    <label class="admin-field" style="grid-column: 1 / -1;">
+                        <span>Domains or Subdomains</span>
+                        <textarea name="hostnames" id="platformUpdateHostnames" rows="3" required></textarea>
+                    </label>
+                    <label class="admin-check-card admin-check-card-inline" style="grid-column: 1 / -1;">
+                        <input type="checkbox" name="is_default" id="platformUpdateIsDefault">
+                        <div>
+                            <strong>Default organization</strong>
+                            <span>Use this workspace when the request host has not been mapped yet.</span>
+                        </div>
+                    </label>
+                    <label class="admin-field">
+                        <span>Reset Institution Admin Password</span>
+                        <input type="password" name="admin_password" id="platformUpdatePassword" placeholder="Leave blank to keep current password">
+                    </label>
+                    <label class="admin-field">
+                        <span>Confirm New Password</span>
+                        <input type="password" name="confirm_admin_password" id="platformUpdateConfirmPassword" placeholder="Repeat only when resetting">
+                    </label>
+                    <div class="admin-form-actions" style="grid-column: 1 / -1;">
+                        <button class="admin-toolbar-button tone-primary" type="submit">
+                            {{ icon('settings') }}
+                            <span>Save Institution</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="platform-detail-section" data-platform-panel="access">
+                <div class="platform-detail-info-grid">
+                    <div class="platform-access-card">
+                        <span>Admin Portal</span>
+                        <strong id="platformAccessAdminLink">—</strong>
+                        <small>Institution admins sign in here with the username assigned to this workspace.</small>
+                        <div class="platform-access-actions">
+                            <a class="admin-toolbar-button tone-primary" href="#" id="platformOpenAdminPortal" target="_blank" rel="noreferrer">
+                                {{ icon('arrow-right') }}
+                                <span>Open Admin Portal</span>
+                            </a>
+                            <button class="admin-toolbar-button" type="button" id="platformCopyAdminLink">
+                                {{ icon('document') }}
+                                <span>Copy Admin Link</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="platform-access-card">
+                        <span>Staff App Login</span>
+                        <strong id="platformAccessStaffLink">—</strong>
+                        <small>Staff install and sign in to their institution app from this link only.</small>
+                        <div class="platform-access-actions">
+                            <a class="admin-toolbar-button tone-primary" href="#" id="platformOpenStaffPortal" target="_blank" rel="noreferrer">
+                                {{ icon('arrow-right') }}
+                                <span>Open Staff Login</span>
+                            </a>
+                            <button class="admin-toolbar-button" type="button" id="platformCopyStaffLink">
+                                {{ icon('document') }}
+                                <span>Copy Staff Link</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="platform-access-card">
+                        <span>Username</span>
+                        <strong id="platformAccessUsername">—</strong>
+                        <small>Share this with the institution administrator together with their password.</small>
+                        <div class="platform-access-actions">
+                            <button class="admin-toolbar-button" type="button" id="platformCopyUsername">
+                                {{ icon('document') }}
+                                <span>Copy Username</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="platform-access-card">
+                        <span>Fallback Portal Links</span>
+                        <strong id="platformAccessFallbackAdmin">—</strong>
+                        <small>Use these built-in links before the customer’s own domain is ready.</small>
+                        <div class="platform-access-fallback-list">
+                            <a href="#" id="platformFallbackAdminLink" target="_blank" rel="noreferrer">Admin fallback</a>
+                            <a href="#" id="platformFallbackStaffLink" target="_blank" rel="noreferrer">Staff fallback</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="platform-detail-section" data-platform-panel="license">
+                <form method="post" class="admin-form-grid platform-org-form platform-drawer-form">
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="organization_slug" id="platformLicenseSlug">
+                    <label class="admin-field">
+                        <span>Plan Name</span>
+                        <input type="text" name="plan_name" id="platformLicensePlanName" required>
+                    </label>
+                    <label class="admin-field">
+                        <span>License Status</span>
+                        <select name="license_status" id="platformLicenseStatus" required>
+                            {% for option in license_status_options %}
+                            <option value="{{ option.value }}">{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="admin-field">
+                        <span>Expiry Date</span>
+                        <input type="date" name="expires_on" id="platformLicenseExpiresOn">
+                    </label>
+                    <label class="admin-field">
+                        <span>Billing Cycle</span>
+                        <select name="billing_cycle" id="platformLicenseBillingCycle" required>
+                            {% for option in billing_cycle_options %}
+                            <option value="{{ option.value }}">{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="admin-field">
+                        <span>Subscription Amount</span>
+                        <input type="number" step="0.01" min="0" name="subscription_amount" id="platformLicenseSubscriptionAmount">
+                    </label>
+                    <label class="admin-field">
+                        <span>Renewal Due On</span>
+                        <input type="date" name="renewal_due_on" id="platformLicenseRenewalDueOn">
+                    </label>
+                    <label class="admin-field">
+                        <span>Last Payment Date</span>
+                        <input type="date" name="last_payment_on" id="platformLicenseLastPaymentOn">
+                    </label>
+                    <label class="admin-field">
+                        <span>Billing Contact Name</span>
+                        <input type="text" name="billing_contact_name" id="platformLicenseBillingContactName">
+                    </label>
+                    <label class="admin-field">
+                        <span>Billing Email</span>
+                        <input type="email" name="billing_email" id="platformLicenseBillingEmail">
+                    </label>
+                    <label class="admin-field">
+                        <span>Billing Phone</span>
+                        <input type="text" name="billing_phone" id="platformLicenseBillingPhone">
+                    </label>
+                    <label class="admin-field" style="grid-column: 1 / -1;">
+                        <span>License Notes</span>
+                        <textarea name="license_notes" id="platformLicenseNotes" rows="3"></textarea>
+                    </label>
+                    <div class="admin-form-actions" style="grid-column: 1 / -1;">
+                        <button class="admin-toolbar-button tone-primary" type="submit">
+                            {{ icon('settings') }}
+                            <span>Save License Settings</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="platform-detail-section" data-platform-panel="backups">
+                <div class="platform-backup-section">
+                    <div class="admin-card-head">
+                        {{ section_title('Backups & Restore', 'Create snapshots, download archives, or restore this institution from a previous backup') }}
+                    </div>
+                    <div class="platform-backup-controls">
+                        <form method="post" class="platform-backup-action-form">
+                            <input type="hidden" name="action" value="create_backup">
+                            <input type="hidden" name="organization_slug" id="platformBackupSlug">
+                            <button class="admin-toolbar-button tone-primary" type="submit">
+                                {{ icon('plus') }}
+                                <span>Create Backup Now</span>
+                            </button>
+                        </form>
+                        <form method="post" class="platform-backup-restore-form" id="platformRestoreForm">
+                            <input type="hidden" name="action" value="restore_backup">
+                            <input type="hidden" name="organization_slug" id="platformRestoreSlug">
+                            <label class="admin-field platform-backup-select">
+                                <span>Restore from snapshot</span>
+                                <select name="backup_name" id="platformRestoreBackupName" required></select>
+                            </label>
+                            <button class="admin-toolbar-button" type="submit">
+                                {{ icon('settings') }}
+                                <span>Restore Selected Backup</span>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="platform-backup-list" id="platformBackupList"></div>
+                    <div class="admin-inline-notice" id="platformBackupEmpty">
+                        <strong>First backup pending</strong>
+                        <span>Create a manual snapshot now or wait for the automatic daily backup to create the first restore point.</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</article>
+
+<article class="admin-side-card">
+    <div class="admin-card-head">
+        {{ section_title('Platform Playbook') }}
+    </div>
+    <div class="admin-note-list">
+        <div class="admin-note-item">
+            <strong>Provision cleanly</strong>
+            <span>Create the institution once, then give them the copied admin link and username from the Access tab.</span>
+        </div>
+        <div class="admin-note-item">
+            <strong>Use fallback links</strong>
+            <span>If the customer domain is not ready yet, the built-in portal links let them start immediately.</span>
+        </div>
+        <div class="admin-note-item">
+            <strong>Check the license first</strong>
+            <span>Use the License tab to control trial access, renewals, expiry dates, and billing details.</span>
+        </div>
+        <div class="admin-note-item">
+            <strong>Protect every workspace</strong>
+            <span>The Backups tab lets you create manual snapshots and restore safely with a pre-restore backup.</span>
+        </div>
+    </div>
+</article>

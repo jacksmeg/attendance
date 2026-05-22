@@ -1,0 +1,120 @@
+{% from "_icons.html" import icon %}
+{% from "_admin_macros.html" import section_title %}
+
+<article class="admin-table-card platform-control-card">
+    <div class="admin-card-head platform-control-head">
+        {{ section_title('Institution Directory', 'Create customers, scan license health, and open each institution portal without scrolling through long cards') }}
+        <div class="platform-segmented-filter" role="tablist" aria-label="Institution status filter">
+            <button class="admin-page-chip is-active" type="button" data-license-filter="all">All</button>
+            <button class="admin-page-chip" type="button" data-license-filter="active">Active</button>
+            <button class="admin-page-chip" type="button" data-license-filter="trial">Trial</button>
+            <button class="admin-page-chip" type="button" data-license-filter="blocked">Blocked</button>
+        </div>
+    </div>
+
+    <div class="admin-table-wrap platform-table-wrap">
+        <table class="admin-table platform-org-table">
+            <thead>
+                <tr>
+                    <th>Institution</th>
+                    <th>Admin</th>
+                    <th>Access</th>
+                    <th>Plan</th>
+                    <th>Main Domain</th>
+                    <th>Latest Backup</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if organizations %}
+                    {% for organization in organizations %}
+                    {% set status_value = organization.access_state.status %}
+                    {% set status_bucket = 'blocked' if status_value in ['expired', 'suspended'] else status_value %}
+                    <tr
+                        data-organization-row
+                        data-organization-slug="{{ organization.slug }}"
+                        data-license-filter="{{ status_bucket }}"
+                        data-search-index="{{ (organization.display_name ~ ' ' ~ organization.slug ~ ' ' ~ organization.admin_username ~ ' ' ~ organization.hostnames|join(' '))|lower }}"
+                    >
+                        <td>
+                            <div class="platform-table-identity">
+                                <div class="platform-table-identity-copy">
+                                    <strong>{{ organization.display_name }}</strong>
+                                    <span>{{ organization.slug }}</span>
+                                </div>
+                                <div class="platform-table-inline-chips">
+                                    {% if organization.is_default %}
+                                    <span class="admin-table-chip tone-blue">Default</span>
+                                    {% endif %}
+                                    <span class="admin-table-chip {% if status_value == 'active' %}tone-green{% elif status_value == 'trial' %}tone-purple{% elif status_value == 'suspended' %}tone-orange{% else %}tone-red{% endif %}">
+                                        {{ status_value|replace('-', ' ')|title }}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="platform-table-meta">
+                                <strong>{{ organization.admin_username }}</strong>
+                                <span>{{ organization.preferred_admin_login_url }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="platform-table-meta">
+                                <strong>{{ organization.access_state.reason }}</strong>
+                                <span>{{ organization.access_state.days_label or 'No expiry limit' }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="platform-table-meta">
+                                <strong>{{ organization.plan_name }}</strong>
+                                <span>GH₵{{ '%.2f'|format(organization.subscription_amount) }} · {{ organization.billing_cycle|replace('-', ' ')|title }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if organization.primary_url %}
+                            <a class="platform-table-link" href="{{ organization.primary_url }}" target="_blank" rel="noreferrer">{{ organization.primary_url }}</a>
+                            {% else %}
+                            <span class="platform-table-muted">No custom domain yet</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="platform-table-meta">
+                                <strong>{{ organization.latest_backup.created_label if organization.latest_backup else 'No backups yet' }}</strong>
+                                <span>{{ organization.latest_backup.reason_label if organization.latest_backup else 'Daily backup will create the first snapshot' }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="platform-table-actions">
+                                <button class="admin-toolbar-button tone-primary" type="button" data-select-organization="{{ organization.slug }}">
+                                    {{ icon('settings') }}
+                                    <span>Manage</span>
+                                </button>
+                                <a class="admin-toolbar-button" href="{{ organization.preferred_admin_login_url }}" target="_blank" rel="noreferrer">
+                                    {{ icon('arrow-right') }}
+                                    <span>Open</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="admin-empty">
+                                <strong>No institutions have been provisioned yet.</strong>
+                                <p>Use the Add Institution button to create the first customer workspace.</p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-table-footer">
+        <span>{{ organizations|length }} institution{{ '' if organizations|length == 1 else 's' }} in the platform directory</span>
+        <div class="platform-table-footer-note">
+            <span>Select any row to view access details, license controls, and backups on the right.</span>
+        </div>
+    </div>
+</article>

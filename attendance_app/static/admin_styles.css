@@ -2538,7 +2538,257 @@ body.admin-ui {
     line-height: 1.45;
 }
 
+.platform-toolbar-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: min(420px, 100%);
+    padding: 12px 16px;
+    border: 1px solid var(--admin-line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--admin-muted);
+}
+
+.platform-toolbar-search input {
+    width: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--admin-text);
+    font: inherit;
+}
+
+.platform-control-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(340px, 420px);
+    gap: 22px;
+    align-items: start;
+}
+
+.platform-control-card,
+.platform-detail-panel {
+    min-width: 0;
+}
+
+.platform-control-head {
+    gap: 16px;
+}
+
+.platform-segmented-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.platform-table-wrap {
+    margin-top: 4px;
+}
+
+.platform-org-table tbody tr.is-selected {
+    background: linear-gradient(180deg, rgba(47, 107, 255, 0.08), rgba(47, 107, 255, 0.04));
+}
+
+.platform-table-identity,
+.platform-table-meta {
+    display: grid;
+    gap: 6px;
+}
+
+.platform-table-identity-copy,
+.platform-table-meta strong {
+    color: var(--admin-text);
+}
+
+.platform-table-identity-copy strong,
+.platform-table-meta strong {
+    display: block;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.platform-table-identity-copy span,
+.platform-table-meta span,
+.platform-table-muted {
+    color: var(--admin-muted);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.platform-table-inline-chips,
+.platform-table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.platform-table-link {
+    color: var(--admin-blue);
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.platform-table-footer-note {
+    color: var(--admin-muted);
+    font-size: 0.82rem;
+}
+
+.platform-detail-stack {
+    position: sticky;
+    top: 22px;
+}
+
+.platform-detail-panel {
+    display: grid;
+    gap: 18px;
+}
+
+.platform-detail-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.platform-detail-kicker {
+    margin: 0 0 6px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+}
+
+.platform-detail-head h2 {
+    margin: 0;
+    color: var(--admin-text);
+    font-size: 1.32rem;
+    line-height: 1.2;
+}
+
+.platform-detail-subtitle {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--admin-muted);
+    font-size: 0.84rem;
+}
+
+.platform-detail-badge {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.platform-detail-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 6px;
+    border-radius: 18px;
+    background: var(--admin-surface-soft);
+}
+
+.platform-detail-tab {
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--admin-muted);
+    font: inherit;
+    font-weight: 700;
+    padding: 12px 10px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.platform-detail-tab.is-active {
+    background: #ffffff;
+    color: var(--admin-blue);
+    box-shadow: 0 10px 24px rgba(31, 54, 120, 0.08);
+}
+
+.platform-detail-panels {
+    display: grid;
+}
+
+.platform-detail-section {
+    display: none;
+}
+
+.platform-detail-section.is-active {
+    display: grid;
+    gap: 16px;
+}
+
+.platform-drawer-form,
+.platform-detail-info-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.platform-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(8, 17, 31, 0.46);
+    z-index: 60;
+}
+
+.platform-modal-backdrop.is-visible {
+    display: flex;
+}
+
+.platform-modal-dialog {
+    width: min(1000px, 100%);
+    max-height: min(90vh, 960px);
+    overflow: auto;
+    padding: 24px;
+    border-radius: 28px;
+    border: 1px solid var(--admin-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
+    box-shadow: 0 28px 64px rgba(16, 33, 84, 0.24);
+}
+
+.platform-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.platform-modal-close {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--admin-line);
+    border-radius: 14px;
+    background: var(--admin-surface);
+    color: var(--admin-muted);
+    cursor: pointer;
+}
+
+.platform-modal-form {
+    margin: 0;
+}
+
+body.platform-modal-open {
+    overflow: hidden;
+}
+
 @media (max-width: 1100px) {
+    .platform-control-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .platform-detail-stack {
+        position: static;
+    }
+
     .platform-org-meta-grid,
     .platform-org-license-grid,
     .platform-access-grid {
@@ -2551,8 +2801,27 @@ body.admin-ui {
 }
 
 @media (max-width: 760px) {
+    .platform-toolbar-search {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .platform-detail-head,
     .platform-org-card-head {
         flex-direction: column;
+    }
+
+    .platform-detail-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .platform-modal-backdrop {
+        padding: 14px;
+    }
+
+    .platform-modal-dialog {
+        padding: 18px;
+        border-radius: 22px;
     }
 
     .platform-backup-row {
@@ -2685,6 +2954,35 @@ html[data-theme="dark"] .platform-backup-row {
 
 html[data-theme="dark"] .platform-access-panel {
     background: linear-gradient(180deg, rgba(12, 23, 41, 0.98), rgba(15, 29, 51, 0.98));
+    border-color: var(--admin-line);
+}
+
+html[data-theme="dark"] .platform-toolbar-search,
+html[data-theme="dark"] .platform-modal-close,
+html[data-theme="dark"] .platform-detail-tab.is-active {
+    background: rgba(10, 21, 38, 0.94);
+    border-color: var(--admin-line);
+    color: var(--admin-text);
+}
+
+html[data-theme="dark"] .platform-toolbar-search input {
+    color: var(--admin-text);
+}
+
+html[data-theme="dark"] .platform-detail-tabs {
+    background: rgba(10, 21, 38, 0.88);
+}
+
+html[data-theme="dark"] .platform-detail-tab {
+    color: var(--admin-muted);
+}
+
+html[data-theme="dark"] .platform-org-table tbody tr.is-selected {
+    background: linear-gradient(180deg, rgba(47, 107, 255, 0.18), rgba(47, 107, 255, 0.08));
+}
+
+html[data-theme="dark"] .platform-modal-dialog {
+    background: linear-gradient(180deg, rgba(9, 18, 33, 0.99), rgba(10, 21, 38, 0.99));
     border-color: var(--admin-line);
 }
 

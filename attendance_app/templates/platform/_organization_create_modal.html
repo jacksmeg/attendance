@@ -1,0 +1,114 @@
+{% from "_icons.html" import icon %}
+
+<div class="platform-modal-backdrop{% if open_create_modal %} is-visible{% endif %}" id="platformCreateModal" {% if open_create_modal %}aria-hidden="false"{% else %}aria-hidden="true"{% endif %}>
+    <div class="platform-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="platformCreateModalTitle">
+        <div class="platform-modal-head">
+            <div>
+                <p class="platform-detail-kicker">New Institution</p>
+                <h2 id="platformCreateModalTitle">Create customer workspace</h2>
+                <span class="platform-detail-subtitle">Set the institution identity, portal access, domain mapping, and the first admin password.</span>
+            </div>
+            <button class="platform-modal-close" type="button" data-close-platform-modal aria-label="Close create institution panel">
+                {{ icon('close') }}
+            </button>
+        </div>
+
+        <form method="post" class="admin-form-grid platform-org-form platform-modal-form">
+            <input type="hidden" name="action" value="create">
+            <label class="admin-field">
+                <span>Institution Name</span>
+                <input type="text" name="display_name" value="{{ create_form.display_name }}" placeholder="Hopewell Hospital" required>
+            </label>
+            <label class="admin-field">
+                <span>Organization Slug</span>
+                <input type="text" name="slug" value="{{ create_form.slug }}" placeholder="hopewell-hospital" required>
+            </label>
+            <label class="admin-field" style="grid-column: 1 / -1;">
+                <span>Domains or Subdomains</span>
+                <textarea name="hostnames" rows="3" placeholder="attendance.hopewell.com&#10;hopewell-attendance.example.org" required>{{ create_form.hostnames }}</textarea>
+                <small class="admin-side-note">Enter one hostname per line. The first hostname becomes the main login link for that institution.</small>
+            </label>
+            <label class="admin-field">
+                <span>Institution Admin Username</span>
+                <input type="text" name="admin_username" value="{{ create_form.admin_username }}" placeholder="admin" required>
+            </label>
+            <label class="admin-field">
+                <span>Plan Name</span>
+                <input type="text" name="plan_name" value="{{ create_form.plan_name }}" placeholder="Standard" required>
+            </label>
+            <label class="admin-field">
+                <span>License Status</span>
+                <select name="license_status" required>
+                    {% for option in license_status_options %}
+                    <option value="{{ option.value }}" {% if create_form.license_status == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="admin-field">
+                <span>Expiry Date</span>
+                <input type="date" name="expires_on" value="{{ create_form.expires_on }}">
+            </label>
+            <label class="admin-field">
+                <span>Billing Cycle</span>
+                <select name="billing_cycle" required>
+                    {% for option in billing_cycle_options %}
+                    <option value="{{ option.value }}" {% if create_form.billing_cycle == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="admin-field">
+                <span>Subscription Amount</span>
+                <input type="number" step="0.01" min="0" name="subscription_amount" value="{{ create_form.subscription_amount }}" placeholder="0.00">
+            </label>
+            <label class="admin-field">
+                <span>Renewal Due On</span>
+                <input type="date" name="renewal_due_on" value="{{ create_form.renewal_due_on }}">
+            </label>
+            <label class="admin-field">
+                <span>Last Payment Date</span>
+                <input type="date" name="last_payment_on" value="{{ create_form.last_payment_on }}">
+            </label>
+            <label class="admin-field">
+                <span>Billing Contact Name</span>
+                <input type="text" name="billing_contact_name" value="{{ create_form.billing_contact_name }}" placeholder="Jane Manager">
+            </label>
+            <label class="admin-field">
+                <span>Billing Email</span>
+                <input type="email" name="billing_email" value="{{ create_form.billing_email }}" placeholder="billing@example.org">
+            </label>
+            <label class="admin-field">
+                <span>Billing Phone</span>
+                <input type="text" name="billing_phone" value="{{ create_form.billing_phone }}" placeholder="+233 20 000 0000">
+            </label>
+            <label class="admin-field" style="grid-column: 1 / -1;">
+                <span>License Notes</span>
+                <textarea name="license_notes" rows="3" placeholder="Special onboarding terms, migration notes, contract remarks...">{{ create_form.license_notes }}</textarea>
+            </label>
+            <label class="admin-field">
+                <span>Initial Institution Admin Password</span>
+                <input type="password" name="admin_password" value="{{ create_form.admin_password }}" placeholder="At least 8 characters" required>
+            </label>
+            <label class="admin-field">
+                <span>Confirm Admin Password</span>
+                <input type="password" name="confirm_admin_password" value="{{ create_form.confirm_admin_password }}" placeholder="Repeat password" required>
+            </label>
+            <label class="admin-check-card admin-check-card-inline" style="grid-column: 1 / -1;">
+                <input type="checkbox" name="is_default" {% if create_form.is_default %}checked{% endif %}>
+                <div>
+                    <strong>Use as default organization</strong>
+                    <span>This workspace will be used for localhost and for any hostname that is not mapped yet.</span>
+                </div>
+            </label>
+            <div class="admin-form-actions" style="grid-column: 1 / -1;">
+                <button class="admin-toolbar-button tone-primary" type="submit">
+                    {{ icon('plus') }}
+                    <span>Create Institution</span>
+                </button>
+                <button class="admin-toolbar-button" type="button" data-close-platform-modal>
+                    {{ icon('close') }}
+                    <span>Cancel</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

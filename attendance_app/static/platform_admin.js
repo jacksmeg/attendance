@@ -1,0 +1,302 @@
+(() => {
+    const organizationsScript = document.getElementById("platformOrganizationsData");
+    if (!organizationsScript) return;
+
+    const organizations = JSON.parse(organizationsScript.textContent || "[]");
+    const selectedSlug = (document.querySelector("[data-selected-organization]")?.getAttribute("data-selected-organization") || "").toLowerCase();
+    const organizationMap = new Map(organizations.map((organization) => [String(organization.slug).toLowerCase(), organization]));
+    const rows = Array.from(document.querySelectorAll("[data-organization-row]"));
+    const searchInput = document.getElementById("platformOrganizationSearch");
+    const filterButtons = Array.from(document.querySelectorAll("[data-license-filter]"));
+    const openModalButtons = Array.from(document.querySelectorAll("[data-open-platform-modal]"));
+    const closeModalButtons = Array.from(document.querySelectorAll("[data-close-platform-modal]"));
+    const modal = document.getElementById("platformCreateModal");
+    const detailEmpty = document.querySelector("[data-platform-empty]");
+    const detailBody = document.querySelector("[data-platform-detail]");
+    const detailTitle = document.getElementById("platformDetailTitle");
+    const detailSubtitle = document.getElementById("platformDetailSubtitle");
+    const detailBadge = document.getElementById("platformDetailBadge");
+    const tabButtons = Array.from(document.querySelectorAll("[data-platform-tab]"));
+    const tabPanels = Array.from(document.querySelectorAll("[data-platform-panel]"));
+    let currentFilter = "all";
+
+    const setCopyTarget = (button, value) => {
+        if (!button) return;
+        button.dataset.copyText = value || "";
+        const label = button.querySelector("span");
+        if (label && !button.dataset.originalLabel) {
+            button.dataset.originalLabel = label.textContent || "";
+        }
+    };
+
+    const copyWithFeedback = async (button) => {
+        const text = button.dataset.copyText || "";
+        const label = button.querySelector("span");
+        const original = button.dataset.originalLabel || (label ? label.textContent : "");
+        if (!text || !navigator.clipboard) {
+            if (label) label.textContent = "Copy failed";
+            window.setTimeout(() => {
+                if (label) label.textContent = original;
+            }, 1600);
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(text);
+            if (label) label.textContent = "Copied";
+        } catch (error) {
+            if (label) label.textContent = "Copy failed";
+        }
+        window.setTimeout(() => {
+            if (label) label.textContent = original;
+        }, 1600);
+    };
+
+    document.querySelectorAll("[data-copy-text]").forEach((button) => {
+        const label = button.querySelector("span");
+        if (label && !button.dataset.originalLabel) {
+            button.dataset.originalLabel = label.textContent || "";
+        }
+        button.addEventListener("click", () => copyWithFeedback(button));
+    });
+
+    const openModal = () => {
+        if (!modal) return;
+        modal.classList.add("is-visible");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("platform-modal-open");
+    };
+
+    const closeModal = () => {
+        if (!modal) return;
+        modal.classList.remove("is-visible");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("platform-modal-open");
+    };
+
+    openModalButtons.forEach((button) => {
+        button.addEventListener("click", openModal);
+    });
+
+    closeModalButtons.forEach((button) => {
+        button.addEventListener("click", closeModal);
+    });
+
+    if (modal) {
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    }
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            closeModal();
+        }
+    });
+
+    const setActiveTab = (tabName) => {
+        tabButtons.forEach((button) => {
+            button.classList.toggle("is-active", button.dataset.platformTab === tabName);
+        });
+        tabPanels.forEach((panel) => {
+            panel.classList.toggle("is-active", panel.dataset.platformPanel === tabName);
+        });
+    };
+
+    tabButtons.forEach((button) => {
+        button.addEventListener("click", () => setActiveTab(button.dataset.platformTab));
+    });
+
+    const updateHistorySelection = (slug) => {
+        const url = new URL(window.location.href);
+        if (slug) {
+            url.searchParams.set("organization", slug);
+        } else {
+            url.searchParams.delete("organization");
+        }
+        url.searchParams.delete("create");
+        window.history.replaceState({}, "", url.toString());
+    };
+
+    const renderBackups = (organization) => {
+        const backupList = document.getElementById("platformBackupList");
+        const backupEmpty = document.getElementById("platformBackupEmpty");
+        const restoreForm = document.getElementById("platformRestoreForm");
+        const restoreSelect = document.getElementById("platformRestoreBackupName");
+        if (!backupList || !backupEmpty || !restoreForm || !restoreSelect) return;
+
+        backupList.innerHTML = "";
+        restoreSelect.innerHTML = "";
+
+        if (!organization.backups || !organization.backups.length) {
+            backupEmpty.hidden = false;
+            restoreForm.hidden = true;
+            return;
+        }
+
+        backupEmpty.hidden = true;
+        restoreForm.hidden = false;
+
+        organization.backups.forEach((backup, index) => {
+            const option = document.createElement("option");
+            option.value = backup.name;
+            option.textContent = `${backup.reason_label} · ${backup.created_label}`;
+            restoreSelect.appendChild(option);
+
+            const row = document.createElement("div");
+            row.className = "platform-backup-row";
+            row.innerHTML = `
+                <div class="platform-backup-row-copy">
+                    <strong>${backup.reason_label}</strong>
+                    <span>${backup.created_label} · ${backup.size_label}</span>
+                </div>
+                <a class="admin-toolbar-button" href="${backup.download_url}">
+                    <span>Download</span>
+                </a>
+            `;
+            backupList.appendChild(row);
+            if (index === 0) {
+                restoreSelect.value = backup.name;
+            }
+        });
+    };
+
+    const assignField = (id, value) => {
+        const field = document.getElementById(id);
+        if (!field) return;
+        if (field.type === "checkbox") {
+            field.checked = Boolean(value);
+            return;
+        }
+        field.value = value ?? "";
+    };
+
+    const updateDetailPanel = (slug) => {
+        const organization = organizationMap.get(String(slug).toLowerCase());
+        if (!organization) return;
+
+        if (detailEmpty) detailEmpty.hidden = true;
+        if (detailBody) detailBody.hidden = false;
+
+        rows.forEach((row) => {
+            row.classList.toggle("is-selected", row.dataset.organizationSlug === organization.slug);
+        });
+
+        detailTitle.textContent = organization.display_name;
+        detailSubtitle.textContent = `${organization.slug} · ${organization.hostnames.length} domain${organization.hostnames.length === 1 ? "" : "s"}`;
+
+        const toneClass =
+            organization.access_state.status === "active"
+                ? "tone-green"
+                : organization.access_state.status === "trial"
+                    ? "tone-purple"
+                    : organization.access_state.status === "suspended"
+                        ? "tone-orange"
+                        : "tone-red";
+        detailBadge.innerHTML = `<span class="admin-table-chip ${toneClass}">${organization.access_state.status.replace("-", " ")}</span>`;
+
+        assignField("platformUpdateSlug", organization.slug);
+        assignField("platformUpdateDisplayName", organization.form.display_name);
+        assignField("platformUpdateAdminUsername", organization.form.admin_username);
+        assignField("platformUpdateHostnames", organization.form.hostnames);
+        assignField("platformUpdateIsDefault", organization.form.is_default);
+        assignField("platformUpdatePassword", "");
+        assignField("platformUpdateConfirmPassword", "");
+
+        assignField("platformLicenseSlug", organization.slug);
+        assignField("platformLicensePlanName", organization.form.plan_name);
+        assignField("platformLicenseStatus", organization.form.license_status);
+        assignField("platformLicenseExpiresOn", organization.form.expires_on);
+        assignField("platformLicenseBillingCycle", organization.form.billing_cycle);
+        assignField("platformLicenseSubscriptionAmount", organization.form.subscription_amount);
+        assignField("platformLicenseRenewalDueOn", organization.form.renewal_due_on);
+        assignField("platformLicenseLastPaymentOn", organization.form.last_payment_on);
+        assignField("platformLicenseBillingContactName", organization.form.billing_contact_name);
+        assignField("platformLicenseBillingEmail", organization.form.billing_email);
+        assignField("platformLicenseBillingPhone", organization.form.billing_phone);
+        assignField("platformLicenseNotes", organization.form.license_notes);
+
+        assignField("platformBackupSlug", organization.slug);
+        assignField("platformRestoreSlug", organization.slug);
+
+        const adminLink = organization.preferred_admin_login_url;
+        const staffLink = organization.preferred_staff_login_url;
+        const fallbackAdminLink = organization.platform_login_url;
+        const fallbackStaffLink = organization.platform_staff_login_url;
+
+        document.getElementById("platformAccessAdminLink").textContent = adminLink;
+        document.getElementById("platformAccessStaffLink").textContent = staffLink;
+        document.getElementById("platformAccessUsername").textContent = organization.admin_username;
+        document.getElementById("platformAccessFallbackAdmin").textContent = fallbackAdminLink;
+
+        document.getElementById("platformOpenAdminPortal").href = adminLink;
+        document.getElementById("platformOpenStaffPortal").href = staffLink;
+        document.getElementById("platformFallbackAdminLink").href = fallbackAdminLink;
+        document.getElementById("platformFallbackStaffLink").href = fallbackStaffLink;
+
+        setCopyTarget(document.getElementById("platformCopyAdminLink"), adminLink);
+        setCopyTarget(document.getElementById("platformCopyStaffLink"), staffLink);
+        setCopyTarget(document.getElementById("platformCopyUsername"), organization.admin_username);
+
+        renderBackups(organization);
+        updateHistorySelection(organization.slug);
+    };
+
+    rows.forEach((row) => {
+        row.addEventListener("click", (event) => {
+            if (event.target.closest("a, button, input, select, textarea, label")) {
+                return;
+            }
+            updateDetailPanel(row.dataset.organizationSlug);
+        });
+    });
+
+    document.querySelectorAll("[data-select-organization]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const slug = button.getAttribute("data-select-organization");
+            updateDetailPanel(slug);
+        });
+    });
+
+    const applyFilters = () => {
+        const query = (searchInput?.value || "").trim().toLowerCase();
+        rows.forEach((row) => {
+            const matchesFilter = currentFilter === "all" || row.dataset.licenseFilter === currentFilter;
+            const matchesQuery = !query || (row.dataset.searchIndex || "").includes(query);
+            row.hidden = !(matchesFilter && matchesQuery);
+        });
+    };
+
+    filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            currentFilter = button.dataset.licenseFilter || "all";
+            filterButtons.forEach((chip) => chip.classList.toggle("is-active", chip === button));
+            applyFilters();
+        });
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener("input", applyFilters);
+    }
+
+    ["platformCopyAdminLink", "platformCopyStaffLink", "platformCopyUsername"].forEach((id) => {
+        const button = document.getElementById(id);
+        if (!button) return;
+        const label = button.querySelector("span");
+        if (label && !button.dataset.originalLabel) {
+            button.dataset.originalLabel = label.textContent || "";
+        }
+        button.addEventListener("click", () => copyWithFeedback(button));
+    });
+
+    setActiveTab("overview");
+    applyFilters();
+
+    const initialSlug = organizationMap.has(selectedSlug)
+        ? selectedSlug
+        : (organizations[0] ? String(organizations[0].slug).toLowerCase() : "");
+    if (initialSlug) {
+        updateDetailPanel(initialSlug);
+    }
+})();
