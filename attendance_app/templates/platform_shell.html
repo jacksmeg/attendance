@@ -15,26 +15,21 @@
     {% set page_title = page_title|default(title) %}
     {% set breadcrumbs = breadcrumbs|default([]) %}
     {% set display_name = display_name if display_name else (session.get('display_name') or session.get('admin_username') or 'Platform Admin') %}
-    {% set current_role = 'Platform Super Admin' %}
-    {% set initials = (display_name[:1] if display_name else 'P')|upper %}
-    {% if selected_organization_slug %}
-        {% set dashboard_url = url_for('app.platform_organizations', section='dashboard', organization=selected_organization_slug) %}
-        {% set organizations_url = url_for('app.platform_organizations', section='organizations', organization=selected_organization_slug) %}
-        {% set licenses_url = url_for('app.platform_organizations', section='licenses', organization=selected_organization_slug) %}
-        {% set backups_url = url_for('app.platform_organizations', section='backups', organization=selected_organization_slug) %}
-        {% set create_url = url_for('app.platform_organizations', section='create', organization=selected_organization_slug) %}
-    {% else %}
-        {% set dashboard_url = url_for('app.platform_organizations', section='dashboard') %}
-        {% set organizations_url = url_for('app.platform_organizations', section='organizations') %}
-        {% set licenses_url = url_for('app.platform_organizations', section='licenses') %}
-        {% set backups_url = url_for('app.platform_organizations', section='backups') %}
-        {% set create_url = url_for('app.platform_organizations', section='create') %}
-    {% endif %}
+    {% set current_role = 'Platform Admin' %}
+    {% set initials = (display_name[:2] if display_name else 'PA')|upper %}
+    {% set organization_query = {'organization': selected_organization_slug} if selected_organization_slug else {} %}
+    {% set dashboard_url = url_for('app.platform_organizations', section='dashboard', **organization_query) %}
+    {% set organizations_url = url_for('app.platform_organizations', section='organizations', **organization_query) %}
+    {% set licenses_url = url_for('app.platform_organizations', section='licenses', **organization_query) %}
+    {% set backups_url = url_for('app.platform_organizations', section='backups', **organization_query) %}
+    {% set billing_url = url_for('app.platform_organizations', section='billing', **organization_query) %}
+    {% set settings_url = url_for('app.platform_organizations', section='settings', **organization_query) %}
+    {% set create_url = url_for('app.platform_organizations', section='create', **organization_query) %}
 
     <div class="platform-shell">
         <aside class="platform-sidebar">
             <div class="platform-sidebar-top">
-                <a class="platform-brand" href="{{ dashboard_url }}">
+                <a class="platform-brand" href="{{ licenses_url }}">
                     <span class="platform-brand-mark">
                         {% if app_logo_url %}
                         <img src="{{ app_logo_url }}" alt="{{ app_name }} logo">
@@ -47,19 +42,22 @@
                     <div class="platform-brand-copy">
                         <strong>{{ app_name }}</strong>
                         <span class="platform-brand-version">{{ software_version }}</span>
-                        <span>Platform Console</span>
+                        <span class="platform-brand-mode">Standalone Platform</span>
+                        <small>Platform Command Center</small>
                     </div>
                 </a>
 
-                <div class="platform-sidebar-card">
-                    <span class="platform-sidebar-kicker">Platform cockpit</span>
-                    <h2>Operate the whole business with less clutter.</h2>
-                    <p>Open focused workspaces for onboarding, licensing, backups, and customer access instead of squeezing everything into one page.</p>
+                <div class="platform-super-card">
+                    <span class="platform-super-avatar">{{ initials }}</span>
+                    <div class="platform-super-copy">
+                        <strong>Super Admin</strong>
+                        <span>{{ current_role }}</span>
+                    </div>
+                    <span class="platform-super-caret">{{ icon('chevron-down') }}</span>
                 </div>
             </div>
 
             <nav class="platform-nav" aria-label="Platform navigation">
-                <span class="platform-nav-label">Workspace</span>
                 <a class="platform-nav-link {% if nav_primary == 'dashboard' %}is-active{% endif %}" href="{{ dashboard_url }}">
                     <span class="platform-nav-icon">{{ icon('dashboard') }}</span>
                     <span>Dashboard</span>
@@ -76,7 +74,14 @@
                     <span class="platform-nav-icon">{{ icon('document') }}</span>
                     <span>Backups</span>
                 </a>
-                <span class="platform-nav-label">Actions</span>
+                <a class="platform-nav-link {% if nav_primary == 'billing' %}is-active{% endif %}" href="{{ billing_url }}">
+                    <span class="platform-nav-icon">{{ icon('bank') }}</span>
+                    <span>Billing</span>
+                </a>
+                <a class="platform-nav-link {% if nav_primary == 'settings' %}is-active{% endif %}" href="{{ settings_url }}">
+                    <span class="platform-nav-icon">{{ icon('settings') }}</span>
+                    <span>Settings</span>
+                </a>
                 <a class="platform-nav-link platform-nav-link-accent {% if nav_primary == 'create' %}is-active{% endif %}" href="{{ create_url }}">
                     <span class="platform-nav-icon">{{ icon('plus') }}</span>
                     <span>Add Organization</span>
@@ -84,73 +89,93 @@
             </nav>
 
             <div class="platform-sidebar-bottom">
-                <div class="platform-identity-card">
-                    <div class="platform-identity-avatar">{{ initials }}</div>
-                    <div class="platform-identity-copy">
-                        <strong>{{ display_name }}</strong>
-                        <span>{{ current_role }}</span>
-                    </div>
-                </div>
-
                 <a class="platform-logout-button" href="{{ url_for('app.platform_logout') }}">
                     <span class="platform-nav-icon">{{ icon('logout') }}</span>
                     <span>Logout</span>
                 </a>
 
-                <div class="platform-sidebar-legal">
-                    <strong>{{ copyright_notice }}</strong>
-                    <span>{{ software_version }}</span>
-                </div>
+                <article class="platform-status-card">
+                    <div class="platform-status-head">
+                        <strong>System Status</strong>
+                        <span class="platform-status-dot"></span>
+                    </div>
+                    <div class="platform-status-grid">
+                        <div>
+                            <span>Healthy</span>
+                            <strong>{{ platform_status.state if platform_status else 'Healthy' }}</strong>
+                        </div>
+                        <div>
+                            <span>Uptime</span>
+                            <strong>{{ platform_status.uptime if platform_status else '99.98%' }}</strong>
+                        </div>
+                    </div>
+                    <div class="platform-status-wave" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <p>{{ platform_status.service if platform_status else 'All systems operational' }}</p>
+                </article>
             </div>
         </aside>
 
         <section class="platform-workspace">
-            <header class="platform-topbar">
-                <div class="platform-topbar-left">
-                    <span class="platform-topbar-chip">{{ icon('shield-check') }} Standalone Platform</span>
-                    <div class="platform-page-heading">
-                        <h1>{{ page_title }}</h1>
-                        {% if breadcrumbs %}
-                        <nav class="platform-breadcrumbs" aria-label="Breadcrumb">
-                            {% for crumb in breadcrumbs %}
-                                <span class="platform-breadcrumb-item">{{ crumb }}</span>
-                                {% if not loop.last %}<span class="platform-breadcrumb-sep">{{ icon('chevron-right') }}</span>{% endif %}
-                            {% endfor %}
-                        </nav>
-                        {% endif %}
+            <div class="platform-window">
+                <header class="platform-topbar">
+                    <div class="platform-topbar-left">
+                        <span class="platform-topbar-menu">{{ icon('menu') }}</span>
+                        <div class="platform-page-heading">
+                            <h1>{{ page_title }}</h1>
+                            {% if breadcrumbs %}
+                            <nav class="platform-breadcrumbs" aria-label="Breadcrumb">
+                                {% for crumb in breadcrumbs %}
+                                    <span class="platform-breadcrumb-item">{{ crumb }}</span>
+                                    {% if not loop.last %}<span class="platform-breadcrumb-sep">{{ icon('chevron-right') }}</span>{% endif %}
+                                {% endfor %}
+                            </nav>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-                <div class="platform-topbar-right">
-                    <div class="platform-toolbar-slot">
+                    <div class="platform-topbar-center">
                         {% block toolbar_center %}{% endblock %}
                     </div>
-                    <div class="platform-toolbar-actions">
+                    <div class="platform-topbar-right">
                         {% block toolbar_actions %}{% endblock %}
+                        <a class="platform-icon-button platform-notification-button" href="{{ licenses_url }}">
+                            {{ icon('bell') }}
+                            {% if platform_alert_count %}
+                            <span class="platform-icon-badge">{{ platform_alert_count }}</span>
+                            {% endif %}
+                        </a>
+                        <a class="platform-icon-button" href="{{ settings_url }}" aria-label="Open platform settings">
+                            {{ icon('help') }}
+                        </a>
                         <div class="platform-profile-pill">
-                            <div class="platform-profile-avatar">{{ initials }}</div>
+                            <span class="platform-profile-avatar">{{ initials }}</span>
                             <div class="platform-profile-copy">
                                 <strong>{{ display_name }}</strong>
                                 <span>{{ current_role }}</span>
                             </div>
                         </div>
+                        <button class="platform-window-close" type="button" aria-label="Close workspace">
+                            {{ icon('close') }}
+                        </button>
                     </div>
+                </header>
+
+                <div class="platform-page-shell">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        <section class="admin-flash-stack">
+                            {% for category, message in messages %}
+                            <div class="admin-flash admin-flash-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </section>
+                        {% endif %}
+                    {% endwith %}
+
+                    <main class="platform-page-content">
+                        {% block content %}{% endblock %}
+                    </main>
                 </div>
-            </header>
-
-            <div class="platform-page-shell">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                    <section class="admin-flash-stack">
-                        {% for category, message in messages %}
-                        <div class="admin-flash admin-flash-{{ category }}">{{ message }}</div>
-                        {% endfor %}
-                    </section>
-                    {% endif %}
-                {% endwith %}
-
-                <main class="platform-page-content">
-                    {% block content %}{% endblock %}
-                </main>
             </div>
         </section>
     </div>

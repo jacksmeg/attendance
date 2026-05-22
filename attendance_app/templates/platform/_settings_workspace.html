@@ -1,0 +1,181 @@
+{% from "_icons.html" import icon %}
+
+<section class="platform-saas-grid">
+    <div class="platform-saas-main">
+        <section class="platform-command-hero tone-settings">
+            <div class="platform-command-copy">
+                <span class="platform-command-kicker">{{ platform_section_meta.kicker }}</span>
+                <h2>Platform Settings Studio</h2>
+                <p>Keep the product identity, routing defaults, and platform-wide operating posture organized in one polished settings workspace.</p>
+                <div class="platform-command-bullets">
+                    <span>{{ icon('settings') }} Product identity</span>
+                    <span>{{ icon('shield-check') }} Access isolation</span>
+                    <span>{{ icon('document') }} Operational defaults</span>
+                </div>
+            </div>
+            <div class="platform-command-art" aria-hidden="true">
+                <div class="platform-command-orb"></div>
+                <div class="platform-command-shield">{{ icon('settings') }}</div>
+                <div class="platform-command-card platform-command-card-one"></div>
+                <div class="platform-command-card platform-command-card-two"></div>
+            </div>
+        </section>
+
+        <section class="platform-license-stat-row">
+            <article class="platform-license-stat-card accent-blue">
+                <span class="platform-license-stat-icon">{{ icon('settings') }}</span>
+                <div>
+                    <small>Product Name</small>
+                    <strong>{{ app_name }}</strong>
+                    <span>Main software identity</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-purple">
+                <span class="platform-license-stat-icon">{{ icon('document') }}</span>
+                <div>
+                    <small>Version</small>
+                    <strong>{{ software_version }}</strong>
+                    <span>Current platform release</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-green">
+                <span class="platform-license-stat-icon">{{ icon('users') }}</span>
+                <div>
+                    <small>Default Workspace</small>
+                    <strong>{{ platform_stats.default_name }}</strong>
+                    <span>{{ platform_stats.default_slug }}</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-cyan">
+                <span class="platform-license-stat-icon">{{ icon('check-circle') }}</span>
+                <div>
+                    <small>Healthy Licenses</small>
+                    <strong>{{ platform_stats.active }}</strong>
+                    <span>Active institutions</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-orange">
+                <span class="platform-license-stat-icon">{{ icon('bank') }}</span>
+                <div>
+                    <small>Billing Workspaces</small>
+                    <strong>{{ platform_billing.billing_contacts }}</strong>
+                    <span>Contacts configured</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-red">
+                <span class="platform-license-stat-icon">{{ icon('close') }}</span>
+                <div>
+                    <small>Platform Alerts</small>
+                    <strong>{{ platform_alert_count }}</strong>
+                    <span>Licenses or renewals needing attention</span>
+                </div>
+            </article>
+        </section>
+
+        <section class="platform-settings-grid">
+            <article class="platform-table-card">
+                <div class="platform-table-card-head">
+                    <div class="admin-section-title">
+                        <h3>Product Identity</h3>
+                        <p>The global software branding shown before each institution applies its own workspace branding.</p>
+                    </div>
+                </div>
+                <div class="platform-settings-list">
+                    <div><span>Software Name</span><strong>{{ app_name }}</strong></div>
+                    <div><span>Software Version</span><strong>{{ software_version }}</strong></div>
+                    <div><span>Copyright</span><strong>{{ copyright_notice }}</strong></div>
+                    <div><span>Standalone Portal</span><strong>/platform/login</strong></div>
+                </div>
+            </article>
+
+            <article class="platform-table-card">
+                <div class="platform-table-card-head">
+                    <div class="admin-section-title">
+                        <h3>Routing &amp; Defaults</h3>
+                        <p>Fallback routing, default workspace behavior, and portal conventions for new rollouts.</p>
+                    </div>
+                </div>
+                <div class="platform-settings-list">
+                    <div><span>Default Organization</span><strong>{{ platform_stats.default_name }}</strong></div>
+                    <div><span>Default Slug</span><strong>{{ platform_stats.default_slug }}</strong></div>
+                    <div><span>Provisioned Domains</span><strong>{{ platform_stats.hostnames }}</strong></div>
+                    <div><span>Institution Portals</span><strong>/portal/&lt;slug&gt;/admin/login</strong></div>
+                </div>
+            </article>
+
+            <article class="platform-table-card">
+                <div class="platform-table-card-head">
+                    <div class="admin-section-title">
+                        <h3>Security &amp; Isolation</h3>
+                        <p>Platform and institution spaces stay separate so each customer only sees their own data and tools.</p>
+                    </div>
+                </div>
+                <div class="platform-settings-list">
+                    <div><span>Platform Owner Access</span><strong>Standalone</strong></div>
+                    <div><span>Institution Admin Portals</span><strong>Isolated</strong></div>
+                    <div><span>Staff Apps</span><strong>Institution scoped</strong></div>
+                    <div><span>Daily Recovery Coverage</span><strong>{{ platform_stats.backups }} snapshots</strong></div>
+                </div>
+            </article>
+
+            <article class="platform-table-card">
+                <div class="platform-table-card-head">
+                    <div class="admin-section-title">
+                        <h3>Control Links</h3>
+                        <p>Open the main operating areas from the settings studio without hunting through the sidebar.</p>
+                    </div>
+                </div>
+                <div class="platform-settings-actions">
+                    <a class="platform-quick-button tone-blue" href="{{ organizations_url }}">{{ icon('users') }}<span>Organizations</span></a>
+                    <a class="platform-quick-button tone-purple" href="{{ licenses_url }}">{{ icon('shield-check') }}<span>Licenses</span></a>
+                    <a class="platform-quick-button tone-cyan" href="{{ billing_url }}">{{ icon('bank') }}<span>Billing</span></a>
+                    <a class="platform-quick-button tone-orange" href="{{ backups_url }}">{{ icon('document') }}<span>Backups</span></a>
+                </div>
+            </article>
+        </section>
+    </div>
+
+    <aside class="platform-saas-side">
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>Platform Health</h3>
+                <span class="platform-side-state">{{ platform_status.state }}</span>
+            </div>
+            <div class="platform-health-list">
+                <div><span>Uptime</span><strong>{{ platform_status.uptime }}</strong></div>
+                <div><span>Institutions</span><strong>{{ platform_stats.organizations }}</strong></div>
+                <div><span>Alerts</span><strong>{{ platform_alert_count }}</strong></div>
+                <div><span>Recovery Coverage</span><strong>{{ platform_stats.backup_coverage }}%</strong></div>
+            </div>
+        </article>
+
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>Release Notes</h3>
+            </div>
+            <div class="platform-timeline-list">
+                <div class="platform-timeline-item">
+                    <span class="platform-timeline-dot tone-green"></span>
+                    <div>
+                        <strong>{{ software_version }}</strong>
+                        <span>Current live platform release</span>
+                    </div>
+                </div>
+                <div class="platform-timeline-item">
+                    <span class="platform-timeline-dot tone-blue"></span>
+                    <div>
+                        <strong>Multi-institution ready</strong>
+                        <span>Standalone portals, licensing, billing, and backups enabled.</span>
+                    </div>
+                </div>
+                <div class="platform-timeline-item">
+                    <span class="platform-timeline-dot tone-purple"></span>
+                    <div>
+                        <strong>Professional rollout</strong>
+                        <span>Designed for customer handover with branded institution portals.</span>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </aside>
+</section>

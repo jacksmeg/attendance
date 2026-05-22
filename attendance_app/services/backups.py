@@ -172,9 +172,9 @@ def restore_organization_backup(organization: OrganizationContext, backup_name: 
         if not database_snapshot.exists():
             raise ValueError("Backup archive is missing the database snapshot.")
 
-        _clear_tenant_media(organization)
+        _clear_tenant_media(organization, keep_database=True)
         organization.database_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(database_snapshot, organization.database_path)
+        _restore_database_snapshot(database_snapshot, organization.database_path)
 
         instance_root = temp_dir / "instance"
         for directory_name in TENANT_DIRECTORY_NAMES:
@@ -210,8 +210,8 @@ def _write_tenant_media(archive: zipfile.ZipFile, organization: OrganizationCont
         archive.write(organization.mock_store_path, (Path("instance") / TENANT_FILE_NAMES[0]).as_posix())
 
 
-def _clear_tenant_media(organization: OrganizationContext) -> None:
-    if organization.database_path.exists():
+def _clear_tenant_media(organization: OrganizationContext, *, keep_database: bool = False) -> None:
+    if not keep_database and organization.database_path.exists():
         organization.database_path.unlink()
 
     for directory_name in TENANT_DIRECTORY_NAMES:
@@ -226,6 +226,16 @@ def _clear_tenant_media(organization: OrganizationContext) -> None:
 def _snapshot_database(source_path: Path, destination_path: Path) -> None:
     source_db = sqlite3.connect(str(source_path))
     source_db.row_factory = sqlite3.Row
+    destination_db = sqlite3.connect(str(destination_path))
+    try:
+        source_db.backup(destination_db)
+    finally:
+        destination_db.close()
+        source_db.close()
+
+
+def _restore_database_snapshot(source_path: Path, destination_path: Path) -> None:
+    source_db = sqlite3.connect(str(source_path))
     destination_db = sqlite3.connect(str(destination_path))
     try:
         source_db.backup(destination_db)

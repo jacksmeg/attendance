@@ -1,0 +1,228 @@
+{% from "_icons.html" import icon %}
+{% set selected_org = platform_selected_organization %}
+
+<section class="platform-saas-grid">
+    <div class="platform-saas-main">
+        <section class="platform-command-hero">
+            <div class="platform-command-copy">
+                <span class="platform-command-kicker">{{ platform_section_meta.kicker }}</span>
+                <h2>License Command Center</h2>
+                <p>Monitor, manage, and optimize all organization licenses from one premium command surface.</p>
+                <div class="platform-command-bullets">
+                    <span>{{ icon('shield-check') }} Real-time license insights</span>
+                    <span>{{ icon('clock') }} Automated renewals</span>
+                    <span>{{ icon('check-circle') }} Secure &amp; compliant</span>
+                </div>
+            </div>
+            <div class="platform-command-art" aria-hidden="true">
+                <div class="platform-command-orb"></div>
+                <div class="platform-command-shield">{{ icon('shield-check') }}</div>
+                <div class="platform-command-card platform-command-card-one"></div>
+                <div class="platform-command-card platform-command-card-two"></div>
+            </div>
+        </section>
+
+        <section class="platform-license-stat-row">
+            <article class="platform-license-stat-card accent-green">
+                <span class="platform-license-stat-icon">{{ icon('shield-check') }}</span>
+                <div>
+                    <small>Active Licenses</small>
+                    <strong>{{ platform_stats.active }}</strong>
+                    <span>Healthy workspaces</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-blue">
+                <span class="platform-license-stat-icon">{{ icon('clock') }}</span>
+                <div>
+                    <small>Trials</small>
+                    <strong>{{ platform_stats.trial }}</strong>
+                    <span>Onboarding this month</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-orange">
+                <span class="platform-license-stat-icon">{{ icon('calendar') }}</span>
+                <div>
+                    <small>Expiring Soon</small>
+                    <strong>{{ platform_stats.expiring_soon }}</strong>
+                    <span>Within 30 days</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-purple">
+                <span class="platform-license-stat-icon">{{ icon('check-circle') }}</span>
+                <div>
+                    <small>Grace Active</small>
+                    <strong>{{ platform_stats.grace_active }}</strong>
+                    <span>In grace period</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-red">
+                <span class="platform-license-stat-icon">{{ icon('close') }}</span>
+                <div>
+                    <small>Suspended</small>
+                    <strong>{{ platform_highlights.suspended }}</strong>
+                    <span>Requires attention</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-cyan">
+                <span class="platform-license-stat-icon">{{ icon('bank') }}</span>
+                <div>
+                    <small>Revenue (MTD)</small>
+                    <strong>{{ platform_stats.monthly_revenue_label }}</strong>
+                    <span>Active + trial value</span>
+                </div>
+            </article>
+        </section>
+
+        <section class="platform-table-card">
+            <div class="platform-table-card-head">
+                <div class="admin-section-title">
+                    <h3>Licensed Organizations</h3>
+                    <p>{{ organizations|length }} total</p>
+                </div>
+                <div class="platform-inline-filters">
+                    <a class="platform-mini-chip {% if platform_license_filter == 'all' %}is-active{% endif %}" href="{{ url_for('app.platform_organizations', section='licenses', q=platform_search_query or None, organization=selected_organization_slug or None, status='all') }}">All</a>
+                    <a class="platform-mini-chip {% if platform_license_filter == 'active' %}is-active{% endif %}" href="{{ url_for('app.platform_organizations', section='licenses', q=platform_search_query or None, organization=selected_organization_slug or None, status='active') }}">Active</a>
+                    <a class="platform-mini-chip {% if platform_license_filter == 'trial' %}is-active{% endif %}" href="{{ url_for('app.platform_organizations', section='licenses', q=platform_search_query or None, organization=selected_organization_slug or None, status='trial') }}">Trial</a>
+                    <a class="platform-mini-chip {% if platform_license_filter == 'blocked' %}is-active{% endif %}" href="{{ url_for('app.platform_organizations', section='licenses', q=platform_search_query or None, organization=selected_organization_slug or None, status='blocked') }}">Blocked</a>
+                </div>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table platform-license-table">
+                    <thead>
+                        <tr>
+                            <th>Organization</th>
+                            <th>Domain</th>
+                            <th>Plan</th>
+                            <th>Status</th>
+                            <th>Users</th>
+                            <th>Expires On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if organizations %}
+                            {% for organization in organizations %}
+                            <tr>
+                                <td>
+                                    <div class="platform-license-org">
+                                        <span class="platform-license-avatar tone-{{ organization.access_summary.tone }}">{{ organization.display_name[:1]|upper }}</span>
+                                        <div class="platform-license-org-copy">
+                                            <strong>{{ organization.display_name }}</strong>
+                                            <span>{{ organization.slug }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if organization.hostnames %}
+                                    <span class="platform-table-muted">{{ organization.hostnames[0] }}</span>
+                                    {% else %}
+                                    <span class="platform-table-muted">No custom domain yet</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="platform-plan-pill">{{ organization.plan_name }}</span></td>
+                                <td><span class="admin-table-chip tone-{{ organization.access_summary.tone }}">{{ organization.access_summary.state_label }}</span></td>
+                                <td>{{ organization.staff_count }}</td>
+                                <td>
+                                    <div class="platform-expiry-meta">
+                                        <strong>{{ organization.expires_on or 'No date set' }}</strong>
+                                        <span>{{ organization.access_summary.days_label or 'Open-ended' }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="platform-license-actions">
+                                        <a class="platform-row-action" href="{{ url_for('app.platform_organizations', section='licenses', organization=organization.slug, q=platform_search_query or None, status=platform_license_filter if platform_license_filter != 'all' else None) }}">{{ icon('eye') }}</a>
+                                        <a class="platform-row-action" href="{{ url_for('app.platform_organizations', section='organizations', organization=organization.slug) }}">{{ icon('settings') }}</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="admin-empty">
+                                    <strong>No organizations matched this license view.</strong>
+                                    <p>Try another search term or reset the current status filter.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <aside class="platform-saas-side">
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>License Health</h3>
+                <span class="platform-side-state">{{ 'Healthy' if platform_stats.blocked == 0 else 'Attention' }}</span>
+            </div>
+            <div class="platform-health-list">
+                <div><span>Service Uptime</span><strong>{{ platform_status.uptime }}</strong></div>
+                <div><span>License Validity</span><strong>{{ 'Good' if platform_stats.blocked == 0 else 'Review needed' }}</strong></div>
+                <div><span>Payment Status</span><strong>{{ 'Up to date' if platform_billing.overdue == 0 else 'Follow-up needed' }}</strong></div>
+                <div><span>Compliance</span><strong>Compliant</strong></div>
+            </div>
+        </article>
+
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>Quick Actions</h3>
+            </div>
+            <div class="platform-quick-action-grid">
+                <a class="platform-quick-button tone-blue" href="{{ create_url }}">{{ icon('plus') }}<span>Add License</span></a>
+                <form method="post">
+                    <input type="hidden" name="action" value="license_action">
+                    <input type="hidden" name="section" value="licenses">
+                    <input type="hidden" name="organization_slug" value="{{ selected_org.slug if selected_org else '' }}">
+                    <button class="platform-quick-button tone-purple" type="submit" name="license_action" value="renew_cycle" {% if not selected_org %}disabled{% endif %}>{{ icon('arrow-right') }}<span>Renew License</span></button>
+                </form>
+                <a class="platform-quick-button tone-cyan" href="{{ billing_url }}">{{ icon('bank') }}<span>Open Billing</span></a>
+                <a class="platform-quick-button tone-orange" href="{{ settings_url }}">{{ icon('settings') }}<span>Platform Settings</span></a>
+            </div>
+        </article>
+
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>Billing Contact</h3>
+            </div>
+            {% if selected_org %}
+            <div class="platform-contact-card">
+                <strong>{{ selected_org.billing_contact_name or selected_org.display_name }}</strong>
+                <span>{{ selected_org.billing_email or 'No billing email yet' }}</span>
+                <span>{{ selected_org.billing_phone or 'No billing phone yet' }}</span>
+                <a class="platform-contact-link" href="{{ selected_org.preferred_admin_login_url }}" target="_blank" rel="noreferrer">Open institution portal</a>
+            </div>
+            {% else %}
+            <div class="admin-inline-notice">
+                <strong>No organization selected</strong>
+                <span>Select an organization row to review its billing owner.</span>
+            </div>
+            {% endif %}
+        </article>
+
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>Renewal Timeline</h3>
+            </div>
+            <div class="platform-timeline-list">
+                {% for organization in platform_highlights.renewal_timeline %}
+                <div class="platform-timeline-item">
+                    <span class="platform-timeline-dot tone-{{ organization.access_summary.tone }}"></span>
+                    <div>
+                        <strong>{{ organization.display_name }}</strong>
+                        <span>{{ organization.renewal_due_on or organization.expires_on or 'No renewal date set' }}</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="admin-inline-notice">
+                    <strong>No renewals on the watchlist</strong>
+                    <span>Renewal dates will appear here once institutions are configured.</span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+    </aside>
+</section>

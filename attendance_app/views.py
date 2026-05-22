@@ -1008,11 +1008,16 @@ self.addEventListener("fetch", (event) => {{
     @platform_admin_required
     def platform_organizations():
         settings = current_app.config["APP_SETTINGS"]
-        valid_sections = {"dashboard", "organizations", "licenses", "backups", "create"}
+        valid_sections = {"dashboard", "organizations", "licenses", "backups", "billing", "settings", "create"}
         section = str(request.values.get("section", request.args.get("section", "organizations")) or "").strip().lower() or "organizations"
         if section not in valid_sections:
             section = "organizations"
         selected_slug = request.values.get("organization", request.args.get("organization", "")).strip().lower()
+        search_query = str(request.values.get("q", request.args.get("q", "")) or "").strip()
+        valid_status_filters = {"all", "active", "trial", "expiring", "grace", "suspended", "expired", "blocked"}
+        license_filter = str(request.values.get("status", request.args.get("status", "all")) or "").strip().lower() or "all"
+        if license_filter not in valid_status_filters:
+            license_filter = "all"
         create_form = {
             "slug": "",
             "display_name": "",
@@ -1318,8 +1323,29 @@ self.addEventListener("fetch", (event) => {{
             for row in rows
             if row["access_state"]["status"] in {LICENSE_STATUS_ACTIVE, LICENSE_STATUS_TRIAL}
         )
-        if section in {"organizations", "licenses", "backups"} and not selected_slug and rows:
-            selected_slug = str(rows[0]["slug"]).lower()
+        filtered_rows = rows
+        if search_query:
+            filtered_rows = [
+                row for row in filtered_rows if _platform_row_matches_query(row, search_query)
+            ]
+        if section in {"licenses", "billing"} and license_filter != "all":
+            filtered_rows = [
+                row
+                for row in filtered_rows
+                if row["status_bucket"] == license_filter
+                or (license_filter == "blocked" and row["status_bucket"] in {"expired", "suspended"})
+            ]
+
+        selected_row_pool = filtered_rows or rows
+        if section in {"organizations", "licenses", "backups", "billing", "settings"} and not selected_slug and selected_row_pool:
+            selected_slug = str(selected_row_pool[0]["slug"]).lower()
+        if selected_slug and selected_row_pool and not any(str(row["slug"]).lower() == selected_slug for row in selected_row_pool):
+            selected_slug = str(selected_row_pool[0]["slug"]).lower()
+
+        selected_row = next(
+            (row for row in selected_row_pool if str(row["slug"]).lower() == selected_slug),
+            selected_row_pool[0] if selected_row_pool else None,
+        )
         expiring_watchlist = sorted(
             [
                 row
@@ -1345,6 +1371,29 @@ self.addEventListener("fetch", (event) => {{
             for row in rows
             if row["latest_backup"]
         ][:6]
+        suspended_count = sum(1 for row in rows if row["access_state"]["status"] == LICENSE_STATUS_SUSPENDED)
+        overdue_billing_count = sum(
+            1
+            for row in rows
+            if (_parse_platform_date(row["renewal_due_on"]) or _parse_platform_date(row["expires_on"]))
+            and (_parse_platform_date(row["renewal_due_on"]) or _parse_platform_date(row["expires_on"])) < date.today()
+        )
+        paying_customers = sum(
+            1
+            for row in rows
+            if row["access_state"]["status"] in {LICENSE_STATUS_ACTIVE, LICENSE_STATUS_TRIAL}
+        )
+        yearly_plans = sum(1 for row in rows if row["billing_cycle"] == BILLING_CYCLE_YEARLY)
+        billing_contacts = sum(1 for row in rows if row["billing_email"] or row["billing_phone"] or row["billing_contact_name"])
+        total_staff = sum(int(row.get("staff_count") or 0) for row in rows)
+        renewal_timeline = sorted(
+            [
+                row
+                for row in rows
+                if _parse_platform_date(row["renewal_due_on"]) or _parse_platform_date(row["expires_on"])
+            ],
+            key=lambda row: _parse_platform_date(row["renewal_due_on"]) or _parse_platform_date(row["expires_on"]) or date.max,
+        )[:5]
         section_map = {
             "dashboard": {
                 "page_title": "Platform Dashboard",
@@ -1377,6 +1426,22 @@ self.addEventListener("fetch", (event) => {{
                 "hero_copy": "Monitor recovery readiness, create snapshots on demand, and restore customers from one dedicated workspace.",
                 "kicker": "Backup Operations",
                 "initial_tab": "backups",
+            },
+            "billing": {
+                "page_title": "Billing",
+                "breadcrumbs": ["Platform", "Billing"],
+                "hero_title": "Track subscription value, renewal owners, and collection readiness.",
+                "hero_copy": "Keep commercial follow-up, plan revenue, and billing contacts in one polished workspace.",
+                "kicker": "Billing Command Center",
+                "initial_tab": "license",
+            },
+            "settings": {
+                "page_title": "Settings",
+                "breadcrumbs": ["Platform", "Settings"],
+                "hero_title": "Review the product identity, platform access, and operating defaults.",
+                "hero_copy": "Keep the platform brand, routing defaults, and operating posture easy to understand for every rollout.",
+                "kicker": "Platform Settings",
+                "initial_tab": "overview",
             },
             "create": {
                 "page_title": "Add Organization",
@@ -1412,18 +1477,39 @@ self.addEventListener("fetch", (event) => {{
             "platform/organizations.html",
             title=section_meta["page_title"],
             create_form=create_form,
-            organizations=rows,
+            organizations=filtered_rows,
+            all_organizations=rows,
             platform_stats=stats,
             selected_organization_slug=selected_slug,
+            platform_selected_organization=selected_row,
             platform_section=section,
             platform_section_meta=section_meta,
             platform_initial_tab=section_meta["initial_tab"],
+            platform_search_query=search_query,
+            platform_license_filter=license_filter,
             platform_dashboard={
                 "expiring": expiring_watchlist,
                 "blocked": blocked_watchlist,
                 "trial": trial_watchlist,
                 "recent_backups": recent_backups,
             },
+            platform_billing={
+                "paying_customers": paying_customers,
+                "yearly_plans": yearly_plans,
+                "overdue": overdue_billing_count,
+                "billing_contacts": billing_contacts,
+            },
+            platform_highlights={
+                "suspended": suspended_count,
+                "renewal_timeline": renewal_timeline,
+                "total_staff": total_staff,
+            },
+            platform_status={
+                "state": "Healthy" if stats["blocked"] == 0 else "Needs Attention",
+                "uptime": "99.98%",
+                "service": "All systems operational" if stats["blocked"] == 0 else "Review expired or suspended workspaces",
+            },
+            platform_alert_count=stats["blocked"] + stats["expiring_soon"],
             license_status_options=_platform_license_status_options(),
             billing_cycle_options=_platform_billing_cycle_options(),
             **_platform_context(
@@ -4026,6 +4112,51 @@ def _platform_context(
     }
 
 
+def _parse_platform_date(raw_value: str) -> date | None:
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _platform_row_matches_query(row: Mapping[str, Any], query: str) -> bool:
+    needle = str(query or "").strip().lower()
+    if not needle:
+        return True
+    search_parts = [
+        row.get("display_name", ""),
+        row.get("slug", ""),
+        row.get("admin_username", ""),
+        row.get("primary_url", ""),
+        row.get("billing_contact_name", ""),
+        row.get("billing_email", ""),
+        row.get("billing_phone", ""),
+        row.get("plan_name", ""),
+        " ".join(row.get("hostnames", []) or []),
+    ]
+    haystack = " ".join(str(part or "") for part in search_parts).lower()
+    return needle in haystack
+
+
+def _count_active_staff_for_database(database_path: Path) -> int:
+    try:
+        with sqlite3.connect(database_path) as connection:
+            cursor = connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='staff'"
+            )
+            if cursor.fetchone() is None:
+                return 0
+            result = connection.execute(
+                "SELECT COUNT(*) FROM staff WHERE is_active = 1"
+            ).fetchone()
+    except sqlite3.Error:
+        return 0
+    return int(result[0] or 0) if result else 0
+
+
 def _platform_organization_rows(
     organizations: list[Any],
     *,
@@ -4070,6 +4201,7 @@ def _platform_organization_rows(
         hostname_staff_login_url = f"{primary_url}/staff/login" if primary_url else ""
         access_state = get_organization_access_state(organization)
         access_summary = access_state_summary(access_state)
+        staff_count = _count_active_staff_for_database(organization.database_path)
         backups = list_organization_backups(organization, limit=6)
         license_history = [
             {
@@ -4127,8 +4259,10 @@ def _platform_organization_rows(
                 "last_payment_on": organization.last_payment_on,
                 "license_notes": organization.license_notes,
                 "grace_days": organization.grace_days,
+                "staff_count": staff_count,
                 "access_state": access_state,
                 "access_summary": access_summary,
+                "status_bucket": access_state["state"],
                 "license_health": {
                     "tone": access_summary["tone"],
                     "state_label": access_summary["state_label"],

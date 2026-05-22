@@ -1,0 +1,184 @@
+{% from "_icons.html" import icon %}
+{% set selected_org = platform_selected_organization %}
+
+<section class="platform-saas-grid">
+    <div class="platform-saas-main">
+        <section class="platform-command-hero tone-billing">
+            <div class="platform-command-copy">
+                <span class="platform-command-kicker">{{ platform_section_meta.kicker }}</span>
+                <h2>Billing Operations Center</h2>
+                <p>Track subscription value, renewal owners, and collection readiness for every institution from one clean workspace.</p>
+                <div class="platform-command-bullets">
+                    <span>{{ icon('bank') }} Commercial visibility</span>
+                    <span>{{ icon('calendar') }} Renewal scheduling</span>
+                    <span>{{ icon('document') }} Billing contact coverage</span>
+                </div>
+            </div>
+            <div class="platform-command-art" aria-hidden="true">
+                <div class="platform-command-orb"></div>
+                <div class="platform-command-shield">{{ icon('bank') }}</div>
+                <div class="platform-command-card platform-command-card-one"></div>
+                <div class="platform-command-card platform-command-card-two"></div>
+            </div>
+        </section>
+
+        <section class="platform-license-stat-row">
+            <article class="platform-license-stat-card accent-cyan">
+                <span class="platform-license-stat-icon">{{ icon('bank') }}</span>
+                <div>
+                    <small>Monthly Revenue</small>
+                    <strong>{{ platform_stats.monthly_revenue_label }}</strong>
+                    <span>Recurring value</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-green">
+                <span class="platform-license-stat-icon">{{ icon('check-circle') }}</span>
+                <div>
+                    <small>Paying Customers</small>
+                    <strong>{{ platform_billing.paying_customers }}</strong>
+                    <span>Active or trial plans</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-orange">
+                <span class="platform-license-stat-icon">{{ icon('clock') }}</span>
+                <div>
+                    <small>Due Soon</small>
+                    <strong>{{ platform_stats.expiring_soon }}</strong>
+                    <span>Renewal within 14 days</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-red">
+                <span class="platform-license-stat-icon">{{ icon('close') }}</span>
+                <div>
+                    <small>Overdue</small>
+                    <strong>{{ platform_billing.overdue }}</strong>
+                    <span>Needs follow-up</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-purple">
+                <span class="platform-license-stat-icon">{{ icon('calendar') }}</span>
+                <div>
+                    <small>Yearly Plans</small>
+                    <strong>{{ platform_billing.yearly_plans }}</strong>
+                    <span>Long-cycle subscriptions</span>
+                </div>
+            </article>
+            <article class="platform-license-stat-card accent-blue">
+                <span class="platform-license-stat-icon">{{ icon('users') }}</span>
+                <div>
+                    <small>Billing Contacts</small>
+                    <strong>{{ platform_billing.billing_contacts }}</strong>
+                    <span>Institutions with owners assigned</span>
+                </div>
+            </article>
+        </section>
+
+        <section class="platform-table-card">
+            <div class="platform-table-card-head">
+                <div class="admin-section-title">
+                    <h3>Billing Directory</h3>
+                    <p>Institution plans, renewal owners, and subscription amounts in one place.</p>
+                </div>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table platform-license-table">
+                    <thead>
+                        <tr>
+                            <th>Organization</th>
+                            <th>Billing Contact</th>
+                            <th>Plan</th>
+                            <th>Cycle</th>
+                            <th>Amount</th>
+                            <th>Renewal Due</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if organizations %}
+                            {% for organization in organizations %}
+                            <tr>
+                                <td>
+                                    <div class="platform-license-org">
+                                        <span class="platform-license-avatar tone-{{ organization.access_summary.tone }}">{{ organization.display_name[:1]|upper }}</span>
+                                        <div class="platform-license-org-copy">
+                                            <strong>{{ organization.display_name }}</strong>
+                                            <span>{{ organization.hostnames[0] if organization.hostnames else organization.slug }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="platform-expiry-meta">
+                                        <strong>{{ organization.billing_contact_name or 'Not assigned' }}</strong>
+                                        <span>{{ organization.billing_email or organization.billing_phone or 'No billing contact yet' }}</span>
+                                    </div>
+                                </td>
+                                <td><span class="platform-plan-pill">{{ organization.plan_name }}</span></td>
+                                <td>{{ organization.billing_cycle.replace('-', ' ')|title }}</td>
+                                <td><strong>GH₵{{ '%.2f'|format(organization.subscription_amount) }}</strong></td>
+                                <td>{{ organization.renewal_due_on or organization.expires_on or 'Not set' }}</td>
+                                <td><span class="admin-table-chip tone-{{ organization.access_summary.tone }}">{{ organization.access_summary.state_label }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="admin-empty">
+                                    <strong>No billing records matched this view.</strong>
+                                    <p>Try another search term or clear the current status filter.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <aside class="platform-saas-side">
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>Billing Health</h3>
+                <span class="platform-side-state">{{ 'Stable' if platform_billing.overdue == 0 else 'Review' }}</span>
+            </div>
+            <div class="platform-health-list">
+                <div><span>Recurring Revenue</span><strong>{{ platform_stats.monthly_revenue_label }}</strong></div>
+                <div><span>Contacts Assigned</span><strong>{{ platform_billing.billing_contacts }}</strong></div>
+                <div><span>Due This Cycle</span><strong>{{ platform_stats.expiring_soon }}</strong></div>
+                <div><span>Overdue</span><strong>{{ platform_billing.overdue }}</strong></div>
+            </div>
+        </article>
+
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>Billing Contact</h3>
+            </div>
+            {% if selected_org %}
+            <div class="platform-contact-card">
+                <strong>{{ selected_org.billing_contact_name or selected_org.display_name }}</strong>
+                <span>{{ selected_org.billing_email or 'No billing email yet' }}</span>
+                <span>{{ selected_org.billing_phone or 'No billing phone yet' }}</span>
+                <small>{{ selected_org.plan_name }} · GH₵{{ '%.2f'|format(selected_org.subscription_amount) }}</small>
+            </div>
+            {% else %}
+            <div class="admin-inline-notice">
+                <strong>No organization selected</strong>
+                <span>Select a billing row to highlight the main billing owner.</span>
+            </div>
+            {% endif %}
+        </article>
+
+        <article class="platform-side-card">
+            <div class="platform-side-card-head">
+                <h3>Commercial Actions</h3>
+            </div>
+            <div class="platform-quick-action-grid">
+                <a class="platform-quick-button tone-blue" href="{{ licenses_url }}">{{ icon('shield-check') }}<span>Open Licenses</span></a>
+                <a class="platform-quick-button tone-cyan" href="{{ create_url }}">{{ icon('plus') }}<span>Add Organization</span></a>
+                <a class="platform-quick-button tone-purple" href="{{ settings_url }}">{{ icon('settings') }}<span>Platform Settings</span></a>
+                <a class="platform-quick-button tone-orange" href="{{ backups_url }}">{{ icon('document') }}<span>Backup Desk</span></a>
+            </div>
+        </article>
+    </aside>
+</section>

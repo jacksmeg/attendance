@@ -2,32 +2,39 @@
 {% from "_icons.html" import icon %}
 {% from "_admin_macros.html" import stat_card %}
 
-{% set directory_sections = ['organizations', 'licenses', 'backups'] %}
-{% if selected_organization_slug %}
-    {% set organizations_url = url_for('app.platform_organizations', section='organizations', organization=selected_organization_slug) %}
-    {% set licenses_url = url_for('app.platform_organizations', section='licenses', organization=selected_organization_slug) %}
-    {% set backups_url = url_for('app.platform_organizations', section='backups', organization=selected_organization_slug) %}
-{% else %}
-    {% set organizations_url = url_for('app.platform_organizations', section='organizations') %}
-    {% set licenses_url = url_for('app.platform_organizations', section='licenses') %}
-    {% set backups_url = url_for('app.platform_organizations', section='backups') %}
-{% endif %}
-{% set create_url = url_for('app.platform_organizations', section='create') %}
+{% set directory_sections = ['organizations', 'licenses', 'backups', 'billing'] %}
+{% set create_url = url_for('app.platform_organizations', section='create', organization=selected_organization_slug) if selected_organization_slug else url_for('app.platform_organizations', section='create') %}
+{% set organizations_url = url_for('app.platform_organizations', section='organizations', organization=selected_organization_slug) if selected_organization_slug else url_for('app.platform_organizations', section='organizations') %}
+{% set licenses_url = url_for('app.platform_organizations', section='licenses', organization=selected_organization_slug) if selected_organization_slug else url_for('app.platform_organizations', section='licenses') %}
+{% set backups_url = url_for('app.platform_organizations', section='backups', organization=selected_organization_slug) if selected_organization_slug else url_for('app.platform_organizations', section='backups') %}
+{% set billing_url = url_for('app.platform_organizations', section='billing', organization=selected_organization_slug) if selected_organization_slug else url_for('app.platform_organizations', section='billing') %}
+{% set settings_url = url_for('app.platform_organizations', section='settings', organization=selected_organization_slug) if selected_organization_slug else url_for('app.platform_organizations', section='settings') %}
 
 {% block toolbar_center %}
     {% if platform_section in directory_sections %}
-    <label class="platform-toolbar-search">
-        {{ icon('search') }}
-        <input id="platformOrganizationSearch" type="search" placeholder="Search institution, slug, admin, or domain">
-    </label>
-    {% elif platform_section == 'dashboard' %}
-    <div class="platform-toolbar-pill">
-        <span class="platform-toolbar-pill-label">Live Monitor</span>
-        <strong>{{ platform_stats.organizations }} institutions</strong>
-    </div>
+    <form class="platform-toolbar-search-form" method="get" action="{{ url_for('app.platform_organizations') }}">
+        <input type="hidden" name="section" value="{{ platform_section }}">
+        {% if selected_organization_slug %}
+        <input type="hidden" name="organization" value="{{ selected_organization_slug }}">
+        {% endif %}
+        {% if platform_license_filter and platform_license_filter != 'all' %}
+        <input type="hidden" name="status" value="{{ platform_license_filter }}">
+        {% endif %}
+        <label class="platform-toolbar-search">
+            {{ icon('search') }}
+            <input
+                id="platformOrganizationSearch"
+                type="search"
+                name="q"
+                value="{{ platform_search_query }}"
+                placeholder="{% if platform_section == 'licenses' %}Search organizations, domains, or licenses...{% elif platform_section == 'billing' %}Search organizations, contacts, or billing...{% elif platform_section == 'backups' %}Search organizations or snapshots...{% else %}Search organizations, domains, or admins...{% endif %}"
+            >
+            <span class="platform-toolbar-search-shortcut">Ctrl + K</span>
+        </label>
+    </form>
     {% else %}
     <div class="platform-toolbar-pill">
-        <span class="platform-toolbar-pill-label">{{ platform_section_meta.kicker }}</span>
+        <span>{{ platform_section_meta.kicker }}</span>
         <strong>{{ platform_section_meta.page_title }}</strong>
     </div>
     {% endif %}
@@ -35,14 +42,9 @@
 
 {% block toolbar_actions %}
     {% if platform_section == 'create' %}
-    <a class="admin-toolbar-button" href="{{ organizations_url }}">
+    <a class="platform-topbar-button ghost" href="{{ organizations_url }}">
         {{ icon('arrow-right') }}
         <span>Open Directory</span>
-    </a>
-    {% else %}
-    <a class="admin-toolbar-button tone-primary" href="{{ create_url }}">
-        {{ icon('plus') }}
-        <span>Add Organization</span>
     </a>
     {% endif %}
 {% endblock %}
@@ -52,6 +54,12 @@
     {% include "platform/_dashboard_workspace.html" %}
 {% elif platform_section == 'create' %}
     {% include "platform/_create_workspace.html" %}
+{% elif platform_section == 'licenses' %}
+    {% include "platform/_licenses_workspace.html" %}
+{% elif platform_section == 'billing' %}
+    {% include "platform/_billing_workspace.html" %}
+{% elif platform_section == 'settings' %}
+    {% include "platform/_settings_workspace.html" %}
 {% else %}
     <section class="platform-section-hero platform-section-hero-{{ platform_section }}">
         <div class="platform-section-hero-copy">
@@ -67,9 +75,9 @@
                     {{ icon('shield-check') }}
                     <span>Licenses</span>
                 </a>
-                <a class="platform-section-button tone-cyan" href="{{ backups_url }}">
-                    {{ icon('document') }}
-                    <span>Backups</span>
+                <a class="platform-section-button tone-cyan" href="{{ billing_url }}">
+                    {{ icon('bank') }}
+                    <span>Billing</span>
                 </a>
             </div>
         </div>
@@ -77,7 +85,7 @@
             <article class="platform-metric-card accent-blue">
                 <span>Monthly Value</span>
                 <strong>{{ platform_stats.monthly_revenue_label }}</strong>
-                <small>Current active + trial subscriptions</small>
+                <small>Current subscription value across active and trial workspaces.</small>
             </article>
             <article class="platform-metric-card accent-green">
                 <span>Backup Coverage</span>
@@ -85,32 +93,21 @@
                 <small>{{ platform_stats.customers_with_backups }} of {{ platform_stats.organizations }} institutions protected</small>
             </article>
             <article class="platform-metric-card accent-orange">
-                <span>Default Workspace</span>
-                <strong>{{ platform_stats.default_name }}</strong>
-                <small>{{ platform_stats.default_slug }}</small>
+                <span>Total Staff</span>
+                <strong>{{ platform_highlights.total_staff }}</strong>
+                <small>Employees currently active across all institution portals.</small>
             </article>
         </div>
     </section>
 
     <section class="admin-stats-grid cols-6 platform-section-stats">
         {{ stat_card('dashboard', 'blue', 'Institutions', platform_stats.organizations, 'Provisioned customers') }}
-        {{ stat_card('check-circle', 'green', 'Active', platform_stats.active, 'Healthy licensed workspaces') }}
+        {{ stat_card('check-circle', 'green', 'Active', platform_stats.active, 'Healthy workspaces') }}
         {{ stat_card('clock', 'purple', 'Trial', platform_stats.trial, 'Still onboarding') }}
         {{ stat_card('clock', 'orange', 'Expiring Soon', platform_stats.expiring_soon, 'Due within 14 days') }}
-        {{ stat_card('shield-check', 'cyan', 'Grace Active', platform_stats.grace_active, 'Past expiry but still allowed') }}
+        {{ stat_card('shield-check', 'cyan', 'Grace Active', platform_stats.grace_active, 'Past expiry but allowed') }}
         {{ stat_card('document', 'red', 'Backup Snapshots', platform_stats.backups, 'Stored recovery points') }}
     </section>
-
-    {% if platform_section == 'organizations' %}
-        {% set directory_title = 'Institution Directory' %}
-        {% set directory_subtitle = 'Create customers, open access links, and keep every institution workspace tidy and easy to scan.' %}
-    {% elif platform_section == 'licenses' %}
-        {% set directory_title = 'License Portfolio' %}
-        {% set directory_subtitle = 'Review subscription health, expiring customers, and commercial status without leaving the directory.' %}
-    {% else %}
-        {% set directory_title = 'Backup Coverage' %}
-        {% set directory_subtitle = 'Choose an institution to create snapshots, download archives, or restore from a previous backup.' %}
-    {% endif %}
 
     <section class="platform-control-grid" data-selected-organization="{{ selected_organization_slug }}">
         <div class="admin-main-stack">
