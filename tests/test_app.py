@@ -880,7 +880,7 @@ class AttendanceAppTests(unittest.TestCase):
         login_response = self.client.get("/staff/login")
         self.assertEqual(login_response.status_code, 200)
         self.assertIn(b"Add this app to your Home Screen", login_response.data)
-        self.assertIn(b"/static/branding/jhims-attendance-logo-mark.png", login_response.data)
+        self.assertIn(b"/static/branding/jhims-attendance-system-mark.png", login_response.data)
 
         offline_response = self.client.get("/pwa/offline")
         self.assertEqual(offline_response.status_code, 200)

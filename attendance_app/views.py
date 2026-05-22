@@ -200,8 +200,8 @@ PAYMENT_METHOD_CHOICES = [
 MAX_STAFF_PHOTO_BYTES = 4 * 1024 * 1024
 SYSTEM_LOGO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_SYSTEM_LOGO_BYTES = 3 * 1024 * 1024
-DEFAULT_LOGO_MARK_STATIC = "branding/jhims-attendance-logo-mark.png"
-DEFAULT_LOGO_FULL_STATIC = "branding/jhims-attendance-logo-full.png"
+DEFAULT_LOGO_MARK_STATIC = "branding/jhims-attendance-system-mark.png"
+DEFAULT_LOGO_FULL_STATIC = "branding/jhims-attendance-system-full.png"
 AUDIT_SELFIE_MIME_TYPES = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
