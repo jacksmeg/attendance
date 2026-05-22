@@ -11,9 +11,9 @@ def get_db() -> sqlite3.Connection:
     if "db" not in g:
         organization = get_current_organization()
         organization.instance_dir.mkdir(parents=True, exist_ok=True)
-        g.db = sqlite3.connect(organization.database_path)
+        g.db = sqlite3.connect(organization.database_path, timeout=30)
         g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
+        _configure_connection(g.db)
     return g.db
 
 
@@ -32,10 +32,10 @@ def init_db(database_path: Path | None = None) -> None:
 
     database_path = Path(database_path).resolve()
     database_path.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(database_path)
+    db = sqlite3.connect(database_path, timeout=30)
     db.row_factory = sqlite3.Row
     try:
-        db.execute("PRAGMA foreign_keys = ON")
+        _configure_connection(db)
         _apply_schema(db, schema_path)
     finally:
         db.close()
@@ -78,6 +78,18 @@ def _apply_schema(db: sqlite3.Connection, schema_path: Path) -> None:
     _ensure_column(db, "attendance_events", "longitude", "REAL")
     _ensure_column(db, "attendance_events", "gps_accuracy", "REAL")
     db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_staff_qr_token ON staff(qr_token)")
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_staff_active_department_name "
+        "ON staff(is_active, department, last_name, first_name)"
+    )
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_fingerprint_templates_staff_adapter_active "
+        "ON fingerprint_templates(staff_id, adapter, is_active)"
+    )
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_fingerprint_templates_adapter_active "
+        "ON fingerprint_templates(adapter, is_active, staff_id)"
+    )
     db.execute("CREATE INDEX IF NOT EXISTS idx_staff_shift_id ON staff(shift_id)")
     db.execute(
         "CREATE INDEX IF NOT EXISTS idx_payroll_entries_month_status "
@@ -100,3 +112,12 @@ def _ensure_column(db: sqlite3.Connection, table_name: str, column_name: str, co
     if column_name in existing:
         return
     db.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+
+
+def _configure_connection(db: sqlite3.Connection) -> None:
+    db.execute("PRAGMA foreign_keys = ON")
+    db.execute("PRAGMA journal_mode = WAL")
+    db.execute("PRAGMA synchronous = NORMAL")
+    db.execute("PRAGMA temp_store = MEMORY")
+    db.execute("PRAGMA cache_size = -20000")
+    db.execute("PRAGMA busy_timeout = 30000")
