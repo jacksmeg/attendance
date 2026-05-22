@@ -39,5 +39,5 @@
 {% include "platform/_organization_create_modal.html" %}
 
 <script id="platformOrganizationsData" type="application/json">{{ organizations|tojson }}</script>
-<script src="{{ url_for('static', filename='platform_admin.js') }}" defer></script>
+{% include "platform/_organization_script.html" %}
 {% endblock %}
