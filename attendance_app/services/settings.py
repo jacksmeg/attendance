@@ -10,7 +10,7 @@ import sqlite3
 from flask import g, has_request_context
 
 from attendance_app.auth import hash_secret, secret_matches
-from attendance_app.db import get_db
+from attendance_app.db import get_db, init_db
 
 
 WORKDAY_OPTIONS = [
@@ -179,14 +179,18 @@ def _cached_admin_security_for_database(database_path: str, default_username: st
 
 
 def _read_admin_security(db, default_username: str = "") -> dict[str, Any]:
-    username_row = db.execute(
-        "SELECT value, updated_at FROM app_settings WHERE key = ?",
-        (ADMIN_USERNAME_KEY,),
-    ).fetchone()
-    row = db.execute(
-        "SELECT value, updated_at FROM app_settings WHERE key = ?",
-        (ADMIN_PASSWORD_HASH_KEY,),
-    ).fetchone()
+    try:
+        username_row = db.execute(
+            "SELECT value, updated_at FROM app_settings WHERE key = ?",
+            (ADMIN_USERNAME_KEY,),
+        ).fetchone()
+        row = db.execute(
+            "SELECT value, updated_at FROM app_settings WHERE key = ?",
+            (ADMIN_PASSWORD_HASH_KEY,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        username_row = None
+        row = None
     stored_username = str(username_row["value"]).strip() if username_row and username_row["value"] else ""
     admin_username = stored_username or default_username
     return {
@@ -203,10 +207,13 @@ def admin_password_matches(password: str, default_password: str) -> bool:
         return False
 
     db = get_db()
-    row = db.execute(
-        "SELECT value FROM app_settings WHERE key = ?",
-        (ADMIN_PASSWORD_HASH_KEY,),
-    ).fetchone()
+    try:
+        row = db.execute(
+            "SELECT value FROM app_settings WHERE key = ?",
+            (ADMIN_PASSWORD_HASH_KEY,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        row = None
     stored_hash = str(row["value"]) if row and row["value"] else ""
     if stored_hash:
         return secret_matches(stored_hash, password)
@@ -234,7 +241,9 @@ def save_admin_password(new_password: str) -> dict[str, Any]:
 
 
 def save_admin_password_for_database(database_path: Path, new_password: str) -> None:
-    db = sqlite3.connect(Path(database_path).resolve())
+    database_path = Path(database_path).resolve()
+    init_db(database_path)
+    db = sqlite3.connect(database_path)
     try:
         _upsert_setting(
             db,
@@ -258,7 +267,9 @@ def save_admin_credentials_for_database(
     if not cleaned_username:
         raise ValueError("Institution admin username is required.")
 
-    db = sqlite3.connect(Path(database_path).resolve())
+    database_path = Path(database_path).resolve()
+    init_db(database_path)
+    db = sqlite3.connect(database_path)
     try:
         timestamp = datetime.now().isoformat(timespec="seconds")
         _upsert_setting(

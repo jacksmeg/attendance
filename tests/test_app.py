@@ -375,6 +375,36 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(login_response.status_code, 200)
         self.assertIn(b"Attendance Overview", login_response.data)
 
+    def test_portal_admin_login_self_heals_organization_without_initialized_schema(self) -> None:
+        with self.app.app_context():
+            organization = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="rescue-clinic",
+                display_name="Rescue Clinic",
+            )
+            save_admin_credentials_for_database(
+                organization.database_path,
+                username="rescueadmin",
+                password="Rescue@1234",
+            )
+
+        login_page = self.client.get(
+            "/portal/rescue-clinic/admin/login",
+            base_url="https://attendance.jhimssoftware.com",
+            follow_redirects=True,
+        )
+        self.assertEqual(login_page.status_code, 200)
+        self.assertIn(b"Rescue Clinic", login_page.data)
+
+        login_response = self.client.post(
+            "/admin/login",
+            data={"username": "rescueadmin", "password": "Rescue@1234"},
+            base_url="https://attendance.jhimssoftware.com",
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"Attendance Overview", login_response.data)
+
     def test_platform_super_admin_can_store_subscription_and_billing_fields(self) -> None:
         self.client.post(
             "/platform/login",

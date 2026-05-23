@@ -789,6 +789,7 @@ self.addEventListener("fetch", (event) => {{
             return redirect(url_for("app.platform_organizations"))
         settings = current_app.config["APP_SETTINGS"]
         organization = get_current_organization()
+        _ensure_organization_database_ready(organization)
         live_settings = get_app_settings(default_app_name=_tenant_default_app_name())
         admin_security = get_admin_security(default_username=settings.admin_username)
         if request.method == "POST":
@@ -839,6 +840,7 @@ self.addEventListener("fetch", (event) => {{
             flash("Platform sessions use the standalone platform control room.", "warning")
             return redirect(url_for("app.platform_organizations"))
         organization = get_current_organization()
+        _ensure_organization_database_ready(organization)
         if request.method == "POST":
             staff_identifier = request.form.get("staff_identifier", "").strip()
             staff_code = request.form.get("staff_code", "").strip().upper()
@@ -892,6 +894,7 @@ self.addEventListener("fetch", (event) => {{
     @bp.route("/staff/recover", methods=["GET", "POST"])
     def staff_recover_credentials():
         organization = get_current_organization()
+        _ensure_organization_database_ready(organization)
         form_values = {
             "staff_identifier": request.args.get("identifier", "").strip(),
             "date_of_birth": "",
@@ -3759,6 +3762,30 @@ def _audit_selfie_directory() -> Path:
 
 def _tenant_instance_dir() -> Path:
     return get_current_organization().instance_dir
+
+
+def _ensure_organization_database_ready(organization) -> None:
+    database_path = Path(organization.database_path).resolve()
+    schema_present = False
+
+    if database_path.exists():
+        probe = sqlite3.connect(database_path)
+        try:
+            row = probe.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'app_settings'
+                """
+            ).fetchone()
+            schema_present = bool(row)
+        except sqlite3.DatabaseError:
+            schema_present = False
+        finally:
+            probe.close()
+
+    if not schema_present:
+        init_db(database_path)
 
 
 def _tenant_default_app_name() -> str:
