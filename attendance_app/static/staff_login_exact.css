@@ -101,8 +101,8 @@
 
 .staff-login-exact-header {
     display: grid;
-    gap: 22px;
-    margin-bottom: 26px;
+    gap: 0;
+    margin-bottom: 22px;
 }
 
 .staff-login-exact-brand-row {
@@ -183,30 +183,6 @@
     color: rgba(207, 224, 242, 0.78);
     line-height: 1.7;
     font-size: 1rem;
-}
-
-.staff-login-exact-top-pill {
-    width: fit-content;
-    justify-self: start;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 40px;
-    padding: 0 16px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(180, 218, 255, 0.12);
-    color: #cbe6ff;
-    font-weight: 700;
-    font-size: 0.9rem;
-}
-
-.staff-login-exact-top-pill-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #35e0b0, #63c1ff);
-    box-shadow: 0 0 0 8px rgba(54, 214, 179, 0.15);
 }
 
 .staff-login-exact-shell {
@@ -855,11 +831,6 @@
 
     .staff-login-exact-brand-copy {
         justify-items: center;
-    }
-
-    .staff-login-exact-brand-kicker,
-    .staff-login-exact-top-pill {
-        justify-self: center;
     }
 
     .staff-login-exact-shell {
