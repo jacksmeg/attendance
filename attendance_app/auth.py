@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from functools import wraps
 import hmac
 from secrets import token_urlsafe
@@ -138,6 +139,7 @@ def start_staff_session(staff: dict[str, object], *, organization_slug: str = ""
     session["organization_slug"] = organization_slug
     session["pending_organization_slug"] = organization_slug
     session["portal_organization_slug"] = organization_slug
+    session["staff_login_at"] = datetime.now().isoformat(timespec="seconds")
 
 
 def current_access_role() -> str:

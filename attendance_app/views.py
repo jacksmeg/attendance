@@ -875,7 +875,6 @@ self.addEventListener("fetch", (event) => {{
                     device_name=_request_device_name(),
                 )
                 start_staff_session(staff, organization_slug=organization.slug)
-                flash("Welcome back. You are signed in.", "success")
                 if next_url:
                     return redirect(next_url)
                 if session.get("admin_authenticated"):
@@ -2971,12 +2970,19 @@ self.addEventListener("fetch", (event) => {{
         location_policy = _location_policy_view_model(
             get_app_settings(default_app_name=_tenant_default_app_name())
         )
+        dashboard = _staff_mobile_dashboard_model(
+            staff=staff,
+            today_status=today_status,
+            location_policy=location_policy,
+            current_day=date.today(),
+        )
         return render_template(
             "staff/home.html",
             title="Staff Portal",
             staff=staff,
             today=date.today(),
             today_status=today_status,
+            dashboard=dashboard,
             last_attendance_result=session.pop("last_staff_attendance_result", None),
             quick_url=quick_url,
             mobile_qr_svg=build_qr_svg(quick_url),
@@ -3163,6 +3169,213 @@ def _store_last_staff_attendance_result(
         "status_badge": status_badge,
         "footer_title": footer_title,
         "footer_note": "You can view your full attendance history in the reports section.",
+    }
+
+
+def _staff_mobile_state_title(today_status: dict[str, Any]) -> str:
+    latest = today_status.get("latest_event") or {}
+    event_type = str(latest.get("event_type", "") or "")
+    if event_type == "check_out":
+        return "Checked Out"
+    if event_type == "break_start":
+        return "On Break"
+    if event_type == "break_end":
+        return "Back to Work"
+    if event_type == "check_in":
+        return "Checked In"
+    return "Ready to Check In"
+
+
+def _staff_mobile_action_cards(today_status: dict[str, Any]) -> list[dict[str, Any]]:
+    next_actions = {str(action) for action in today_status.get("next_actions", [])}
+    check_in_at = today_status.get("check_in_at")
+    check_out_at = today_status.get("check_out_at")
+    break_started_at = today_status.get("active_break_started_at")
+    cards = [
+        {
+            "action": "check_in",
+            "label": "Check In",
+            "icon": "fingerprint",
+            "tone": "green",
+            "hint": "Start your shift",
+        },
+        {
+            "action": "check_out",
+            "label": "Check Out",
+            "icon": "logout",
+            "tone": "blue",
+            "hint": "End your shift",
+        },
+        {
+            "action": "break_start",
+            "label": "Start Break",
+            "icon": "clock",
+            "tone": "orange",
+            "hint": "Start your break",
+        },
+        {
+            "action": "break_end",
+            "label": "End Break",
+            "icon": "clock",
+            "tone": "purple",
+            "hint": "End your break",
+        },
+    ]
+    for card in cards:
+        action = str(card["action"])
+        enabled = action in next_actions
+        if not enabled:
+            if action == "check_in" and check_in_at:
+                hint = "Already checked in"
+            elif action == "check_out" and check_out_at:
+                hint = "Shift already closed"
+            elif action == "break_start" and break_started_at:
+                hint = "Break already started"
+            elif action == "break_end" and not break_started_at:
+                hint = "No active break"
+            else:
+                hint = "Not available now"
+        else:
+            hint = str(card["hint"])
+        card["enabled"] = enabled
+        card["hint"] = hint
+    return cards
+
+
+def _staff_mobile_recent_activity(
+    today_status: dict[str, Any],
+    *,
+    shift_label: str,
+) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    rows = list(today_status.get("rows", []) or [])
+    for row in reversed(rows[-3:]):
+        event_type = str(row.get("event_type", "") or "")
+        try:
+            event_dt = datetime.fromisoformat(str(row.get("event_time", "")))
+        except ValueError:
+            event_dt = datetime.now()
+        subtitle = shift_label if event_type in {"check_in", "check_out"} else "Attendance Activity"
+        if event_type in {"break_start", "break_end"}:
+            subtitle = "Break Management"
+        items.append(
+            {
+                "title": event_type.replace("_", " ").title(),
+                "subtitle": subtitle,
+                "time": event_dt.strftime("%I:%M %p"),
+                "detail": f"Today, {event_dt.strftime('%I:%M %p')}",
+                "tone": {
+                    "check_in": "green",
+                    "check_out": "blue",
+                    "break_start": "orange",
+                    "break_end": "purple",
+                }.get(event_type, "neutral"),
+            }
+        )
+
+    login_at_raw = str(session.get("staff_login_at", "") or "").strip()
+    if login_at_raw:
+        try:
+            login_at = datetime.fromisoformat(login_at_raw)
+        except ValueError:
+            login_at = datetime.now()
+        items.append(
+            {
+                "title": "System Login",
+                "subtitle": "Mobile App",
+                "time": login_at.strftime("%I:%M %p"),
+                "detail": f"Today, {login_at.strftime('%I:%M %p')}",
+                "tone": "system",
+            }
+        )
+    return items[:4]
+
+
+def _staff_mobile_dashboard_model(
+    *,
+    staff: dict[str, Any],
+    today_status: dict[str, Any],
+    location_policy: dict[str, Any],
+    current_day: date,
+) -> dict[str, Any]:
+    preset = _match_shift_preset(staff.get("shift_start"), staff.get("shift_end"))
+    shift_badge, _ = _shift_badge_from_window(staff.get("shift_start"), staff.get("shift_end"))
+    shift_label = f"{str(preset['badge_label']) if preset else shift_badge} Shift"
+    shift_window = (
+        f"{_format_clock_label(str(staff.get('shift_start') or '09:00'))} - "
+        f"{_format_clock_label(str(staff.get('shift_end') or '17:00'))}"
+    )
+    worked_minutes = int(today_status.get("worked_minutes") or 0)
+    break_minutes = int(today_status.get("total_break_minutes") or 0)
+    late_count = sum(
+        1 for row in today_status.get("rows", []) if str(row.get("status_label", "")).strip().lower() == "late"
+    )
+    attendance_score = 0
+    if today_status.get("check_in_at"):
+        attendance_score = 100 if late_count == 0 else max(72, 100 - (late_count * 14))
+
+    latest_status = str((today_status.get("latest_event") or {}).get("status_label", "") or "").strip()
+    if not latest_status:
+        latest_status = "On Time" if today_status.get("check_in_at") and late_count == 0 else "Waiting"
+
+    zone_enabled = bool(location_policy.get("enabled"))
+    within_range = bool(today_status.get("currently_inside")) or not zone_enabled or not bool(today_status.get("rows"))
+    zone_status = "Within Range" if within_range else "Outside Range"
+    radius_meters = int(location_policy.get("radius_meters") or 0)
+    displayed_accuracy = min(radius_meters, 99) if radius_meters else 12
+    location_name = str(location_policy.get("location_name") or "Assigned Location")
+    location_address = str(location_policy.get("address") or location_name)
+
+    return {
+        "date_label": current_day.strftime("%a, %b %d, %Y"),
+        "welcome_name": str(staff.get("first_name") or staff.get("staff_code") or "Staff"),
+        "state_title": _staff_mobile_state_title(today_status),
+        "shift_label": shift_label,
+        "shift_window": shift_window,
+        "worked_hours_label": _format_minutes_as_hours(worked_minutes),
+        "break_time_label": _format_minutes_as_hours(break_minutes),
+        "late_count": late_count,
+        "attendance_score": attendance_score,
+        "notification_count": min(len(today_status.get("rows", []) or []) + 1, 9),
+        "status_label": latest_status.title(),
+        "location_name": location_name,
+        "location_address": location_address,
+        "zone_status": zone_status,
+        "within_range": within_range,
+        "gps_accuracy": f"{displayed_accuracy} m",
+        "network_strength": "Strong",
+        "summary_items": [
+            {
+                "label": "Work Hours",
+                "value": _format_minutes_as_hours(worked_minutes),
+                "note": "So far",
+                "tone": "blue",
+                "icon": "clock",
+            },
+            {
+                "label": "Break Time",
+                "value": _format_minutes_as_hours(break_minutes),
+                "note": "So far",
+                "tone": "green",
+                "icon": "check-circle",
+            },
+            {
+                "label": "Late Arrivals",
+                "value": str(late_count),
+                "note": "Today",
+                "tone": "indigo",
+                "icon": "calendar",
+            },
+            {
+                "label": "Attendance Score",
+                "value": f"{attendance_score}%",
+                "note": "Score",
+                "tone": "purple",
+                "icon": "reports",
+            },
+        ],
+        "action_cards": _staff_mobile_action_cards(today_status),
+        "recent_activity": _staff_mobile_recent_activity(today_status, shift_label=shift_label),
     }
 
 

@@ -153,6 +153,9 @@
         <article class="platform-side-card">
             <div class="platform-side-card-head">
                 <h3>Billing Contact</h3>
+                {% if selected_org and selected_org.billing_email %}
+                <a class="platform-table-link" href="mailto:{{ selected_org.billing_email }}">Send Email</a>
+                {% endif %}
             </div>
             {% if selected_org %}
             <div class="platform-contact-card">

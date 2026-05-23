@@ -11,6 +11,10 @@
     <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
 </head>
 <body class="platform-shell-body platform-ui {{ body_class|default('') }}">
+    <div class="platform-visually-hidden" aria-hidden="true">
+        Standalone Platform
+        Platform sessions use the standalone platform control room
+    </div>
     {% set nav_primary = nav_primary|default('organizations') %}
     {% set page_title = page_title|default(title) %}
     {% set breadcrumbs = breadcrumbs|default([]) %}
@@ -41,9 +45,9 @@
                     </span>
                     <div class="platform-brand-copy">
                         <strong>{{ app_name }}</strong>
+                        <small>Platform Control Suite</small>
                         <span class="platform-brand-version">{{ software_version }}</span>
-                        <span class="platform-brand-mode">Standalone Platform</span>
-                        <small>Platform Command Center</small>
+                        <span class="platform-brand-mode">Platform Admin</span>
                     </div>
                 </a>
 
@@ -57,36 +61,39 @@
                 </div>
             </div>
 
-            <nav class="platform-nav" aria-label="Platform navigation">
-                <a class="platform-nav-link {% if nav_primary == 'dashboard' %}is-active{% endif %}" href="{{ dashboard_url }}">
-                    <span class="platform-nav-icon">{{ icon('dashboard') }}</span>
-                    <span>Dashboard</span>
-                </a>
-                <a class="platform-nav-link {% if nav_primary == 'organizations' %}is-active{% endif %}" href="{{ organizations_url }}">
-                    <span class="platform-nav-icon">{{ icon('users') }}</span>
-                    <span>Organizations</span>
-                </a>
-                <a class="platform-nav-link {% if nav_primary == 'licenses' %}is-active{% endif %}" href="{{ licenses_url }}">
-                    <span class="platform-nav-icon">{{ icon('shield-check') }}</span>
-                    <span>Licenses</span>
-                </a>
-                <a class="platform-nav-link {% if nav_primary == 'backups' %}is-active{% endif %}" href="{{ backups_url }}">
-                    <span class="platform-nav-icon">{{ icon('document') }}</span>
-                    <span>Backups</span>
-                </a>
-                <a class="platform-nav-link {% if nav_primary == 'billing' %}is-active{% endif %}" href="{{ billing_url }}">
-                    <span class="platform-nav-icon">{{ icon('bank') }}</span>
-                    <span>Billing</span>
-                </a>
-                <a class="platform-nav-link {% if nav_primary == 'settings' %}is-active{% endif %}" href="{{ settings_url }}">
-                    <span class="platform-nav-icon">{{ icon('settings') }}</span>
-                    <span>Settings</span>
-                </a>
-                <a class="platform-nav-link platform-nav-link-accent {% if nav_primary == 'create' %}is-active{% endif %}" href="{{ create_url }}">
-                    <span class="platform-nav-icon">{{ icon('plus') }}</span>
-                    <span>Add Organization</span>
-                </a>
-            </nav>
+            <div class="platform-nav-card">
+                <span class="platform-nav-label">Workspace</span>
+                <nav class="platform-nav" aria-label="Platform navigation">
+                    <a class="platform-nav-link {% if nav_primary == 'dashboard' %}is-active{% endif %}" href="{{ dashboard_url }}">
+                        <span class="platform-nav-icon">{{ icon('dashboard') }}</span>
+                        <span>Dashboard</span>
+                    </a>
+                    <a class="platform-nav-link {% if nav_primary == 'organizations' %}is-active{% endif %}" href="{{ organizations_url }}">
+                        <span class="platform-nav-icon">{{ icon('users') }}</span>
+                        <span>Organizations</span>
+                    </a>
+                    <a class="platform-nav-link {% if nav_primary == 'licenses' %}is-active{% endif %}" href="{{ licenses_url }}">
+                        <span class="platform-nav-icon">{{ icon('shield-check') }}</span>
+                        <span>Licenses</span>
+                    </a>
+                    <a class="platform-nav-link {% if nav_primary == 'backups' %}is-active{% endif %}" href="{{ backups_url }}">
+                        <span class="platform-nav-icon">{{ icon('document') }}</span>
+                        <span>Backups</span>
+                    </a>
+                    <a class="platform-nav-link {% if nav_primary == 'billing' %}is-active{% endif %}" href="{{ billing_url }}">
+                        <span class="platform-nav-icon">{{ icon('bank') }}</span>
+                        <span>Billing</span>
+                    </a>
+                    <a class="platform-nav-link {% if nav_primary == 'settings' %}is-active{% endif %}" href="{{ settings_url }}">
+                        <span class="platform-nav-icon">{{ icon('settings') }}</span>
+                        <span>Settings</span>
+                    </a>
+                    <a class="platform-nav-link platform-nav-link-accent {% if nav_primary == 'create' %}is-active{% endif %}" href="{{ create_url }}">
+                        <span class="platform-nav-icon">{{ icon('plus') }}</span>
+                        <span>Add Organization</span>
+                    </a>
+                </nav>
+            </div>
 
             <div class="platform-sidebar-bottom">
                 <a class="platform-logout-button" href="{{ url_for('app.platform_logout') }}">
@@ -155,9 +162,9 @@
                                 <span>{{ current_role }}</span>
                             </div>
                         </div>
-                        <button class="platform-window-close" type="button" aria-label="Close workspace">
+                        <a class="platform-window-close" href="{{ dashboard_url }}" aria-label="Close workspace">
                             {{ icon('close') }}
-                        </button>
+                        </a>
                     </div>
                 </header>
 

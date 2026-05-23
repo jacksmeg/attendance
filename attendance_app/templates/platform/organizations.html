@@ -61,60 +61,88 @@
 {% elif platform_section == 'settings' %}
     {% include "platform/_settings_workspace.html" %}
 {% else %}
-    <section class="platform-section-hero platform-section-hero-{{ platform_section }}">
-        <div class="platform-section-hero-copy">
-            <span class="platform-section-kicker">{{ platform_section_meta.kicker }}</span>
-            <h2>{{ platform_section_meta.hero_title }}</h2>
-            <p>{{ platform_section_meta.hero_copy }}</p>
-            <div class="platform-section-actions">
-                <a class="platform-section-button tone-blue" href="{{ organizations_url }}">
-                    {{ icon('users') }}
-                    <span>Organizations</span>
-                </a>
-                <a class="platform-section-button tone-purple" href="{{ licenses_url }}">
-                    {{ icon('shield-check') }}
-                    <span>Licenses</span>
-                </a>
-                <a class="platform-section-button tone-cyan" href="{{ billing_url }}">
-                    {{ icon('bank') }}
-                    <span>Billing</span>
-                </a>
-            </div>
-        </div>
-        <div class="platform-section-hero-side">
-            <article class="platform-metric-card accent-blue">
-                <span>Monthly Value</span>
-                <strong>{{ platform_stats.monthly_revenue_label }}</strong>
-                <small>Current subscription value across active and trial workspaces.</small>
-            </article>
-            <article class="platform-metric-card accent-green">
-                <span>Backup Coverage</span>
-                <strong>{{ platform_stats.backup_coverage }}%</strong>
-                <small>{{ platform_stats.customers_with_backups }} of {{ platform_stats.organizations }} institutions protected</small>
-            </article>
-            <article class="platform-metric-card accent-orange">
-                <span>Total Staff</span>
-                <strong>{{ platform_highlights.total_staff }}</strong>
-                <small>Employees currently active across all institution portals.</small>
-            </article>
-        </div>
-    </section>
+    <section class="platform-saas-grid platform-directory-suite" data-selected-organization="{{ selected_organization_slug }}">
+        <div class="platform-saas-main">
+            <section class="platform-command-hero {% if platform_section == 'backups' %}tone-billing{% endif %}">
+                <div class="platform-command-copy">
+                    <span class="platform-command-kicker">{{ platform_section_meta.kicker }}</span>
+                    <h2>{{ platform_section_meta.page_title }} Command Center</h2>
+                    <p>{{ platform_section_meta.hero_copy }}</p>
+                    <div class="platform-command-bullets">
+                        <span>{{ icon('users') }} Customer control</span>
+                        <span>{{ icon('shield-check') }} License visibility</span>
+                        <span>{{ icon('document') }} Recovery ready</span>
+                    </div>
+                </div>
+                <div class="platform-command-art" aria-hidden="true">
+                    <div class="platform-command-orb"></div>
+                    <div class="platform-command-shield">
+                        {% if platform_section == 'backups' %}
+                        {{ icon('document') }}
+                        {% else %}
+                        {{ icon('users') }}
+                        {% endif %}
+                    </div>
+                    <div class="platform-command-card platform-command-card-one"></div>
+                    <div class="platform-command-card platform-command-card-two"></div>
+                </div>
+            </section>
 
-    <section class="admin-stats-grid cols-6 platform-section-stats">
-        {{ stat_card('dashboard', 'blue', 'Institutions', platform_stats.organizations, 'Provisioned customers') }}
-        {{ stat_card('check-circle', 'green', 'Active', platform_stats.active, 'Healthy workspaces') }}
-        {{ stat_card('clock', 'purple', 'Trial', platform_stats.trial, 'Still onboarding') }}
-        {{ stat_card('clock', 'orange', 'Expiring Soon', platform_stats.expiring_soon, 'Due within 14 days') }}
-        {{ stat_card('shield-check', 'cyan', 'Grace Active', platform_stats.grace_active, 'Past expiry but allowed') }}
-        {{ stat_card('document', 'red', 'Backup Snapshots', platform_stats.backups, 'Stored recovery points') }}
-    </section>
+            <section class="platform-license-stat-row">
+                <article class="platform-license-stat-card accent-blue">
+                    <span class="platform-license-stat-icon">{{ icon('users') }}</span>
+                    <div>
+                        <small>Organizations</small>
+                        <strong>{{ platform_stats.organizations }}</strong>
+                        <span>Provisioned workspaces</span>
+                    </div>
+                </article>
+                <article class="platform-license-stat-card accent-green">
+                    <span class="platform-license-stat-icon">{{ icon('check-circle') }}</span>
+                    <div>
+                        <small>Active</small>
+                        <strong>{{ platform_stats.active }}</strong>
+                        <span>Healthy institutions</span>
+                    </div>
+                </article>
+                <article class="platform-license-stat-card accent-purple">
+                    <span class="platform-license-stat-icon">{{ icon('clock') }}</span>
+                    <div>
+                        <small>Trial</small>
+                        <strong>{{ platform_stats.trial }}</strong>
+                        <span>Still onboarding</span>
+                    </div>
+                </article>
+                <article class="platform-license-stat-card accent-orange">
+                    <span class="platform-license-stat-icon">{{ icon('calendar') }}</span>
+                    <div>
+                        <small>Expiring Soon</small>
+                        <strong>{{ platform_stats.expiring_soon }}</strong>
+                        <span>Due within 14 days</span>
+                    </div>
+                </article>
+                <article class="platform-license-stat-card accent-cyan">
+                    <span class="platform-license-stat-icon">{{ icon('document') }}</span>
+                    <div>
+                        <small>Backups</small>
+                        <strong>{{ platform_stats.backups }}</strong>
+                        <span>Snapshots stored</span>
+                    </div>
+                </article>
+                <article class="platform-license-stat-card accent-red">
+                    <span class="platform-license-stat-icon">{{ icon('bank') }}</span>
+                    <div>
+                        <small>Monthly Value</small>
+                        <strong>{{ platform_stats.monthly_revenue_label }}</strong>
+                        <span>Recurring subscription value</span>
+                    </div>
+                </article>
+            </section>
 
-    <section class="platform-control-grid" data-selected-organization="{{ selected_organization_slug }}">
-        <div class="admin-main-stack">
             {% include "platform/_organization_directory.html" %}
         </div>
 
-        <aside class="admin-side-stack platform-detail-stack">
+        <aside class="platform-saas-side platform-directory-side">
             {% include "platform/_organization_detail_panel.html" %}
         </aside>
     </section>
