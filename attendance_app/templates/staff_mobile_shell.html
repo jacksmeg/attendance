@@ -1,0 +1,75 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | {{ app_name }}</title>
+    {% set pwa_app_title = institution_name ~ ' Staff App' if institution_name and institution_name != app_name else app_name %}
+    {% include "_theme_head.html" %}
+    <meta name="theme-color" content="#f6fbff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ pwa_app_title }}">
+    <meta name="pwa-sw-url" content="{{ url_for('app.pwa_service_worker', org=organization_slug) if organization_slug else url_for('app.pwa_service_worker') }}">
+    <link rel="manifest" href="{{ url_for('app.pwa_manifest', org=organization_slug) if organization_slug else url_for('app.pwa_manifest') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('app.pwa_icon_png', size=180, org=organization_slug) if organization_slug else url_for('app.pwa_icon_png', size=180) }}">
+    <link rel="apple-touch-icon" href="{{ url_for('app.pwa_icon_png', size=192, org=organization_slug) if organization_slug else url_for('app.pwa_icon_png', size=192) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='staff_exact.css') }}">
+    <script src="{{ url_for('static', filename='pwa.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
+</head>
+<body class="staff-mobile-shell-body {{ body_class|default('') }}">
+    <div class="staff-exact-stage">
+        <div class="staff-exact-phone-shell">
+            <button class="staff-exact-close-orb" type="button" data-staff-more-toggle aria-label="Open more options">
+                {{ icon('close') }}
+            </button>
+            <section class="staff-exact-phone-frame">
+                <header class="staff-exact-statusbar" aria-hidden="true">
+                    <span class="staff-exact-status-time">9:41</span>
+                    <span class="staff-exact-island"></span>
+                    <span class="staff-exact-status-icons">
+                        <i class="cell"></i>
+                        <i class="wifi"></i>
+                        <i class="battery"></i>
+                    </span>
+                </header>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <section class="staff-exact-flash-shell">
+                        <div class="staff-exact-flash-stack">
+                            {% for category, message in messages %}
+                                <div class="flash flash-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endif %}
+                {% endwith %}
+
+                <main class="staff-exact-content">
+                    {% block content %}{% endblock %}
+                </main>
+            </section>
+        </div>
+    </div>
+
+    <button class="pwa-install-fab" type="button" data-pwa-install hidden>Install App</button>
+    <section class="pwa-ios-sheet" data-pwa-ios-sheet hidden aria-label="Install app on iPhone">
+        <div class="pwa-ios-sheet-backdrop" data-pwa-ios-close></div>
+        <div class="pwa-ios-sheet-card" role="dialog" aria-modal="true" aria-labelledby="pwa-ios-title">
+            <button class="pwa-ios-close" type="button" data-pwa-ios-close aria-label="Close install instructions">&times;</button>
+            <span class="pwa-ios-kicker">iPhone install</span>
+            <h2 id="pwa-ios-title">Add this app to your Home Screen</h2>
+            <p>Open this page in Safari, then follow these quick steps to install the app like a real iPhone app.</p>
+            <ol class="pwa-ios-steps">
+                <li>Tap the <strong>Share</strong> button in Safari.</li>
+                <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+                <li>Tap <strong>Add</strong> to place it on your iPhone.</li>
+            </ol>
+        </div>
+    </section>
+</body>
+</html>

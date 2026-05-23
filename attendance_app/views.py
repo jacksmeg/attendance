@@ -2987,7 +2987,7 @@ self.addEventListener("fetch", (event) => {{
             quick_url=quick_url,
             mobile_qr_svg=build_qr_svg(quick_url),
             location_policy=location_policy,
-            body_class="staff-mobile-app-body",
+            body_class="staff-mobile-app-body staff-mobile-exact-body",
         )
 
     @bp.route("/staff/clock", methods=["POST"])
