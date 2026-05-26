@@ -11,6 +11,7 @@ from .db import close_db, init_db
 from .services.maintenance import reset_system_data
 from .services.seed import seed_demo_data
 from .services.settings import save_admin_credentials_for_database
+from .services.staff_push import dispatch_due_shift_alerts, start_shift_alert_runner
 from .services.tenancy import (
     ensure_default_organization,
     get_organization_by_slug,
@@ -45,6 +46,7 @@ def create_app(overrides: Mapping[str, Any] | None = None) -> Flask:
 
     register_routes(app)
     register_cli(app)
+    start_shift_alert_runner(app)
     return app
 
 
@@ -148,3 +150,17 @@ def register_cli(app: Flask) -> None:
                 f"{organization.slug}{default_label} | {organization.display_name} | "
                 f"{organization.database_path} | {hostnames}"
             )
+
+    @app.cli.command("send-shift-alerts")
+    def send_shift_alerts_command() -> None:
+        settings = app.config["APP_SETTINGS"]
+        summary = dispatch_due_shift_alerts(settings)
+        print(
+            "Shift alerts: "
+            f"organizations={summary.get('organizations', 0)} "
+            f"subscriptions={summary.get('subscriptions', 0)} "
+            f"sent={summary.get('notifications_sent', 0)} "
+            f"skipped={summary.get('skipped', 0)} "
+            f"deactivated={summary.get('deactivated', 0)} "
+            f"errors={summary.get('errors', 0)}"
+        )

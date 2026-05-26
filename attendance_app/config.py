@@ -12,6 +12,11 @@ class AppConfig:
     software_version: str
     copyright_notice: str
     secret_key: str
+    web_push_contact_email: str
+    web_push_vapid_public_key: str
+    web_push_vapid_private_key: str
+    shift_alert_runner_enabled: bool
+    shift_alert_poll_seconds: int
     admin_username: str
     admin_password: str
     database_path: Path
@@ -55,6 +60,20 @@ def load_config(
             "All rights reserved to Jackstudios",
         ),
         secret_key=os.getenv("ATTENDANCE_SECRET_KEY", "change-me-before-production"),
+        web_push_contact_email=os.getenv(
+            "ATTENDANCE_WEB_PUSH_CONTACT_EMAIL",
+            "alerts@jhimssoftware.com",
+        ),
+        web_push_vapid_public_key=os.getenv("ATTENDANCE_WEB_PUSH_VAPID_PUBLIC_KEY", ""),
+        web_push_vapid_private_key=os.getenv("ATTENDANCE_WEB_PUSH_VAPID_PRIVATE_KEY", ""),
+        shift_alert_runner_enabled=os.getenv(
+            "ATTENDANCE_SHIFT_ALERT_RUNNER_ENABLED",
+            "true" if os.getenv("RENDER") else "false",
+        ).lower()
+        == "true",
+        shift_alert_poll_seconds=int(
+            os.getenv("ATTENDANCE_SHIFT_ALERT_POLL_SECONDS", "60")
+        ),
         admin_username=os.getenv("ATTENDANCE_ADMIN_USER", "admin"),
         admin_password=os.getenv("ATTENDANCE_ADMIN_PASSWORD", "admin123"),
         database_path=Path(

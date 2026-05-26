@@ -34,7 +34,7 @@ from flask import (
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
-from .db import init_db
+from .db import get_db, init_db
 from .auth import (
     ACCESS_ROLE_CHOICES,
     DEPARTMENT_MANAGER,
@@ -132,6 +132,12 @@ from .services.shifts import (
     set_shift_active,
     unassign_shift_from_staff,
     update_shift,
+)
+from .services.staff_push import (
+    build_shift_alarm_plan,
+    deactivate_staff_push_subscription,
+    get_push_client_config,
+    save_staff_push_subscription,
 )
 from .services.staff import (
     authenticate_staff,
@@ -625,6 +631,32 @@ self.addEventListener("notificationclick", (event) => {{
       }}
       return undefined;
     }})
+  );
+}});
+
+self.addEventListener("push", (event) => {{
+  let payload = {{}};
+  try {{
+    payload = event.data ? event.data.json() : {{}};
+  }} catch (error) {{
+    payload = {{
+      title: "Shift reminder",
+      body: event.data ? event.data.text() : "Your shift starts in 10 minutes.",
+    }};
+  }}
+  const options = {{
+    body: payload.body || "Your shift starts in 10 minutes.",
+    tag: payload.tag || "shift-reminder",
+    icon: payload.icon || {json.dumps(url_for("app.pwa_icon_png", size=192, **icon_query))},
+    badge: payload.badge || {json.dumps(url_for("app.pwa_icon_png", size=180, **icon_query))},
+    vibrate: payload.vibrate || [250, 150, 250, 150, 500],
+    requireInteraction: Boolean(payload.requireInteraction),
+    data: {{
+      url: payload.url || "/",
+    }},
+  }};
+  event.waitUntil(
+    self.registration.showNotification(payload.title || "Shift reminder", options)
   );
 }});
 """
@@ -3011,6 +3043,97 @@ self.addEventListener("notificationclick", (event) => {{
             body_class="staff-mobile-app-body staff-mobile-exact-body",
         )
 
+    @bp.route("/staff/push/config")
+    @staff_required
+    def staff_push_config():
+        staff = get_staff(session["staff_id"])
+        if not staff:
+            clear_user_session()
+            return jsonify({"enabled": False, "reason": "Staff session expired."}), 404
+
+        organization = get_current_organization()
+        settings = current_app.config["APP_SETTINGS"]
+        today_status = get_staff_today_status(staff["id"])
+        location_policy = _location_policy_view_model(
+            get_app_settings(default_app_name=_tenant_default_app_name())
+        )
+        shift_alarm = _staff_shift_alarm_runtime(
+            staff=staff,
+            today_status=today_status,
+            location_policy=location_policy,
+            current_dt=datetime.now(),
+        )
+        login_url = _portal_aware_login_url("staff", organization.slug)
+        config = get_push_client_config(
+            settings,
+            organization_slug=organization.slug,
+            login_url=login_url,
+            shift_alarm=shift_alarm,
+        )
+        row = get_db().execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM staff_push_subscriptions
+            WHERE staff_id = ? AND is_active = 1 AND notifications_enabled = 1
+            """,
+            (int(staff["id"]),),
+        ).fetchone()
+        return jsonify(
+            {
+                **config,
+                "subscribe_url": url_for("app.staff_push_subscribe"),
+                "unsubscribe_url": url_for("app.staff_push_unsubscribe"),
+                "active_devices": int(row["count"]) if row else 0,
+                "staff_name": f"{staff['first_name']} {staff['last_name']}",
+                "organization_name": organization.display_name,
+                "server_time": datetime.now().isoformat(timespec="seconds"),
+            }
+        )
+
+    @bp.route("/staff/push/subscribe", methods=["POST"])
+    @staff_required
+    def staff_push_subscribe():
+        staff = get_staff(session["staff_id"])
+        if not staff:
+            clear_user_session()
+            return jsonify({"saved": False, "message": "Staff session expired."}), 404
+
+        payload = request.get_json(silent=True) or {}
+        subscription = payload.get("subscription")
+        if not isinstance(subscription, Mapping):
+            return jsonify({"saved": False, "message": "A browser push subscription is required."}), 400
+        try:
+            result = save_staff_push_subscription(
+                int(staff["id"]),
+                subscription,
+                user_agent=str(payload.get("user_agent") or request.user_agent.string or "").strip(),
+                platform=str(payload.get("platform") or "").strip(),
+                device_label=str(payload.get("device_label") or "").strip(),
+            )
+        except ValueError as error:
+            return jsonify({"saved": False, "message": str(error)}), 400
+        return jsonify(result)
+
+    @bp.route("/staff/push/unsubscribe", methods=["POST"])
+    @staff_required
+    def staff_push_unsubscribe():
+        staff = get_staff(session["staff_id"])
+        if not staff:
+            clear_user_session()
+            return jsonify({"saved": False, "message": "Staff session expired."}), 404
+
+        payload = request.get_json(silent=True) or {}
+        endpoint = str(payload.get("endpoint") or "").strip()
+        endpoint_hash = str(payload.get("endpoint_hash") or "").strip()
+        if not endpoint and not endpoint_hash:
+            return jsonify({"saved": False, "message": "A subscription endpoint is required."}), 400
+        updated = deactivate_staff_push_subscription(
+            staff_id=int(staff["id"]),
+            endpoint=endpoint,
+            endpoint_hash=endpoint_hash,
+        )
+        return jsonify({"saved": True, "updated": updated})
+
     @bp.route("/staff/clock", methods=["POST"])
     @staff_required
     def staff_clock():
@@ -3405,6 +3528,7 @@ def _staff_mobile_dashboard_model(
         "runtime_model": {
             "home_url": url_for("app.staff_home"),
             "location_name": location_name,
+            "push_config_url": url_for("app.staff_push_config"),
             "work_counter": _staff_work_counter_runtime(today_status),
             "shift_alarm": _staff_shift_alarm_runtime(
                 staff=staff,
@@ -3436,46 +3560,36 @@ def _staff_shift_alarm_runtime(
     location_policy: dict[str, Any],
     current_dt: datetime,
 ) -> dict[str, Any]:
-    shift_start_value = str(staff.get("shift_start") or "09:00")
-    shift_end_value = str(staff.get("shift_end") or "17:00")
-    try:
-        shift_start_clock = time.fromisoformat(shift_start_value)
-    except ValueError:
+    plan = build_shift_alarm_plan(
+        staff=staff,
+        check_in_at=today_status.get("check_in_at"),
+        check_out_at=today_status.get("check_out_at"),
+        current_dt=current_dt,
+    )
+    if not plan.get("supported"):
         return {
             "supported": False,
-            "staff_name": f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip(),
+            "staff_name": plan.get("staff_name", ""),
             "storage_key": f"shift-reminder:{staff.get('id', 'staff')}:invalid",
         }
 
-    today_shift_start = datetime.combine(current_dt.date(), shift_start_clock)
-    is_checked_in = bool(today_status.get("check_in_at")) and not bool(today_status.get("check_out_at"))
-    if is_checked_in or current_dt > today_shift_start:
-        next_shift_start = today_shift_start + timedelta(days=1)
-    else:
-        next_shift_start = today_shift_start
-
-    reminder_dt = next_shift_start - timedelta(minutes=10)
-    staff_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip() or str(
-        staff.get("staff_code") or "Staff"
-    )
     location_name = str(location_policy.get("location_name") or "Assigned Location")
     return {
         "supported": True,
-        "enabled_by_policy": bool(staff.get("allow_mobile_clock", 1)),
-        "staff_name": staff_name,
-        "shift_label": _staff_mobile_state_title({"latest_event": {"event_type": ""}}),
-        "shift_window": f"{_format_clock_label(shift_start_value)} - {_format_clock_label(shift_end_value)}",
-        "shift_start_label": _format_clock_label(shift_start_value),
-        "shift_end_label": _format_clock_label(shift_end_value),
-        "next_shift_start_iso": next_shift_start.isoformat(),
-        "next_reminder_iso": reminder_dt.isoformat(),
-        "storage_key": f"shift-reminder:{staff.get('id', 'staff')}:{next_shift_start.isoformat(timespec='minutes')}",
+        "enabled_by_policy": bool(plan.get("enabled_by_policy")),
+        "staff_name": str(plan.get("staff_name") or ""),
+        "shift_window": str(plan.get("shift_window") or ""),
+        "shift_start_label": str(plan.get("shift_start_label") or "--"),
+        "shift_end_label": str(plan.get("shift_end_label") or "--"),
+        "next_shift_start_iso": str(plan.get("next_shift_start_iso") or ""),
+        "next_reminder_iso": str(plan.get("next_reminder_iso") or ""),
+        "storage_key": str(plan.get("reminder_key") or f"shift-reminder:{staff.get('id', 'staff')}"),
         "notification_title": "Shift reminder",
         "notification_body": (
-            f"{staff_name}, your shift at {location_name} starts in 10 minutes. "
-            f"Clock in by {_format_clock_label(shift_start_value)}."
+            f"{plan.get('staff_name', 'Staff')}, your shift at {location_name} starts in 10 minutes. "
+            f"Clock in by {plan.get('shift_start_label', '--')}."
         ),
-        "home_url": url_for("app.staff_home"),
+        "home_url": _portal_aware_login_url("staff", get_current_organization().slug),
         "icon_url": url_for("app.pwa_icon_png", size=192, org=get_current_organization().slug),
     }
 

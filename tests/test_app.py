@@ -5,16 +5,18 @@ from io import BytesIO
 import json
 from pathlib import Path
 import shutil
+import sqlite3
 import unittest
 import uuid
 from unittest.mock import Mock, patch
 
 from attendance_app import create_app
-from attendance_app.db import init_db
+from attendance_app.db import get_db, init_db
 from attendance_app.services.attendance import get_staff_today_status, list_attendance_events, record_attendance
 from attendance_app.services.settings import save_admin_credentials_for_database, save_app_settings
 from attendance_app.services.settings import get_admin_security_for_database
 from attendance_app.services.shifts import get_shift, list_shifts
+from attendance_app.services.staff_push import dispatch_due_shift_alerts, save_staff_push_subscription
 from attendance_app.services.staff import count_active_staff, create_staff, get_staff, get_staff_by_code, upsert_fingerprint
 from attendance_app.services.tenancy import (
     get_current_organization,
@@ -2101,6 +2103,86 @@ class AttendanceAppTests(unittest.TestCase):
             night_rows = [row for row in rows if row["staff_id"] == night_staff_id]
             self.assertEqual([row["event_type"] for row in night_rows], ["check_out", "check_in"])
             self.assertTrue(all(row["attendance_date"] == "2026-05-16" for row in night_rows))
+
+    def test_staff_push_subscription_endpoint_saves_phone_device(self) -> None:
+        self.client.post(
+            "/staff/login",
+            data={"staff_code": "EMP-100", "pin": "4321", "selfie_data": TEST_SELFIE_DATA_URL},
+            follow_redirects=True,
+        )
+
+        response = self.client.post(
+            "/staff/push/subscribe",
+            json={
+                "subscription": {
+                    "endpoint": "https://push.example.test/subscription/1",
+                    "keys": {
+                        "p256dh": "test-p256dh-key",
+                        "auth": "test-auth-key",
+                    },
+                },
+                "platform": "Android",
+                "device_label": "Installed App",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["saved"])
+        self.assertEqual(payload["active_devices"], 1)
+
+        with self.app.app_context():
+            row = get_db().execute(
+                """
+                SELECT endpoint, device_label, platform
+                FROM staff_push_subscriptions
+                WHERE staff_id = ?
+                """,
+                (int(self.staff["id"]),),
+            ).fetchone()
+            self.assertIsNotNone(row)
+            self.assertEqual(row["endpoint"], "https://push.example.test/subscription/1")
+            self.assertEqual(row["device_label"], "Installed App")
+            self.assertEqual(row["platform"], "Android")
+
+    def test_dispatch_due_shift_alerts_sends_once_per_device_for_due_shift(self) -> None:
+        with self.app.app_context():
+            save_staff_push_subscription(
+                int(self.staff["id"]),
+                {
+                    "endpoint": "https://push.example.test/subscription/2",
+                    "keys": {
+                        "p256dh": "test-p256dh-key",
+                        "auth": "test-auth-key",
+                    },
+                },
+                platform="Android",
+                device_label="Installed App",
+            )
+
+            with patch("attendance_app.services.staff_push.push_dependencies_available", return_value=True), patch(
+                "attendance_app.services.staff_push._resolve_vapid_keypair",
+                return_value={"public_key": "public-key", "private_key": "private-key"},
+            ), patch("attendance_app.services.staff_push._send_web_push_message") as send_mock:
+                first_summary = dispatch_due_shift_alerts(
+                    self.app.config["APP_SETTINGS"],
+                    now_dt=datetime(2026, 5, 26, 8, 50),
+                )
+                self.assertEqual(send_mock.call_count, 1)
+                self.assertEqual(first_summary["notifications_sent"], 1)
+
+                send_mock.reset_mock()
+                second_summary = dispatch_due_shift_alerts(
+                    self.app.config["APP_SETTINGS"],
+                    now_dt=datetime(2026, 5, 26, 8, 51),
+                )
+                self.assertEqual(send_mock.call_count, 0)
+                self.assertEqual(second_summary["notifications_sent"], 0)
+
+            log_count = get_db().execute(
+                "SELECT COUNT(*) AS count FROM staff_shift_alert_logs WHERE staff_id = ?",
+                (int(self.staff["id"]),),
+            ).fetchone()
+            self.assertEqual(int(log_count["count"]), 1)
 
 
 if __name__ == "__main__":

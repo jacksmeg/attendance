@@ -13,12 +13,16 @@
 
     const workCounter = runtime.work_counter || {};
     const shiftAlarm = runtime.shift_alarm || {};
+    const pushConfigUrl = String(runtime.push_config_url || "").trim();
     const workHourTargets = Array.from(document.querySelectorAll("[data-work-hours-counter]"));
     const alertButtons = Array.from(document.querySelectorAll("[data-staff-alert-toggle]"));
     const alertIconButtons = Array.from(document.querySelectorAll("[data-staff-alert-icon-button]"));
     const alertLabelButtons = alertButtons.filter((button) => !button.hasAttribute("data-staff-alert-icon-button"));
     let shiftReminderTimer = null;
     let audioContext = null;
+    let pushConfig = null;
+    let pushConfigPromise = null;
+    let serverPushArmed = false;
 
     const parseIso = function (value) {
         if (!value) {
@@ -127,7 +131,145 @@
         return window.localStorage.getItem(shiftReminderStorageKey()) === "1";
     };
 
-    const showShiftReminder = async function () {
+    const urlBase64ToUint8Array = function (value) {
+        const padding = "=".repeat((4 - (value.length % 4)) % 4);
+        const normalized = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+        const rawData = window.atob(normalized);
+        return Uint8Array.from(rawData, (character) => character.charCodeAt(0));
+    };
+
+    const fetchPushConfig = async function () {
+        if (!pushConfigUrl) {
+            return null;
+        }
+        if (pushConfig) {
+            return pushConfig;
+        }
+        if (!pushConfigPromise) {
+            pushConfigPromise = window.fetch(pushConfigUrl, {
+                headers: { "Accept": "application/json" },
+                credentials: "same-origin",
+            }).then(async function (response) {
+                if (!response.ok) {
+                    throw new Error("Unable to load shift alert settings.");
+                }
+                const payload = await response.json();
+                pushConfig = payload;
+                return payload;
+            }).catch(function () {
+                return null;
+            }).finally(function () {
+                pushConfigPromise = null;
+            });
+        }
+        return pushConfigPromise;
+    };
+
+    const postSubscription = async function (config, subscription) {
+        const response = await window.fetch(config.subscribe_url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                subscription: subscription.toJSON(),
+                user_agent: window.navigator.userAgent,
+                platform: window.navigator.platform || "",
+                device_label: window.matchMedia("(display-mode: standalone)").matches ? "Installed App" : "Browser",
+            }),
+        });
+        if (!response.ok) {
+            throw new Error("Unable to save this phone for shift alerts.");
+        }
+        return response.json();
+    };
+
+    const ensureServerPushSubscription = async function (config) {
+        if (!config || !config.enabled) {
+            return false;
+        }
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+            return false;
+        }
+        const registration = await navigator.serviceWorker.ready;
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(config.public_key),
+            });
+        }
+        await postSubscription(config, subscription);
+        serverPushArmed = true;
+        setAlertUi(
+            "Server alerts active",
+            "This phone is armed. You will get a push alarm 10 minutes before your shift even when the app is closed.",
+            "Alerts Active",
+            true,
+        );
+        return true;
+    };
+
+    const refreshServerPushState = async function (promptIfNeeded) {
+        const config = await fetchPushConfig();
+        if (!config || !config.enabled) {
+            scheduleLocalFallbackReminder();
+            return false;
+        }
+        if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+            setAlertUi(
+                "Phone alerts unsupported",
+                "This browser cannot keep a background shift alarm on this device.",
+                "Unsupported",
+                false,
+            );
+            return false;
+        }
+        if (Notification.permission === "denied") {
+            setAlertUi(
+                "Alerts blocked on this phone",
+                "Allow notifications for the installed app in your phone settings to receive shift alarms.",
+                "Blocked",
+                false,
+            );
+            return false;
+        }
+        if (Notification.permission === "default") {
+            if (!promptIfNeeded) {
+                setAlertUi(
+                    "Enable shift alarms",
+                    "Tap the bell once to allow notifications and arm this phone for 10-minute shift alarms.",
+                    "Enable Alerts",
+                    false,
+                );
+                return false;
+            }
+            const permission = await Notification.requestPermission();
+            if (permission === "granted") {
+                await unlockAlertAudio();
+            } else {
+                scheduleLocalFallbackReminder();
+                return false;
+            }
+        } else if (Notification.permission === "granted") {
+            await unlockAlertAudio();
+        }
+
+        try {
+            await ensureServerPushSubscription(config);
+            return true;
+        } catch (error) {
+            setAlertUi(
+                "Server push unavailable",
+                "The app could not arm background phone alerts right now. The page will keep a local reminder while it stays open.",
+                "Fallback Active",
+                false,
+            );
+            scheduleLocalFallbackReminder();
+            return false;
+        }
+    };
+
+    const showLocalShiftReminder = async function () {
         if (!("Notification" in window) || Notification.permission !== "granted") {
             return;
         }
@@ -164,7 +306,7 @@
         setAlertUi("Shift alert sent", "Your phone alert has been delivered for the upcoming shift.", "Alerts Active", true);
     };
 
-    const scheduleShiftReminder = function () {
+    const scheduleLocalFallbackReminder = function () {
         window.clearTimeout(shiftReminderTimer);
         if (!shiftAlarm.supported) {
             setAlertUi("Shift alerts unavailable", "This staff profile is missing shift timing, so the app cannot arm a reminder yet.", "Unavailable", false);
@@ -209,7 +351,7 @@
         const now = new Date();
         if (Notification.permission === "granted") {
             if (now >= reminderAt && now < shiftStartAt) {
-                void showShiftReminder();
+                void showLocalShiftReminder();
                 return;
             }
             if (now >= shiftStartAt) {
@@ -217,13 +359,13 @@
                 return;
             }
             const delay = reminderAt.getTime() - now.getTime();
-            shiftReminderTimer = window.setTimeout(() => {
-                void showShiftReminder();
+            shiftReminderTimer = window.setTimeout(function () {
+                void showLocalShiftReminder();
             }, Math.max(delay, 0));
             setAlertUi(
-                "Alerts armed",
-                `Your phone will alert you at ${reminderAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} for the ${shiftAlarm.shift_start_label || ""} shift.`,
-                "Alerts Active",
+                "Local reminder active",
+                `The page will alert this phone at ${reminderAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} while it stays open.`,
+                "Fallback Active",
                 true,
             );
             return;
@@ -237,45 +379,28 @@
         );
     };
 
-    const requestShiftAlerts = async function () {
-        if (!("Notification" in window)) {
-            scheduleShiftReminder();
-            return;
-        }
-
-        if (Notification.permission === "default") {
-            const permission = await Notification.requestPermission();
-            if (permission === "granted") {
-                await unlockAlertAudio();
-            }
-        } else if (Notification.permission === "granted") {
-            await unlockAlertAudio();
-        }
-        scheduleShiftReminder();
-    };
-
-    alertButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            void requestShiftAlerts();
+    alertButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            void refreshServerPushState(true);
         });
     });
 
-    document.addEventListener("visibilitychange", () => {
+    document.addEventListener("visibilitychange", function () {
         if (!document.hidden) {
-            scheduleShiftReminder();
+            void refreshServerPushState(false);
             updateWorkCounter();
         }
     });
-    window.addEventListener("pageshow", () => {
-        scheduleShiftReminder();
+    window.addEventListener("pageshow", function () {
+        void refreshServerPushState(false);
         updateWorkCounter();
     });
-    window.addEventListener("focus", () => {
-        scheduleShiftReminder();
+    window.addEventListener("focus", function () {
+        void refreshServerPushState(false);
         updateWorkCounter();
     });
 
     updateWorkCounter();
     window.setInterval(updateWorkCounter, 1000);
-    scheduleShiftReminder();
+    void refreshServerPushState(false);
 })();

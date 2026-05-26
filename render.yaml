@@ -21,6 +21,12 @@ services:
         sync: false
       - key: ATTENDANCE_DEBUG
         value: "false"
+      - key: ATTENDANCE_WEB_PUSH_CONTACT_EMAIL
+        value: alerts@jhimssoftware.com
+      - key: ATTENDANCE_SHIFT_ALERT_RUNNER_ENABLED
+        value: "true"
+      - key: ATTENDANCE_SHIFT_ALERT_POLL_SECONDS
+        value: "60"
       - key: ATTENDANCE_FINGERPRINT_BACKEND
         value: disabled
       - key: ATTENDANCE_INSTANCE_DIR

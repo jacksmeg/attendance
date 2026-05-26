@@ -176,3 +176,45 @@ ON notification_events(audience, is_read, created_at DESC, id DESC);
 
 CREATE INDEX IF NOT EXISTS idx_notification_events_target_staff_created
 ON notification_events(target_staff_id, created_at DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS staff_push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    staff_id INTEGER NOT NULL,
+    endpoint TEXT NOT NULL,
+    endpoint_hash TEXT NOT NULL UNIQUE,
+    subscription_json TEXT NOT NULL,
+    p256dh_key TEXT NOT NULL,
+    auth_key TEXT NOT NULL,
+    device_label TEXT,
+    platform TEXT,
+    user_agent TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    notifications_enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    last_seen_at TEXT NOT NULL,
+    last_push_sent_at TEXT,
+    last_error TEXT,
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_push_subscriptions_staff_active
+ON staff_push_subscriptions(staff_id, is_active, notifications_enabled, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS staff_shift_alert_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    staff_id INTEGER NOT NULL,
+    subscription_id INTEGER NOT NULL,
+    reminder_key TEXT NOT NULL,
+    shift_start_at TEXT NOT NULL,
+    scheduled_for TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'sent',
+    detail TEXT,
+    sent_at TEXT NOT NULL,
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (subscription_id) REFERENCES staff_push_subscriptions(id) ON DELETE CASCADE,
+    UNIQUE(subscription_id, reminder_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_shift_alert_logs_staff_sent
+ON staff_shift_alert_logs(staff_id, sent_at DESC, id DESC);
