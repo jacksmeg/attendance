@@ -216,6 +216,21 @@
         assignField("platformBackupSlug", organization.slug);
         assignField("platformRestoreSlug", organization.slug);
         assignField("platformLicenseActionSlug", organization.slug);
+        assignField("platformResetSlug", organization.slug);
+        assignField("platformDeleteSlug", organization.slug);
+        assignField("platformResetConfirmation", "");
+        assignField("platformDeleteConfirmation", "");
+
+        const resetConfirmation = document.getElementById("platformResetConfirmation");
+        const deleteConfirmation = document.getElementById("platformDeleteConfirmation");
+        if (resetConfirmation) {
+            resetConfirmation.placeholder = organization.slug;
+            resetConfirmation.title = `Type ${organization.slug} to reset this institution.`;
+        }
+        if (deleteConfirmation) {
+            deleteConfirmation.placeholder = organization.slug;
+            deleteConfirmation.title = `Type ${organization.slug} to delete this institution.`;
+        }
 
         const adminLink = organization.preferred_admin_login_url;
         const staffLink = organization.preferred_staff_login_url;
@@ -329,6 +344,21 @@
             button.dataset.originalLabel = label.textContent || "";
         }
         button.addEventListener("click", () => copyWithFeedback(button));
+    });
+
+    document.querySelectorAll("[data-platform-confirm]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const form = button.closest("form");
+            const slugField = form?.querySelector('input[name="organization_slug"]');
+            const slug = slugField?.value || "this institution";
+            const mode = button.getAttribute("data-platform-confirm");
+            const message = mode === "delete"
+                ? `Delete ${slug} completely from the platform?`
+                : `Reset ${slug} back to a fresh workspace?`;
+            if (!window.confirm(message)) {
+                event.preventDefault();
+            }
+        });
     });
 
     setActiveTab(initialTab);

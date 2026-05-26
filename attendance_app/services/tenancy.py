@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable
 import re
+import shutil
 import sqlite3
 
 from flask import current_app, g, has_request_context, request, session
@@ -505,6 +506,33 @@ def update_organization(
     if not updated:
         raise RuntimeError("Organization could not be reloaded after update.")
     return updated
+
+
+def delete_organization(settings: AppConfig, *, slug: str) -> OrganizationContext:
+    organization = get_organization_by_slug(settings, slug)
+    if not organization:
+        raise ValueError(f"Organization '{slug}' was not found.")
+    if organization.is_default or organization.slug == settings.default_organization_slug:
+        raise ValueError("The default organization cannot be deleted.")
+
+    db = sqlite3.connect(settings.platform_registry_path)
+    db.row_factory = sqlite3.Row
+    try:
+        db.execute("PRAGMA foreign_keys = ON")
+        db.execute("DELETE FROM organizations WHERE slug = ?", (organization.slug,))
+        db.commit()
+    finally:
+        db.close()
+
+    if organization.database_path.exists():
+        organization.database_path.unlink(missing_ok=True)
+    if organization.mock_store_path.exists():
+        organization.mock_store_path.unlink(missing_ok=True)
+    if organization.instance_dir.exists():
+        shutil.rmtree(organization.instance_dir, ignore_errors=True)
+
+    _clear_organization_registry_caches()
+    return organization
 
 
 def get_organization_by_host(settings: AppConfig, hostname: str) -> OrganizationContext | None:

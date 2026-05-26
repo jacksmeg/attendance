@@ -340,6 +340,41 @@
                         <strong>First backup pending</strong>
                         <span>Create a manual snapshot now or wait for the automatic daily backup to create the first restore point.</span>
                     </div>
+
+                    <section class="platform-danger-zone">
+                        <div class="platform-danger-zone-head">
+                            <strong>Danger Zone</strong>
+                            <span>Reset an institution back to a fresh workspace or remove it from the platform completely. Type the exact institution slug before either action.</span>
+                        </div>
+
+                        <form method="post" class="platform-danger-form">
+                            <input type="hidden" name="action" value="reset_institution">
+                            <input type="hidden" name="section" value="{{ platform_section|default('backups') }}">
+                            <input type="hidden" name="organization_slug" id="platformResetSlug">
+                            <label class="admin-field">
+                                <span>Type institution slug to reset</span>
+                                <input type="text" name="confirmation_slug" id="platformResetConfirmation" autocomplete="off">
+                            </label>
+                            <button class="admin-toolbar-button tone-warning" type="submit" data-platform-confirm="reset">
+                                {{ icon('arrow-right') }}
+                                <span>Reset Institution</span>
+                            </button>
+                        </form>
+
+                        <form method="post" class="platform-danger-form">
+                            <input type="hidden" name="action" value="delete_institution">
+                            <input type="hidden" name="section" value="{{ platform_section|default('backups') }}">
+                            <input type="hidden" name="organization_slug" id="platformDeleteSlug">
+                            <label class="admin-field">
+                                <span>Type institution slug to delete</span>
+                                <input type="text" name="confirmation_slug" id="platformDeleteConfirmation" autocomplete="off">
+                            </label>
+                            <button class="admin-toolbar-button tone-danger" type="submit" data-platform-confirm="delete">
+                                {{ icon('close') }}
+                                <span>Delete Institution</span>
+                            </button>
+                        </form>
+                    </section>
                 </div>
             </section>
         </div>

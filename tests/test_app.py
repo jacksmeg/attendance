@@ -714,6 +714,150 @@ class AttendanceAppTests(unittest.TestCase):
         with self.app.app_context():
             self.assertIsNone(get_staff_by_code("EMP-RESTORE"))
 
+    def test_platform_super_admin_can_reset_institution_to_fresh_workspace(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        with self.app.app_context():
+            organization = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="reset-clinic",
+                display_name="Reset Clinic",
+                hostnames=["attendance.reset.example"],
+            )
+            init_db(organization.database_path)
+            save_admin_credentials_for_database(
+                organization.database_path,
+                username="resetadmin",
+                password="Reset@1234",
+            )
+            with self.app.test_request_context("/"):
+                from attendance_app.services.tenancy import set_current_organization
+
+                set_current_organization(organization)
+                create_staff(
+                    {
+                        "staff_code": "RST-100",
+                        "first_name": "Reset",
+                        "last_name": "Staff",
+                        "email": "reset@example.com",
+                        "phone": "+233200000010",
+                        "department": "Records",
+                        "role": "Officer",
+                        "access_role": "Staff",
+                        "portal_password": "ResetStaff@123",
+                        "portal_pin": "1234",
+                        "shift_start": "08:00",
+                        "shift_end": "16:00",
+                        "grace_minutes": 10,
+                        "is_active": True,
+                    }
+                )
+                save_app_settings(
+                    {"organization_name": "Reset Clinic Workspace"},
+                    default_app_name=self.app.config["APP_SETTINGS"].app_name,
+                )
+
+        reset_response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "reset_institution",
+                "organization_slug": "reset-clinic",
+                "confirmation_slug": "reset-clinic",
+                "section": "backups",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(reset_response.status_code, 200)
+        self.assertIn(b"was reset successfully", reset_response.data)
+
+        with self.app.app_context():
+            organization = get_organization_by_slug(
+                self.app.config["APP_SETTINGS"],
+                "reset-clinic",
+            )
+            self.assertIsNotNone(organization)
+            assert organization is not None
+            admin_security = get_admin_security_for_database(
+                organization.database_path,
+                default_username=self.app.config["APP_SETTINGS"].admin_username,
+            )
+            self.assertEqual(admin_security["admin_username"], "resetadmin")
+
+            with self.app.test_request_context("/"):
+                from attendance_app.services.tenancy import set_current_organization
+
+                set_current_organization(organization)
+                self.assertEqual(count_active_staff(), 0)
+                self.assertIsNone(get_staff_by_code("RST-100"))
+
+        self.client.get("/platform/logout", follow_redirects=True)
+        portal_login_page = self.client.get("/portal/reset-clinic/admin/login", follow_redirects=True)
+        self.assertEqual(portal_login_page.status_code, 200)
+        admin_login_response = self.client.post(
+            "/admin/login",
+            data={"username": "resetadmin", "password": "Reset@1234"},
+            follow_redirects=True,
+        )
+        self.assertEqual(admin_login_response.status_code, 200)
+        self.assertIn(b"Dashboard", admin_login_response.data)
+
+    def test_platform_super_admin_can_delete_institution_and_keep_recovery_snapshot(self) -> None:
+        self.client.post(
+            "/platform/login",
+            data={"username": "boss", "password": "letmein"},
+            follow_redirects=True,
+        )
+
+        with self.app.app_context():
+            organization = provision_organization(
+                self.app.config["APP_SETTINGS"],
+                slug="delete-clinic",
+                display_name="Delete Clinic",
+                hostnames=["attendance.delete.example"],
+            )
+            init_db(organization.database_path)
+            save_admin_credentials_for_database(
+                organization.database_path,
+                username="deleteadmin",
+                password="Delete@1234",
+            )
+            instance_dir = organization.instance_dir
+            database_path = organization.database_path
+
+        delete_response = self.client.post(
+            "/platform/organizations",
+            data={
+                "action": "delete_institution",
+                "organization_slug": "delete-clinic",
+                "confirmation_slug": "delete-clinic",
+                "section": "backups",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertIn(b"was deleted", delete_response.data)
+
+        with self.app.app_context():
+            self.assertIsNone(
+                get_organization_by_slug(
+                    self.app.config["APP_SETTINGS"],
+                    "delete-clinic",
+                )
+            )
+
+        self.assertFalse(instance_dir.exists())
+        self.assertFalse(database_path.exists())
+        retained_backups = list(
+            (self.app.config["APP_SETTINGS"].instance_dir / "deleted_organization_backups").glob(
+                "delete-clinic-*-backup-*.zip"
+            )
+        )
+        self.assertTrue(retained_backups)
+
     def test_expired_organization_is_redirected_to_license_page(self) -> None:
         expired_host = "expired.attendance.local"
         expired_on = (date.today() - timedelta(days=3)).isoformat()

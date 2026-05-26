@@ -2538,6 +2538,57 @@ body.admin-ui {
     line-height: 1.45;
 }
 
+.platform-danger-zone {
+    display: grid;
+    gap: 14px;
+    margin-top: 8px;
+    padding: 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 95, 84, 0.22);
+    background:
+        linear-gradient(180deg, rgba(255, 247, 246, 0.98), rgba(255, 255, 255, 0.98)),
+        radial-gradient(circle at top right, rgba(255, 95, 84, 0.12), transparent 34%);
+}
+
+.platform-danger-zone-head {
+    display: grid;
+    gap: 4px;
+}
+
+.platform-danger-zone-head strong {
+    color: #d74037;
+    font-size: 1rem;
+}
+
+.platform-danger-zone-head span {
+    color: var(--admin-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.platform-danger-form {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 95, 84, 0.14);
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.admin-toolbar-button.tone-warning {
+    background: linear-gradient(135deg, #ffb347 0%, #ff8d3a 100%);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(255, 141, 58, 0.22);
+}
+
+.admin-toolbar-button.tone-danger {
+    background: linear-gradient(135deg, #ff6b6b 0%, #eb4d4b 100%);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(235, 77, 75, 0.22);
+}
+
 .platform-toolbar-search {
     display: inline-flex;
     align-items: center;
@@ -3382,6 +3433,18 @@ html[data-theme="dark"] .platform-backup-row {
     background: linear-gradient(180deg, #0c1729 0%, #0f1d33 100%);
     border-color: var(--admin-line);
     color: var(--admin-text);
+}
+
+html[data-theme="dark"] .platform-danger-zone {
+    background:
+        linear-gradient(180deg, rgba(54, 19, 24, 0.96), rgba(21, 28, 41, 0.98)),
+        radial-gradient(circle at top right, rgba(255, 95, 84, 0.12), transparent 36%);
+    border-color: rgba(255, 95, 84, 0.24);
+}
+
+html[data-theme="dark"] .platform-danger-form {
+    background: rgba(10, 21, 38, 0.78);
+    border-color: rgba(255, 95, 84, 0.16);
 }
 
 html[data-theme="dark"] .platform-license-history-row {

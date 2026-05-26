@@ -8,6 +8,7 @@ from io import BytesIO, StringIO
 import json
 import math
 from pathlib import Path
+import shutil
 import struct
 from typing import Any, Mapping
 import sqlite3
@@ -108,6 +109,7 @@ from .services.reporting import (
     build_report_snapshot,
     report_views_to_csv,
 )
+from .services.maintenance import reset_organization_workspace
 from .services.seed import seed_demo_data
 from .services.selfie_audits import create_staff_selfie_audit, list_staff_selfie_audits
 from .services.settings import (
@@ -176,6 +178,7 @@ from .services.tenancy import (
     get_current_organization_access_state,
     get_organization_access_state,
     get_organization_by_slug,
+    delete_organization,
     list_organization_license_events,
     list_organizations,
     provision_organization,
@@ -1351,6 +1354,95 @@ self.addEventListener("push", (event) => {{
                                 "app.platform_organizations",
                                 section=return_section,
                                 organization=slug,
+                            )
+                        )
+            elif action == "reset_institution":
+                slug = request.form.get("organization_slug", "").strip()
+                confirmation_slug = request.form.get("confirmation_slug", "").strip().lower()
+                section = return_section
+                selected_slug = slug.lower()
+                target_organization = get_organization_by_slug(settings, slug)
+                if not target_organization:
+                    flash("The selected institution could not be found.", "error")
+                elif confirmation_slug != slug.lower():
+                    flash("Type the exact institution slug before resetting it.", "error")
+                else:
+                    try:
+                        safety_backup = create_organization_backup(
+                            target_organization,
+                            reason="manual",
+                            note="Created automatically before institution reset.",
+                        )
+                        existing_db = g.pop("db", None)
+                        if existing_db is not None:
+                            existing_db.close()
+                        reset_organization_workspace(
+                            target_organization,
+                            fallback_admin_username=current_app.config["APP_SETTINGS"].admin_username,
+                        )
+                    except ValueError as exc:
+                        flash(str(exc), "error")
+                    else:
+                        record_organization_license_event(
+                            settings,
+                            slug=target_organization.slug,
+                            event_type="workspace_reset",
+                            title="Institution reset",
+                            actor_name=current_display_name() or "Platform Super Admin",
+                            details=(
+                                f"{target_organization.display_name} was reset to a fresh workspace. "
+                                f"A safety snapshot was saved as {safety_backup.name}."
+                            ),
+                            next_status=target_organization.license_status,
+                            next_expires_on=target_organization.expires_on,
+                            amount=target_organization.subscription_amount,
+                        )
+                        flash(
+                            f"{target_organization.display_name} was reset successfully. "
+                            f"A safety backup was saved as {safety_backup.name}.",
+                            "success",
+                        )
+                        return redirect(
+                            url_for(
+                                "app.platform_organizations",
+                                section=return_section,
+                                organization=slug,
+                            )
+                        )
+            elif action == "delete_institution":
+                slug = request.form.get("organization_slug", "").strip()
+                confirmation_slug = request.form.get("confirmation_slug", "").strip().lower()
+                section = return_section
+                selected_slug = slug.lower()
+                target_organization = get_organization_by_slug(settings, slug)
+                if not target_organization:
+                    flash("The selected institution could not be found.", "error")
+                elif confirmation_slug != slug.lower():
+                    flash("Type the exact institution slug before deleting it.", "error")
+                else:
+                    try:
+                        safety_backup = create_organization_backup(
+                            target_organization,
+                            reason="manual",
+                            note="Created automatically before institution deletion.",
+                        )
+                        deleted_backup_dir = settings.instance_dir / "deleted_organization_backups"
+                        deleted_backup_dir.mkdir(parents=True, exist_ok=True)
+                        retained_backup = deleted_backup_dir / safety_backup.name
+                        shutil.copy2(safety_backup, retained_backup)
+                        deleted_organization = delete_organization(settings, slug=slug)
+                    except ValueError as exc:
+                        flash(str(exc), "error")
+                    else:
+                        flash(
+                            f"{deleted_organization.display_name} was deleted. "
+                            f"A recovery snapshot was retained as {retained_backup.name}.",
+                            "success",
+                        )
+                        return redirect(
+                            url_for(
+                                "app.platform_organizations",
+                                section="organizations",
                             )
                         )
 
