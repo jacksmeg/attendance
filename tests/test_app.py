@@ -1507,6 +1507,7 @@ class AttendanceAppTests(unittest.TestCase):
         )
         self.assertEqual(login_response.status_code, 200)
         self.assertIn(b"LOCATION VERIFICATION", login_response.data)
+        self.assertIn(b"data-work-hours-counter", login_response.data)
 
         for payload in (
             {

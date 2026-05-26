@@ -609,6 +609,24 @@ self.addEventListener("fetch", (event) => {{
     );
   }}
 }});
+
+self.addEventListener("notificationclick", (event) => {{
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/";
+  event.waitUntil(
+    clients.matchAll({{ type: "window", includeUncontrolled: true }}).then((windowClients) => {{
+      for (const client of windowClients) {{
+        if ("focus" in client && client.url.includes(targetUrl)) {{
+          return client.focus();
+        }}
+      }}
+      if (clients.openWindow) {{
+        return clients.openWindow(targetUrl);
+      }}
+      return undefined;
+    }})
+  );
+}});
 """
         return Response(
             script,
@@ -3347,6 +3365,11 @@ def _staff_mobile_dashboard_model(
         "within_range": within_range,
         "gps_accuracy": f"{displayed_accuracy} m",
         "network_strength": "Strong",
+        "shift_alarm_summary": _staff_shift_alarm_summary(
+            staff=staff,
+            today_status=today_status,
+            current_dt=datetime.now(),
+        ),
         "summary_items": [
             {
                 "label": "Work Hours",
@@ -3379,7 +3402,107 @@ def _staff_mobile_dashboard_model(
         ],
         "action_cards": _staff_mobile_action_cards(today_status),
         "recent_activity": _staff_mobile_recent_activity(today_status, shift_label=shift_label),
+        "runtime_model": {
+            "home_url": url_for("app.staff_home"),
+            "location_name": location_name,
+            "work_counter": _staff_work_counter_runtime(today_status),
+            "shift_alarm": _staff_shift_alarm_runtime(
+                staff=staff,
+                today_status=today_status,
+                location_policy=location_policy,
+                current_dt=datetime.now(),
+            ),
+        },
     }
+
+
+def _staff_work_counter_runtime(today_status: dict[str, Any]) -> dict[str, Any]:
+    check_in_at = today_status.get("check_in_at")
+    check_out_at = today_status.get("check_out_at")
+    active_break_started_at = today_status.get("active_break_started_at")
+    return {
+        "check_in_iso": check_in_at.isoformat() if check_in_at else "",
+        "check_out_iso": check_out_at.isoformat() if check_out_at else "",
+        "active_break_started_iso": active_break_started_at.isoformat() if active_break_started_at else "",
+        "total_break_minutes": int(today_status.get("total_break_minutes") or 0),
+        "currently_inside": bool(today_status.get("currently_inside")),
+    }
+
+
+def _staff_shift_alarm_runtime(
+    *,
+    staff: dict[str, Any],
+    today_status: dict[str, Any],
+    location_policy: dict[str, Any],
+    current_dt: datetime,
+) -> dict[str, Any]:
+    shift_start_value = str(staff.get("shift_start") or "09:00")
+    shift_end_value = str(staff.get("shift_end") or "17:00")
+    try:
+        shift_start_clock = time.fromisoformat(shift_start_value)
+    except ValueError:
+        return {
+            "supported": False,
+            "staff_name": f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip(),
+            "storage_key": f"shift-reminder:{staff.get('id', 'staff')}:invalid",
+        }
+
+    today_shift_start = datetime.combine(current_dt.date(), shift_start_clock)
+    is_checked_in = bool(today_status.get("check_in_at")) and not bool(today_status.get("check_out_at"))
+    if is_checked_in or current_dt > today_shift_start:
+        next_shift_start = today_shift_start + timedelta(days=1)
+    else:
+        next_shift_start = today_shift_start
+
+    reminder_dt = next_shift_start - timedelta(minutes=10)
+    staff_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip() or str(
+        staff.get("staff_code") or "Staff"
+    )
+    location_name = str(location_policy.get("location_name") or "Assigned Location")
+    return {
+        "supported": True,
+        "enabled_by_policy": bool(staff.get("allow_mobile_clock", 1)),
+        "staff_name": staff_name,
+        "shift_label": _staff_mobile_state_title({"latest_event": {"event_type": ""}}),
+        "shift_window": f"{_format_clock_label(shift_start_value)} - {_format_clock_label(shift_end_value)}",
+        "shift_start_label": _format_clock_label(shift_start_value),
+        "shift_end_label": _format_clock_label(shift_end_value),
+        "next_shift_start_iso": next_shift_start.isoformat(),
+        "next_reminder_iso": reminder_dt.isoformat(),
+        "storage_key": f"shift-reminder:{staff.get('id', 'staff')}:{next_shift_start.isoformat(timespec='minutes')}",
+        "notification_title": "Shift reminder",
+        "notification_body": (
+            f"{staff_name}, your shift at {location_name} starts in 10 minutes. "
+            f"Clock in by {_format_clock_label(shift_start_value)}."
+        ),
+        "home_url": url_for("app.staff_home"),
+        "icon_url": url_for("app.pwa_icon_png", size=192, org=get_current_organization().slug),
+    }
+
+
+def _staff_shift_alarm_summary(
+    *,
+    staff: dict[str, Any],
+    today_status: dict[str, Any],
+    current_dt: datetime,
+) -> str:
+    runtime = _staff_shift_alarm_runtime(
+        staff=staff,
+        today_status=today_status,
+        location_policy={"location_name": "Assigned Location"},
+        current_dt=current_dt,
+    )
+    next_reminder = str(runtime.get("next_reminder_iso", "") or "").strip()
+    if not next_reminder:
+        return "Turn on phone alerts and the app will prompt you 10 minutes before your shift."
+    try:
+        reminder_dt = datetime.fromisoformat(next_reminder)
+    except ValueError:
+        return "Turn on phone alerts and the app will prompt you 10 minutes before your shift."
+    return (
+        f"Next phone alert at {reminder_dt.strftime('%I:%M %p')} "
+        f"for your {runtime.get('shift_start_label', '--')} shift."
+    )
 
 
 def _store_ghana_card_verification_result(

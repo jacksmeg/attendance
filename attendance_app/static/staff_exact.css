@@ -195,6 +195,7 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-topbar,
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-alert-card,
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-attendance-card,
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-location-panel,
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-card,
@@ -212,7 +213,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 8px 4px 14px;
+    padding: 6px 2px 12px;
     border: 0;
     border-bottom: 1px solid rgba(231, 237, 246, 0.94);
     background: transparent;
@@ -228,8 +229,8 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-brand-mark {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     overflow: hidden;
     background: #ffffff;
@@ -252,7 +253,7 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-brand-copy strong {
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     line-height: 1.05;
     color: #213861;
     white-space: nowrap;
@@ -261,7 +262,7 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-brand-copy span {
-    font-size: 0.58rem;
+    font-size: 0.5rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     color: #a0aec1;
@@ -275,18 +276,23 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-icon-button {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     border: 0;
-    background: transparent;
+    background: #ffffff;
     color: #617799;
     border-radius: 50%;
     position: relative;
+    box-shadow: 0 10px 18px rgba(26, 76, 144, 0.08);
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-icon-button svg {
     width: 18px;
     height: 18px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-icon-button.is-enabled {
+    color: #25bb6c;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-notice-dot {
@@ -346,8 +352,8 @@
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 132px;
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 128px;
+    gap: 10px;
     align-items: start;
     background: transparent;
     border: 0;
@@ -356,9 +362,9 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-welcome {
-    padding: 8px 4px 0;
+    padding: 6px 2px 0;
     display: grid;
-    gap: 2px;
+    gap: 3px;
     background: transparent;
     border: 0;
     box-shadow: none;
@@ -370,7 +376,7 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-welcome p {
-    font-size: 0.94rem;
+    font-size: 0.76rem;
     font-weight: 700;
     color: #314e7d;
 }
@@ -380,8 +386,8 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 2.05rem;
-    line-height: 0.98;
+    font-size: 2rem;
+    line-height: 0.95;
     color: #193768;
     letter-spacing: -0.04em;
 }
@@ -391,16 +397,16 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-welcome > span {
-    font-size: 0.73rem;
+    font-size: 0.64rem;
     color: #9aa8ba;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-date-card {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    padding: 14px 14px 12px;
-    border-radius: 18px;
+    gap: 9px;
+    padding: 13px 12px 12px;
+    border-radius: 16px;
     border: 1px solid rgba(231, 237, 246, 0.96);
     background: #ffffff;
     box-shadow: 0 14px 28px rgba(19, 72, 142, 0.06);
@@ -428,7 +434,7 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-date-copy strong {
-    font-size: 0.74rem;
+    font-size: 0.68rem;
     line-height: 1.3;
     color: #6d83a4;
     font-weight: 700;
@@ -438,7 +444,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.69rem;
+    font-size: 0.66rem;
     font-weight: 800;
     color: #1fbe68;
     letter-spacing: 0.02em;
@@ -453,10 +459,10 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-attendance-card {
-    border-radius: 24px;
-    padding: 16px;
+    border-radius: 22px;
+    padding: 14px;
     background:
-        radial-gradient(circle at right top, rgba(58, 221, 168, 0.1), transparent 26%),
+        radial-gradient(circle at right top, rgba(58, 221, 168, 0.08), transparent 28%),
         linear-gradient(180deg, #fbfffd 0%, #ffffff 100%);
 }
 
@@ -502,15 +508,15 @@
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-attendance-title h2 {
     margin: 0;
-    font-size: 1.85rem;
-    line-height: 1;
+    font-size: 1.05rem;
+    line-height: 1.1;
     letter-spacing: -0.04em;
     color: #1d355e;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-fingerprint-badge {
-    width: 64px;
-    height: 64px;
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
@@ -523,15 +529,15 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-fingerprint-badge svg {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-attendance-grid {
     display: grid;
     grid-template-columns: 1fr 1.45fr 1fr;
-    gap: 14px 16px;
-    padding-top: 14px;
+    gap: 12px 14px;
+    padding-top: 12px;
     border-top: 1px solid rgba(234, 239, 246, 0.98);
 }
 
@@ -552,7 +558,7 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-stat strong {
-    font-size: 0.98rem;
+    font-size: 0.84rem;
     line-height: 1.2;
     color: #20365e;
     font-weight: 800;
@@ -593,16 +599,16 @@
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-action-card {
     width: 100%;
-    min-height: 108px;
-    padding: 10px 10px 12px;
-    border-radius: 20px;
+    min-height: 102px;
+    padding: 9px 8px 11px;
+    border-radius: 18px;
     border: 1px solid rgba(226, 234, 246, 0.98);
     background: #ffffff;
-    box-shadow: 0 14px 30px rgba(24, 72, 140, 0.08);
+    box-shadow: 0 12px 26px rgba(24, 72, 140, 0.08);
     display: grid;
     align-content: start;
     justify-items: center;
-    gap: 8px;
+    gap: 7px;
     color: #20406f;
 }
 
@@ -612,8 +618,8 @@
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-action-icon {
     width: 100%;
-    min-height: 46px;
-    border-radius: 14px;
+    min-height: 42px;
+    border-radius: 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -627,14 +633,14 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-action-card strong {
-    font-size: 0.92rem;
+    font-size: 0.83rem;
     font-weight: 800;
     line-height: 1.1;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-action-card small {
     position: relative;
-    font-size: 0.62rem;
+    font-size: 0.58rem;
     line-height: 1.25;
     color: #93a3b8;
     text-align: center;
@@ -687,20 +693,21 @@
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-location-panel {
     display: grid;
     grid-template-columns: 1.04fr 1.3fr;
-    gap: 12px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(227, 236, 247, 0.95);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(250, 252, 255, 0.985));
+    box-shadow: 0 18px 36px rgba(30, 76, 146, 0.08);
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-map-card,
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-location-card {
-    min-height: 128px;
-    border-radius: 22px;
-    border: 1px solid rgba(227, 236, 247, 0.95);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(250, 252, 255, 0.985));
-    box-shadow: 0 18px 36px rgba(30, 76, 146, 0.08);
+    min-height: 122px;
+    border-radius: 16px;
+    border: 0;
+    background: #ffffff;
+    box-shadow: none;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-map-card {
@@ -778,9 +785,9 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-location-card {
-    padding: 14px;
+    padding: 12px;
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-location-head {
@@ -871,8 +878,8 @@
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-card,
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-activity-card {
-    border-radius: 22px;
-    padding: 14px;
+    border-radius: 20px;
+    padding: 12px;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-section-head {
@@ -880,7 +887,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-section-head a {
@@ -901,19 +908,19 @@
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-item {
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 7px;
     align-items: start;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-icon {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
@@ -947,7 +954,7 @@
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-item strong {
     display: block;
-    font-size: 1rem;
+    font-size: 0.96rem;
     line-height: 1;
     color: #1f3560;
 }
@@ -955,14 +962,14 @@
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-item span {
     display: block;
     margin-top: 4px;
-    font-size: 0.63rem;
+    font-size: 0.58rem;
     color: #8395ac;
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-item small {
     display: block;
     margin-top: 2px;
-    font-size: 0.61rem;
+    font-size: 0.56rem;
     color: #adb8c8;
 }
 
@@ -975,8 +982,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 10px;
-    padding: 10px 0;
+    gap: 8px;
+    padding: 9px 0;
     border-top: 1px solid rgba(235, 240, 247, 0.95);
 }
 
@@ -1107,7 +1114,7 @@
     gap: 8px;
     align-items: end;
     margin-top: auto;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    padding: 9px 12px calc(9px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid rgba(233, 239, 247, 0.96);
     background: rgba(255, 255, 255, 0.97);
 }
@@ -1141,9 +1148,9 @@
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-nav-fab {
-    width: 60px;
-    height: 60px;
-    margin: -24px auto 0;
+    width: 58px;
+    height: 58px;
+    margin: -22px auto 0;
     border-radius: 50%;
     background: linear-gradient(135deg, #25d3a4 0%, #2a88ff 100%);
     color: #ffffff;
@@ -1247,6 +1254,7 @@ html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-topbar,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-date-card,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-attendance-card,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-location-panel,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-map-card,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-location-card,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-card,

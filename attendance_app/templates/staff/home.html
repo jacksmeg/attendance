@@ -18,7 +18,13 @@
             </div>
         </div>
         <div class="staff-app-top-actions">
-            <button class="staff-app-icon-button" type="button" aria-label="Notifications">
+            <button
+                class="staff-app-icon-button"
+                type="button"
+                aria-label="Shift alerts"
+                data-staff-alert-toggle
+                data-staff-alert-icon-button
+            >
                 {{ icon('bell') }}
                 {% if dashboard.notification_count %}
                     <span class="staff-app-notice-dot">{{ dashboard.notification_count }}</span>
@@ -77,7 +83,7 @@
             </article>
             <article class="staff-app-stat">
                 <small>Work Hours</small>
-                <strong>{{ dashboard.worked_hours_label }}</strong>
+                <strong data-work-hours-counter>{{ dashboard.worked_hours_label }}</strong>
                 <span>So far</span>
             </article>
             <article class="staff-app-stat">
@@ -154,7 +160,7 @@
                 <article class="staff-app-summary-item">
                     <span class="staff-app-summary-icon tone-{{ item.tone }}">{{ icon(item.icon) }}</span>
                     <div>
-                        <strong>{{ item.value }}</strong>
+                        <strong {% if item.label == 'Work Hours' %}data-work-hours-counter{% endif %}>{{ item.value }}</strong>
                         <span>{{ item.label }}</span>
                         <small>{{ item.note }}</small>
                     </div>
@@ -245,6 +251,9 @@
         </div>
     </section>
 </section>
+
+<script id="staff-runtime-data" type="application/json">{{ dashboard.runtime_model|tojson }}</script>
+<script src="{{ url_for('static', filename='staff_home_exact.js') }}" defer></script>
 
 <script>
     for (const form of document.querySelectorAll(".gps-form")) {
