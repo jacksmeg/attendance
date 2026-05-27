@@ -1861,6 +1861,58 @@ class AttendanceAppTests(unittest.TestCase):
         self.assertEqual(login_response.status_code, 200)
         self.assertIn(b"LOCATION VERIFICATION", login_response.data)
 
+    def test_staff_can_open_profile_and_change_password_from_dashboard(self) -> None:
+        login_response = self.client.post(
+            "/staff/login",
+            data={
+                "staff_identifier": "test@example.com",
+                "password": "Test@1234",
+                "selfie_data": TEST_SELFIE_DATA_URL,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(b"My Profile", login_response.data)
+        self.assertIn(b"Change Password", login_response.data)
+        self.assertIn(b"test@example.com", login_response.data)
+
+        invalid_change = self.client.post(
+            "/staff/profile/password",
+            data={
+                "current_password": "wrong-pass",
+                "new_password": "Updated@1234",
+                "confirm_new_password": "Updated@1234",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(invalid_change.status_code, 200)
+        self.assertIn(b"Your current password is not correct.", invalid_change.data)
+
+        valid_change = self.client.post(
+            "/staff/profile/password",
+            data={
+                "current_password": "Test@1234",
+                "new_password": "Updated@1234",
+                "confirm_new_password": "Updated@1234",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(valid_change.status_code, 200)
+        self.assertIn(b"Password updated successfully.", valid_change.data)
+
+        self.client.get("/logout", follow_redirects=True)
+        relogin_response = self.client.post(
+            "/staff/login",
+            data={
+                "staff_identifier": "test@example.com",
+                "password": "Updated@1234",
+                "selfie_data": TEST_SELFIE_DATA_URL,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(relogin_response.status_code, 200)
+        self.assertIn(b"LOCATION VERIFICATION", relogin_response.data)
+
     def test_staff_can_reset_pin_with_registered_details(self) -> None:
         response = self.client.post(
             "/staff/recover",

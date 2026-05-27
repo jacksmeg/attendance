@@ -225,6 +225,46 @@ def reset_staff_credentials(
     db.commit()
 
 
+def change_staff_password(
+    staff_id: int,
+    *,
+    current_password: str,
+    new_password: str,
+) -> tuple[bool, str]:
+    staff = get_staff(staff_id)
+    if not staff:
+        return False, "Your staff profile could not be found."
+    if not current_password.strip():
+        return False, "Enter your current password."
+    if len(new_password.strip()) < 8:
+        return False, "Use a stronger password with at least 8 characters."
+    if new_password.strip() == current_password.strip():
+        return False, "Choose a new password that is different from your current one."
+
+    current_secret = current_password.strip()
+    if not (
+        secret_matches(staff.get("password_hash"), current_secret)
+        or secret_matches(staff.get("pin_hash"), current_secret)
+    ):
+        return False, "Your current password is not correct."
+
+    db = get_db()
+    db.execute(
+        """
+        UPDATE staff
+        SET password_hash = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            hash_secret(new_password.strip()),
+            datetime.now().isoformat(timespec="seconds"),
+            staff_id,
+        ),
+    )
+    db.commit()
+    return True, "Password updated successfully."
+
+
 def create_staff(data: Mapping[str, Any]) -> int:
     db = get_db()
     now = datetime.now().isoformat(timespec="seconds")

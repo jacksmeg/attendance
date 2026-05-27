@@ -30,7 +30,7 @@
                     <span class="staff-app-notice-dot">{{ dashboard.notification_count }}</span>
                 {% endif %}
             </button>
-            <span class="staff-app-profile">
+            <button class="staff-app-profile staff-app-profile-button" type="button" data-staff-profile-toggle aria-label="Open my profile">
                 <span class="staff-app-profile-avatar">
                     {% if staff.photo_filename %}
                         <img src="{{ url_for('app.staff_photo', filename=staff.photo_filename) }}" alt="{{ staff.first_name }} {{ staff.last_name }}">
@@ -39,7 +39,7 @@
                     {% endif %}
                 </span>
                 <span class="staff-app-profile-dot"></span>
-            </span>
+            </button>
         </div>
     </header>
 
@@ -250,6 +250,75 @@
             </a>
         </div>
     </section>
+
+    <section class="staff-app-profile-sheet" data-staff-profile-sheet {% if not profile_sheet_open %}hidden{% endif %}>
+        <button class="staff-app-more-backdrop" type="button" data-staff-profile-close aria-label="Close profile"></button>
+        <div class="staff-app-profile-card">
+            <div class="staff-app-more-head">
+                <strong>My Profile</strong>
+                <button type="button" data-staff-profile-close aria-label="Close profile">{{ icon('close') }}</button>
+            </div>
+            <div class="staff-app-profile-summary">
+                <span class="staff-app-profile-sheet-avatar">
+                    {% if staff_profile.photo_url %}
+                        <img src="{{ staff_profile.photo_url }}" alt="{{ staff_profile.full_name }}">
+                    {% else %}
+                        <span>{{ staff_profile.initials }}</span>
+                    {% endif %}
+                </span>
+                <div class="staff-app-profile-summary-copy">
+                    <strong>{{ staff_profile.full_name }}</strong>
+                    <span>{{ staff_profile.role }}</span>
+                    <small>{{ staff_profile.department }}</small>
+                </div>
+            </div>
+            <div class="staff-app-profile-grid">
+                <article class="staff-app-profile-metric">
+                    <small>Staff Code</small>
+                    <strong>{{ staff_profile.staff_code }}</strong>
+                </article>
+                <article class="staff-app-profile-metric">
+                    <small>Shift</small>
+                    <strong>{{ staff_profile.shift_label }}</strong>
+                    <span>{{ staff_profile.shift_window }}</span>
+                </article>
+                <article class="staff-app-profile-metric">
+                    <small>Email</small>
+                    <strong>{{ staff_profile.email }}</strong>
+                </article>
+                <article class="staff-app-profile-metric">
+                    <small>Phone</small>
+                    <strong>{{ staff_profile.phone }}</strong>
+                </article>
+            </div>
+            <form method="post" action="{{ url_for('app.staff_change_password') }}" class="staff-app-password-form">
+                <div class="staff-app-password-head">
+                    <strong>Change Password</strong>
+                    <span>Update your staff portal password here.</span>
+                </div>
+                <label class="staff-app-field">
+                    <span>Current Password</span>
+                    <input type="password" name="current_password" autocomplete="current-password" required>
+                </label>
+                <label class="staff-app-field">
+                    <span>New Password</span>
+                    <input type="password" name="new_password" autocomplete="new-password" minlength="8" required>
+                </label>
+                <label class="staff-app-field">
+                    <span>Confirm New Password</span>
+                    <input type="password" name="confirm_new_password" autocomplete="new-password" minlength="8" required>
+                </label>
+                <div class="staff-app-password-actions">
+                    <button class="staff-app-secondary-button" type="button" data-staff-profile-close>Cancel</button>
+                    <button class="staff-app-primary-button" type="submit">Save New Password</button>
+                </div>
+            </form>
+            <a href="{{ url_for('app.logout') }}" class="staff-app-more-link">
+                <span>{{ icon('logout') }}</span>
+                <span>Logout</span>
+            </a>
+        </div>
+    </section>
 </section>
 
 <script id="staff-runtime-data" type="application/json">{{ dashboard.runtime_model|tojson }}</script>
@@ -288,6 +357,25 @@
         }
         for (const closer of closers) {
             closer.addEventListener("click", () => setMoreState(false));
+        }
+    }
+
+    const profileSheet = document.querySelector("[data-staff-profile-sheet]");
+    if (profileSheet) {
+        const openers = document.querySelectorAll("[data-staff-profile-toggle]");
+        const closers = profileSheet.querySelectorAll("[data-staff-profile-close]");
+        const setProfileState = (open) => {
+            profileSheet.hidden = !open;
+            document.body.classList.toggle("staff-profile-open", open);
+        };
+        if (!profileSheet.hidden) {
+            document.body.classList.add("staff-profile-open");
+        }
+        for (const opener of openers) {
+            opener.addEventListener("click", () => setProfileState(true));
+        }
+        for (const closer of closers) {
+            closer.addEventListener("click", () => setProfileState(false));
         }
     }
 </script>

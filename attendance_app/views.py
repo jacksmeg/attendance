@@ -143,6 +143,7 @@ from .services.staff_push import (
 )
 from .services.staff import (
     authenticate_staff,
+    change_staff_password,
     count_active_staff,
     create_staff,
     get_staff,
@@ -3121,19 +3122,77 @@ self.addEventListener("push", (event) => {{
             location_policy=location_policy,
             current_day=date.today(),
         )
+        profile_view = _staff_profile_view_model(staff=staff, dashboard=dashboard)
         return render_template(
             "staff/home.html",
             title="Staff Portal",
             staff=staff,
+            staff_profile=profile_view,
             today=date.today(),
             today_status=today_status,
             dashboard=dashboard,
             last_attendance_result=session.pop("last_staff_attendance_result", None),
+            profile_sheet_open=bool(session.pop("staff_profile_sheet_open", False)),
             quick_url=quick_url,
             mobile_qr_svg=build_qr_svg(quick_url),
             location_policy=location_policy,
             body_class="staff-mobile-app-body staff-mobile-exact-body",
         )
+
+    @bp.route("/staff/profile/password", methods=["POST"])
+    @staff_required
+    def staff_change_password():
+        staff = get_staff(session["staff_id"])
+        if not staff:
+            clear_user_session()
+            flash("Your staff record is no longer active.", "warning")
+            return redirect(url_for("app.staff_login"))
+
+        current_password = request.form.get("current_password", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        confirm_new_password = request.form.get("confirm_new_password", "").strip()
+        session["staff_profile_sheet_open"] = True
+
+        if not new_password:
+            flash("Enter a new password.", "error")
+            return redirect(url_for("app.staff_home"))
+        if new_password != confirm_new_password:
+            flash("Your new password confirmation does not match.", "error")
+            return redirect(url_for("app.staff_home"))
+
+        password_updated, message = change_staff_password(
+            int(staff["id"]),
+            current_password=current_password,
+            new_password=new_password,
+        )
+        if not password_updated:
+            flash(message, "error")
+            return redirect(url_for("app.staff_home"))
+
+        full_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip() or str(
+            staff.get("staff_code", "Staff")
+        )
+        log_admin_activity(
+            actor_type="staff",
+            actor_name=full_name,
+            actor_role=str(staff.get("access_role", STAFF)),
+            event_type="staff_password_change",
+            target_name="Password",
+            details="Staff changed their own portal password from the mobile profile drawer.",
+            ip_address=_request_ip_address(),
+            device_name=_request_device_name(),
+        )
+        _notify_admin(
+            title=f"{full_name} changed their password",
+            message="A staff member updated their own portal password from the staff app profile.",
+            category="security",
+            tone="neutral",
+            action_url=url_for("app.admin_audit_logs"),
+            target_staff_id=int(staff["id"]),
+        )
+        session["staff_profile_sheet_open"] = False
+        flash(message, "success")
+        return redirect(url_for("app.staff_home"))
 
     @bp.route("/staff/push/config")
     @staff_required
@@ -3709,6 +3768,29 @@ def _staff_shift_alarm_summary(
         f"Next phone alert at {reminder_dt.strftime('%I:%M %p')} "
         f"for your {runtime.get('shift_start_label', '--')} shift."
     )
+
+
+def _staff_profile_view_model(*, staff: dict[str, Any], dashboard: Mapping[str, Any]) -> dict[str, Any]:
+    full_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip() or str(
+        staff.get("staff_code", "Staff")
+    )
+    initials = (
+        f"{str(staff.get('first_name', '') or 'S')[:1]}{str(staff.get('last_name', '') or 'T')[:1]}"
+    ).upper()
+    phone = str(staff.get("phone") or "").strip()
+    email = str(staff.get("email") or "").strip()
+    return {
+        "full_name": full_name,
+        "initials": initials,
+        "staff_code": str(staff.get("staff_code") or "--"),
+        "department": str(staff.get("department") or "Not assigned"),
+        "role": str(staff.get("role") or "Staff"),
+        "email": email or "Not provided",
+        "phone": phone or "Not provided",
+        "shift_label": str(dashboard.get("shift_label") or "--"),
+        "shift_window": str(dashboard.get("shift_window") or "--"),
+        "photo_url": _photo_url_for_filename(staff.get("photo_filename")),
+    }
 
 
 def _store_ghana_card_verification_result(

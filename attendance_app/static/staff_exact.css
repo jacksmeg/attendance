@@ -318,6 +318,13 @@
     display: inline-flex;
 }
 
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-avatar {
     width: 36px;
     height: 36px;
@@ -1172,6 +1179,16 @@
     z-index: 90;
 }
 
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-sheet[hidden] {
+    display: none;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+}
+
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-more-backdrop {
     position: absolute;
     inset: 0;
@@ -1189,6 +1206,175 @@
     padding: 18px;
     display: grid;
     gap: 14px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-card {
+    position: absolute;
+    left: 50%;
+    bottom: 20px;
+    width: min(100% - 24px, 360px);
+    transform: translateX(-50%);
+    border-radius: 28px;
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 251, 255, 0.985));
+    border: 1px solid rgba(227, 236, 247, 0.95);
+    box-shadow: 0 22px 42px rgba(24, 76, 145, 0.16);
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-sheet-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ebf4ff, #dbe7ff);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #335d9d;
+    font-size: 1rem;
+    font-weight: 800;
+    box-shadow: 0 12px 24px rgba(29, 82, 154, 0.16);
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-sheet-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-summary-copy {
+    display: grid;
+    gap: 2px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-summary-copy strong {
+    color: #18386a;
+    font-size: 1rem;
+    line-height: 1.1;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-summary-copy span {
+    color: #5a76a4;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-summary-copy small {
+    color: #95a6be;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-metric {
+    min-height: 72px;
+    padding: 12px 13px;
+    border-radius: 18px;
+    background: #f8fbff;
+    border: 1px solid rgba(227, 236, 247, 0.95);
+    display: grid;
+    gap: 4px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-metric small,
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-password-head span,
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-field span {
+    color: #97a6ba;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-metric strong,
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-password-head strong {
+    color: #1a396b;
+    font-size: 0.82rem;
+    line-height: 1.2;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-metric span {
+    color: #5e79a7;
+    font-size: 0.66rem;
+    font-weight: 700;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-password-form {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 22px;
+    background: #f8fbff;
+    border: 1px solid rgba(227, 236, 247, 0.95);
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-password-head {
+    display: grid;
+    gap: 4px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-field {
+    display: grid;
+    gap: 6px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-field input {
+    width: 100%;
+    height: 44px;
+    border-radius: 15px;
+    border: 1px solid rgba(215, 226, 241, 0.95);
+    background: #ffffff;
+    color: #14325d;
+    padding: 0 14px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    box-sizing: border-box;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-field input:focus {
+    outline: none;
+    border-color: rgba(78, 133, 255, 0.8);
+    box-shadow: 0 0 0 3px rgba(91, 128, 255, 0.14);
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-password-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-primary-button,
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-secondary-button {
+    min-height: 46px;
+    border-radius: 16px;
+    border: 0;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-primary-button {
+    background: linear-gradient(135deg, #4c86ff, #24c2ff);
+    color: #ffffff;
+    box-shadow: 0 14px 24px rgba(55, 121, 247, 0.22);
+}
+
+.staff-mobile-shell-body.staff-mobile-exact-body .staff-app-secondary-button {
+    background: #eef4ff;
+    color: #4b6ea5;
+    border: 1px solid rgba(215, 226, 241, 0.95);
 }
 
 .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-more-head {
@@ -1261,6 +1447,7 @@ html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-activity-card,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-bottom-nav,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-more-card,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-card,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-attendance-success-banner,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-attendance-success-card {
     background: linear-gradient(180deg, #101929 0%, #132032 100%);
@@ -1288,6 +1475,9 @@ html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-item strong,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-activity-copy strong,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-more-head strong,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-summary-copy strong,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-metric strong,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-password-head strong,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-more-link {
     color: #eef4ff;
 }
@@ -1304,6 +1494,12 @@ html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-summary-item small,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-activity-copy span,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-activity-side span,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-summary-copy span,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-summary-copy small,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-metric small,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-metric span,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-password-head span,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-field span,
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-empty-state span {
     color: #92a3bd;
 }
@@ -1319,6 +1515,26 @@ html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-
     color: #9baecc;
     background: rgba(255, 255, 255, 0.03);
     border-color: rgba(69, 88, 120, 0.58);
+}
+
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-profile-metric,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-password-form,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-more-link,
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-more-head button {
+    background: rgba(18, 31, 50, 0.86);
+    border-color: rgba(69, 88, 120, 0.58);
+}
+
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-field input {
+    background: rgba(11, 20, 33, 0.9);
+    border-color: rgba(69, 88, 120, 0.58);
+    color: #eef4ff;
+}
+
+html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-secondary-button {
+    background: rgba(18, 31, 50, 0.92);
+    color: #d7e5ff;
+    border: 1px solid rgba(69, 88, 120, 0.58);
 }
 
 html[data-theme="dark"] .staff-mobile-shell-body.staff-mobile-exact-body .staff-app-nav-link {
